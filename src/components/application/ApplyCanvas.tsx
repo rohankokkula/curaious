@@ -86,6 +86,7 @@ export function ApplyCanvas({
 
   useEffect(() => {
     if (!scrollDriven || !scrollStep || scrollStep === currentStep) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- optional scroll-driven mode syncs the step from a parent-owned scroll position
     setCurrentStep(scrollStep);
     setDirection("forward");
   }, [scrollDriven, scrollStep, currentStep]);

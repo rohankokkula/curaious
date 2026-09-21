@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Newsreader } from "next/font/google";
+import { IBM_Plex_Mono, Inter } from "next/font/google";
 import "./globals.css";
 
-const display = Newsreader({
+const display = Inter({
   variable: "--font-display",
   subsets: ["latin"],
   display: "swap",
+  weight: ["600", "700"],
 });
 
-const body = Newsreader({
+const body = Inter({
   variable: "--font-body",
   subsets: ["latin"],
   display: "swap",
@@ -23,13 +24,16 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "10 people. one table. every weekend.",
+  title: {
+    default: "curaious — nine people who know what you're working on",
+    template: "%s",
+  },
   description:
-    "a small AI learning circle in hyderabad. cohort 01 has 10 seats.",
+    "a small AI learning circle in hyderabad. ten people, four weekends, one table. cohort 01 has 10 seats.",
   openGraph: {
-    title: "10 people. one table. every weekend.",
+    title: "curaious — nine people who know what you're working on",
     description:
-      "a small AI learning circle in hyderabad. every week, one person takes the floor.",
+      "ten people, four weekends, one table. a small AI learning circle in hyderabad — you present once, the other nine give you real feedback.",
     type: "website",
   },
 };
