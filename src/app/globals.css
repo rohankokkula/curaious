@@ -2,13 +2,37 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #1f2937;
+  --foreground: #111827;
   --muted: #6b7280;
   --border: #e5e7eb;
   --accent: #d4623a;
   --accent-soft: rgba(212, 98, 58, 0.08);
   --surface: #f9fafb;
+  --card: #ffffff;
+  --primary: #059669;
+  --primary-foreground: #ffffff;
+  --primary-soft: #ecfdf5;
+  --destructive: #dc2626;
+  color-scheme: light;
 }
+
+.dark {
+  --background: #0b0f14;
+  --foreground: #e5e7eb;
+  --muted: #9ca3af;
+  --border: #232b36;
+  --accent: #e57a55;
+  --accent-soft: rgba(229, 122, 85, 0.14);
+  --surface: #121821;
+  --card: #10151c;
+  --primary: #10b981;
+  --primary-foreground: #04130d;
+  --primary-soft: rgba(16, 185, 129, 0.14);
+  --destructive: #f87171;
+  color-scheme: dark;
+}
+
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
@@ -18,6 +42,11 @@
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
   --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-destructive: var(--destructive);
   --font-sans: var(--font-body);
   --font-serif: var(--font-display);
   --font-mono: var(--font-mono);

@@ -103,7 +103,7 @@ export function TalkSubmitForm({ slotId }: { slotId: string }) {
 
   if (state === "done") {
     return (
-      <div className="bg-white border border-border rounded-lg p-8 space-y-5">
+      <div className="bg-card border border-border rounded-lg p-8 space-y-5">
         <h2 className="text-lg font-semibold text-foreground">Submitted</h2>
         <p className="text-sm text-muted">
           Your talk is waiting on review. Until it&rsquo;s approved, the slot
@@ -113,7 +113,7 @@ export function TalkSubmitForm({ slotId }: { slotId: string }) {
         <div className="pt-4">
           <Link
             href="/dashboard"
-            className="inline-block px-4 py-2 bg-foreground text-white text-sm font-medium rounded hover:bg-foreground/90 transition"
+            className="inline-block px-4 py-2 bg-foreground text-primary-foreground text-sm font-medium rounded hover:bg-foreground/90 transition"
           >
             Back to calendar
           </Link>
@@ -123,7 +123,7 @@ export function TalkSubmitForm({ slotId }: { slotId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white border border-border rounded-lg p-8 space-y-6">
+    <form onSubmit={handleSubmit} className="bg-card border border-border rounded-lg p-8 space-y-6">
       {/* Title */}
       <div className="space-y-2">
         <label htmlFor="title" className="block text-sm font-medium text-foreground">
@@ -138,10 +138,10 @@ export function TalkSubmitForm({ slotId }: { slotId: string }) {
           placeholder="What are you presenting?"
           maxLength={140}
           className={cn(
-            "w-full px-4 py-2.5 border rounded text-sm bg-white outline-none transition",
+            "w-full px-4 py-2.5 border rounded text-sm bg-card outline-none transition",
             errors.title
               ? "border-red-300 focus:border-red-400 focus:ring-1 focus:ring-red-300"
-              : "border-border focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
+              : "border-border focus:border-primary focus:ring-1 focus:ring-primary/30"
           )}
         />
         {errors.title ? (
@@ -165,10 +165,10 @@ export function TalkSubmitForm({ slotId }: { slotId: string }) {
           maxLength={2000}
           rows={5}
           className={cn(
-            "w-full px-4 py-2.5 border rounded text-sm bg-white outline-none transition resize-none",
+            "w-full px-4 py-2.5 border rounded text-sm bg-card outline-none transition resize-none",
             errors.description
               ? "border-red-300 focus:border-red-400 focus:ring-1 focus:ring-red-300"
-              : "border-border focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
+              : "border-border focus:border-primary focus:ring-1 focus:ring-primary/30"
           )}
         />
         {errors.description ? (
@@ -191,7 +191,7 @@ export function TalkSubmitForm({ slotId }: { slotId: string }) {
           accept="application/pdf"
           onChange={handleFile}
           className={cn(
-            "block w-full text-sm py-2 file:mr-3 file:px-3 file:py-2 file:text-xs file:font-medium file:rounded file:border file:border-border file:bg-white file:cursor-pointer hover:file:bg-surface transition",
+            "block w-full text-sm py-2 file:mr-3 file:px-3 file:py-2 file:text-xs file:font-medium file:rounded file:border file:border-border file:bg-card file:cursor-pointer hover:file:bg-surface transition",
             errors.deck ? "file:border-red-300" : "file:border-border"
           )}
         />
@@ -229,7 +229,7 @@ export function TalkSubmitForm({ slotId }: { slotId: string }) {
         <button
           type="submit"
           disabled={state === "sending"}
-          className="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          className="px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
           {state === "sending" ? "Submitting…" : "Submit for review"}
         </button>

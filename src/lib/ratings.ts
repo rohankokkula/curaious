@@ -3,28 +3,28 @@ import { z } from "zod";
 export const RATING_PARAMETERS = [
   {
     key: "understanding",
-    label: "understanding",
-    hint: "did they actually understand what they were talking about?",
+    label: "Understanding",
+    hint: "Did they actually understand what they were talking about?",
   },
   {
     key: "content",
-    label: "content",
-    hint: "was the material itself worth the room's time?",
+    label: "Content",
+    hint: "Was the material itself worth the room's time?",
   },
   {
     key: "research_depth",
-    label: "research / depth",
-    hint: "did they go past the surface?",
+    label: "Research / Depth",
+    hint: "Did they go past the surface?",
   },
   {
     key: "delivery",
-    label: "delivery",
-    hint: "was it clear, paced, easy to follow?",
+    label: "Delivery",
+    hint: "Was it clear, paced, easy to follow?",
   },
   {
     key: "usefulness",
-    label: "usefulness",
-    hint: "will you use any of this?",
+    label: "Usefulness",
+    hint: "Will you use any of this?",
   },
 ] as const;
 

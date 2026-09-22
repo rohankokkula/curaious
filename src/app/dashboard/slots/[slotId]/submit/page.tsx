@@ -22,12 +22,12 @@ function Notice({
   children: React.ReactNode;
 }) {
   return (
-    <div className="max-w-2xl bg-white border border-border rounded-lg p-8 space-y-4">
+    <div className="max-w-2xl bg-card border border-border rounded-lg p-8 space-y-4">
       <h1 className="text-xl font-semibold text-foreground">{heading}</h1>
       <p className="text-sm text-muted">{children}</p>
       <Link
         href="/dashboard"
-        className="inline-block px-4 py-2 bg-foreground text-white text-sm font-medium rounded hover:bg-foreground/90 transition"
+        className="inline-block px-4 py-2 bg-foreground text-primary-foreground text-sm font-medium rounded hover:bg-foreground/90 transition"
       >
         Back to calendar
       </Link>

@@ -74,8 +74,8 @@ export function AddInviteForm() {
           placeholder="Full name"
           maxLength={120}
           className={cn(
-            "w-full px-4 py-3 border rounded-lg text-sm bg-white outline-none transition",
-            errors.name ? "border-red-300 bg-red-50" : "border-border focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
+            "w-full px-4 py-3 border rounded-lg text-sm bg-card outline-none transition",
+            errors.name ? "border-red-300 bg-red-50" : "border-border focus:border-primary focus:ring-1 focus:ring-primary/30"
           )}
         />
         {errors.name && <p className="text-xs text-red-600">{errors.name}</p>}
@@ -90,8 +90,8 @@ export function AddInviteForm() {
           onChange={(event) => setEmail(event.target.value)}
           placeholder="name@example.com"
           className={cn(
-            "w-full px-4 py-3 border rounded-lg text-sm bg-white outline-none transition",
-            errors.email ? "border-red-300 bg-red-50" : "border-border focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
+            "w-full px-4 py-3 border rounded-lg text-sm bg-card outline-none transition",
+            errors.email ? "border-red-300 bg-red-50" : "border-border focus:border-primary focus:ring-1 focus:ring-primary/30"
           )}
         />
         {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
@@ -111,7 +111,7 @@ export function AddInviteForm() {
       <button
         type="submit"
         disabled={state === "sending" || !name.trim() || !email.trim()}
-        className="w-full px-4 py-3 bg-emerald-600 text-white font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700"
+        className="w-full px-4 py-3 bg-primary text-primary-foreground font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90"
       >
         {state === "sending" ? "Adding…" : "Add Member"}
       </button>

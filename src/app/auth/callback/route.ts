@@ -41,12 +41,13 @@ export async function GET(request: Request) {
 
   const { data: invite } = await admin
     .from("invites")
-    .select("id, name, accepted_at")
+    .select("id, name, accepted_at, cohort_id")
     .ilike("email", escapeLike(email))
     .maybeSingle<{
       id: string;
       name: string;
       accepted_at: string | null;
+      cohort_id: string | null;
     }>();
 
   if (!adminRecord && !invite) {
@@ -84,6 +85,18 @@ export async function GET(request: Request) {
       .from("profiles")
       .update({ role })
       .eq("id", user.id);
+  }
+
+  // Join the invite's cohort (falling back to the live one) so the member shows up in rosters.
+  let cohortId = invite?.cohort_id ?? null;
+  if (!cohortId) {
+    const { data: live } = await admin.from("seasons").select("id").eq("is_active", true).limit(1).maybeSingle<{ id: string }>();
+    cohortId = live?.id ?? null;
+  }
+  if (cohortId) {
+    await admin
+      .from("cohort_members")
+      .upsert({ cohort_id: cohortId, profile_id: user.id, role }, { onConflict: "cohort_id,profile_id", ignoreDuplicates: true });
   }
 
   // Mark invite as accepted

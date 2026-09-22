@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getActiveCohort } from "@/lib/cohort";
 import { requireAdmin } from "@/lib/adminAuth";
 import { escapeLike, inviteSchema, normalizeEmail } from "@/lib/invites";
 import { hasServiceRoleKey } from "@/lib/supabase/admin";
@@ -127,6 +128,7 @@ export async function POST(request: Request) {
       email,
       role: parsed.data.role ?? "member",
       invited_by: guard.userId,
+      cohort_id: (await getActiveCohort())?.id ?? null,
     })
     .select("id, name, email, role, accepted_at, created_at")
     .single<InviteRow>();

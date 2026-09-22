@@ -1,39 +1,27 @@
-import Link from "next/link";
-import { AdminNavigation } from "@/components/admin/AdminNavigation";
+import { AppShell } from "@/components/shell/AppShell";
+import type { NavItem } from "@/components/shell/SidebarNav";
+import { getActiveCohort } from "@/lib/cohort";
 import { getViewerProfile } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const viewer = await getViewerProfile();
+const ITEMS: NavItem[] = [
+  { href: "/admin", label: "Overview", icon: "home", exact: true },
+  { href: "/admin/cohorts", label: "Cohorts", icon: "layers" },
+  { href: "/admin/talks", label: "Talks", icon: "file" },
+  { href: "/admin/members", label: "Members", icon: "users" },
+  { href: "/admin/invites", label: "Invites", icon: "mail" },
+  { href: "/admin/schedule", label: "Schedule", icon: "calendar" },
+  { href: "/admin/feedback", label: "Feedback", icon: "message" },
+  { href: "/admin/analytics", label: "Analytics", icon: "chart" },
+  { href: "/dashboard", label: "Member View", icon: "eye" },
+];
 
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const [viewer, cohort] = await Promise.all([getViewerProfile(), getActiveCohort()]);
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-white sticky top-0 z-50">
-        <div className="mx-auto w-full max-w-5xl px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <Link href="/admin" className="focus-ring">
-              <span className="text-sm font-semibold uppercase tracking-widest text-muted">curaious admin</span>
-            </Link>
-            {viewer ? (
-              <form action="/api/auth/sign-out" method="post">
-                <button
-                  type="submit"
-                  className="text-xs font-medium text-muted hover:text-foreground transition"
-                >
-                  Sign out
-                </button>
-              </form>
-            ) : null}
-          </div>
-          <AdminNavigation />
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-5xl px-6 py-12">{children}</main>
-    </div>
+    <AppShell variant="admin" items={ITEMS} viewer={viewer} cohort={cohort}>
+      {children}
+    </AppShell>
   );
 }

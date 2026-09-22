@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ProgressRing } from "@/components/dashboard/ProgressRing";
 import { ScheduleTimeline } from "@/components/dashboard/ScheduleTimeline";
 import { fetchInternal } from "@/lib/internalFetch";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { cohortMonthLabel, getActiveCohort } from "@/lib/cohort";
 import { getViewerProfile } from "@/lib/supabase/server";
 import type { SlotView } from "@/lib/talks";
 
@@ -42,7 +42,7 @@ function longDate(date: string) {
 
 function EmptyState({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border bg-white p-8">
+    <div className="rounded-xl border border-border bg-card p-8">
       <p className="text-sm text-muted">{children}</p>
     </div>
   );
@@ -50,10 +50,12 @@ function EmptyState({ children }: { children: React.ReactNode }) {
 
 export default async function DashboardPage() {
   const viewer = await getViewerProfile();
+  const cohort = await getActiveCohort();
+  const cohortName = cohort?.name ?? "your cohort";
 
   if (!isSupabaseConfigured) {
     return (
-      <EmptyState>Season 1 isn&rsquo;t connected to its database yet.</EmptyState>
+      <EmptyState>The app isn&rsquo;t connected to its database yet.</EmptyState>
     );
   }
 
@@ -78,30 +80,28 @@ export default async function DashboardPage() {
   }
 
   const talkSlots = slots.filter((slot) => slot.type === "talk");
-  const claimedCount = talkSlots.filter((slot) => slot.status !== "open").length;
   const weekends = new Set(slots.map((slot) => weekKey(slot.date))).size;
   const today = new Date().toISOString().slice(0, 10);
   const nextUp = slots.find((slot) => slot.date >= today) ?? slots[0];
-  const mySlot = slots.find((slot) => slot.isMine);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            {firstName ? `Welcome back, ${firstName}` : "Season 1"}
+            {firstName ? `Welcome back, ${firstName}` : cohortName}
           </h1>
           <p className="mt-1 text-muted">
             Here&rsquo;s your season schedule for {monthLabel(slots[0].date)}.
           </p>
         </div>
 
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 px-5 py-4">
+        <div className="rounded-xl border border-primary/30 bg-primary-soft px-5 py-4">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
-            Season 1
+            {cohortName}
           </p>
           <p className="mt-1 text-xl font-bold text-foreground">
-            {monthLabel(slots[0].date)}
+            {cohort ? cohortMonthLabel(cohort) : monthLabel(slots[0].date)}
           </p>
           <p className="mt-0.5 text-sm text-muted">
             {weekends} weekends · {talkSlots.length} talks · 1 cohort
@@ -112,7 +112,7 @@ export default async function DashboardPage() {
       <ScheduleTimeline slots={slots} viewerHasActiveTalk={hasActiveTalk} />
 
       <div className="grid gap-6 lg:grid-cols-5">
-        <section className="rounded-xl border border-border bg-white p-6 lg:col-span-3">
+        <section className="rounded-xl border border-border bg-card p-6 lg:col-span-3">
           <h2 className="text-lg font-bold text-foreground">Next up</h2>
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-lg bg-surface p-4">
@@ -129,14 +129,14 @@ export default async function DashboardPage() {
             !hasActiveTalk ? (
               <Link
                 href={`/dashboard/slots/${nextUp.id}/submit`}
-                className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
               >
                 Claim slot
               </Link>
             ) : nextUp.status === "approved" && nextUp.talkId ? (
               <Link
                 href={`/dashboard/talks/${nextUp.talkId}/present`}
-                className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
               >
                 View details
               </Link>
@@ -150,49 +150,11 @@ export default async function DashboardPage() {
             )}
           </div>
         </section>
-
-        <section className="rounded-xl border border-border bg-white p-6 lg:col-span-2">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-lg font-bold text-foreground">Your progress</h2>
-            <span className="text-sm text-muted">Season 1</span>
-          </div>
-
-          <div className="mt-5 flex flex-wrap items-center gap-6">
-            <ProgressRing
-              value={claimedCount}
-              total={talkSlots.length}
-              caption="Talk slots claimed"
-            />
-
-            <div className="min-w-[150px] flex-1 space-y-4">
-              <p className="text-sm text-muted">
-                {mySlot
-                  ? `You have ${mySlot.label} this season.`
-                  : "Claim a slot to present your talk for one of the upcoming sessions."}
-              </p>
-              {mySlot && viewer ? (
-                <Link
-                  href={`/dashboard/members/${viewer.id}`}
-                  className="inline-block rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface"
-                >
-                  View your talk
-                </Link>
-              ) : (
-                <Link
-                  href="#schedule"
-                  className="inline-block rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface"
-                >
-                  Browse sessions
-                </Link>
-              )}
-            </div>
-          </div>
-        </section>
       </div>
 
       <Link
         href="/dashboard/members"
-        className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-white p-6 transition hover:bg-surface"
+        className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card p-6 transition hover:bg-surface"
       >
         <div className="flex items-center gap-4">
           <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-surface text-muted">
@@ -214,7 +176,7 @@ export default async function DashboardPage() {
           <div>
             <p className="font-semibold text-foreground">Explore the cohort</p>
             <p className="text-sm text-muted">
-              See who&rsquo;s part of Curaious Season 1.
+              See who&rsquo;s part of Curaious {cohortName}.
             </p>
           </div>
         </div>

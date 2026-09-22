@@ -32,7 +32,7 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-2">curaious</p>
           <h1 className="text-3xl font-bold text-foreground">Member Login</h1>
-          <p className="text-sm text-muted mt-2">Season 1 is invite-only</p>
+          <p className="text-sm text-muted mt-2">Curaious is invite-only</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-border p-6">

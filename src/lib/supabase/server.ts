@@ -43,6 +43,7 @@ export type ViewerProfile = {
   email: string;
   name: string;
   role: "member" | "admin";
+  avatar_url: string | null;
 };
 
 /** Current user's profile row, or null if not logged in / no profile yet. */
@@ -56,7 +57,7 @@ export async function getViewerProfile(): Promise<ViewerProfile | null> {
 
   const { data } = await supabase
     .from("profiles")
-    .select("id, email, name, role")
+    .select("id, email, name, role, avatar_url")
     .eq("id", user.id)
     .maybeSingle();
 

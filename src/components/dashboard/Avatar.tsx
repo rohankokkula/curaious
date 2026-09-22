@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 const PALETTE = [
-  "bg-emerald-100 text-emerald-700",
+  "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
   "bg-sky-100 text-sky-700",
   "bg-amber-100 text-amber-700",
   "bg-violet-100 text-violet-700",
@@ -28,17 +28,30 @@ const SIZES = {
   sm: "h-8 w-8 text-xs",
   md: "h-10 w-10 text-sm",
   lg: "h-24 w-24 text-2xl",
+  xl: "h-40 w-40 text-4xl",
 };
 
 export function Avatar({
   name,
+  src,
   size = "md",
   className,
 }: {
   name: string;
+  src?: string | null;
   size?: keyof typeof SIZES;
   className?: string;
 }) {
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt={name}
+        className={cn("shrink-0 rounded-full object-cover", SIZES[size], className)}
+      />
+    );
+  }
   return (
     <span
       aria-hidden

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 const UNIQUE_VIOLATION = "23505";
 
-export async function POST(request: Request) {
+async function save(request: Request, mode: "create" | "update") {
   if (!isSupabaseConfigured || !hasServiceRoleKey) {
     return NextResponse.json(
       {
@@ -78,12 +78,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const { error } = await admin.from("ratings").insert({
-    talk_id: talk.id,
-    rater_id: userId,
+  const payload = {
     ...scores,
     comment: comment && comment.length > 0 ? comment : null,
-  });
+  };
+  const { error } =
+    mode === "create"
+      ? await admin.from("ratings").insert({ talk_id: talk.id, rater_id: userId, ...payload })
+      : await admin
+          .from("ratings")
+          .update({ ...payload, updated_at: new Date().toISOString() })
+          .eq("talk_id", talk.id)
+          .eq("rater_id", userId);
 
   if (error) {
     if (error.code === UNIQUE_VIOLATION) {
@@ -110,3 +116,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true });
 }
+
+export const POST = (request: Request) => save(request, "create");
+export const PUT = (request: Request) => save(request, "update");

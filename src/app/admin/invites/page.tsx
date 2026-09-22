@@ -3,6 +3,7 @@ import {
   InvitesTable,
   type InviteListItem,
 } from "@/components/admin/InvitesTable";
+import { getActiveCohort } from "@/lib/cohort";
 import { fetchInternal } from "@/lib/internalFetch";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -12,7 +13,7 @@ export default async function AdminInvitesPage() {
   if (!isSupabaseConfigured) {
     return (
       <p className="prose-quiet">
-        season 1 isn&rsquo;t connected to its database yet.
+        the app isn&rsquo;t connected to its database yet.
       </p>
     );
   }
@@ -24,12 +25,13 @@ export default async function AdminInvitesPage() {
     invites?: InviteListItem[];
   }>("/api/admin/invites");
 
+  const cohort = await getActiveCohort();
   const invites = body?.ok ? (body.invites ?? []) : [];
 
   return (
     <div className="space-y-8">
       <header className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Season 1</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">{cohort?.name}</p>
         <h1 className="text-4xl font-bold text-foreground mb-2">Invite Members</h1>
         <p className="text-lg text-muted max-w-2xl">
           Only these emails can sign in. You must manually add them here — we
@@ -40,7 +42,7 @@ export default async function AdminInvitesPage() {
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-1">
           <div className="sticky top-20">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <div className="bg-surface border border-border rounded-lg p-6">
               <h2 className="text-lg font-bold text-foreground mb-4">Add Member</h2>
               <AddInviteForm />
             </div>
@@ -48,10 +50,10 @@ export default async function AdminInvitesPage() {
         </div>
 
         <div className="lg:col-span-2">
-          <div className="bg-white border border-border rounded-lg p-6 shadow-sm">
+          <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-foreground">Members ({invites.length})</h2>
-              <span className="text-sm text-muted">Manage Season 1 cohort</span>
+              <span className="text-sm text-muted">Manage {cohort?.name}</span>
             </div>
 
             {!body?.ok ? (

@@ -1,8 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
   RATING_MAX,
@@ -21,155 +23,119 @@ const DEFAULT_SCORES: Scores = {
   usefulness: 7,
 };
 
-export function RatingForm({ talkId }: { talkId: string }) {
+const VALUES = Array.from({ length: RATING_MAX - RATING_MIN + 1 }, (_, i) => RATING_MIN + i);
+
+export function RatingForm({
+  talkId,
+  initial,
+}: {
+  talkId: string;
+  initial?: (Scores & { comment: string | null }) | null;
+}) {
   const router = useRouter();
-  const [scores, setScores] = useState<Scores>(DEFAULT_SCORES);
-  const [comment, setComment] = useState("");
-  const [state, setState] = useState<"idle" | "sending" | "done">("idle");
-  const [message, setMessage] = useState<string | null>(null);
+  const editing = Boolean(initial);
+  const [scores, setScores] = useState<Scores>(
+    initial
+      ? {
+          understanding: initial.understanding,
+          content: initial.content,
+          research_depth: initial.research_depth,
+          delivery: initial.delivery,
+          usefulness: initial.usefulness,
+        }
+      : DEFAULT_SCORES,
+  );
+  const [comment, setComment] = useState(initial?.comment ?? "");
+  const [sending, setSending] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (state === "sending") return;
-
-    setState("sending");
-    setMessage(null);
+    if (sending) return;
+    setSending(true);
 
     try {
       const response = await fetch("/api/ratings", {
-        method: "POST",
+        method: editing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ talkId, ...scores, comment: comment.trim() }),
       });
-
-      const body = (await response.json()) as {
-        ok?: boolean;
-        message?: string;
-      };
+      const body = (await response.json()) as { ok?: boolean; message?: string };
 
       if (!response.ok || !body.ok) {
-        setState("idle");
-        setMessage(
-          body.message || "couldn't save that. try again in a moment.",
-        );
+        toast.error(body.message || "Couldn't save that. Try again in a moment.");
+        setSending(false);
         return;
       }
 
-      setState("done");
+      toast.success(editing ? "Feedback updated" : "Feedback submitted");
+      router.push("/dashboard");
       router.refresh();
     } catch {
-      setState("idle");
-      setMessage("couldn't save that. try again in a moment.");
+      toast.error("Couldn't save that. Try again in a moment.");
+      setSending(false);
     }
   }
 
-  if (state === "done") {
-    return (
-      <div className="bg-white border border-border rounded-lg p-8 space-y-5">
-        <h2 className="text-lg font-semibold text-foreground">Feedback submitted</h2>
-        <p className="text-sm text-muted">
-          Your scores contribute to the presenter&rsquo;s average. Your note is
-          shared without your name.
-        </p>
-        <div className="pt-4">
-          <Link
-            href="/dashboard"
-            className="inline-block px-4 py-2 bg-foreground text-white text-sm font-medium rounded hover:bg-foreground/90 transition"
-          >
-            Back to calendar
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="bg-white border border-border rounded-lg p-8 space-y-6">
-      {/* Rating parameters */}
-      <div className="space-y-6">
+    <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-card p-5">
+      <h2 className="text-base font-bold">Rate the talk</h2>
+      <p className="mt-1 text-sm text-muted">Give a score for each category based on your experience.</p>
+
+      <div className="mt-6 space-y-6">
         {RATING_PARAMETERS.map((parameter) => (
-          <div key={parameter.key} className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label htmlFor={parameter.key} className="block text-sm font-medium text-foreground">
-                {parameter.label}
-              </label>
-              <span className="text-lg font-semibold text-emerald-600">
-                {scores[parameter.key]}
-              </span>
+          <fieldset key={parameter.key}>
+            <legend className="text-sm font-semibold">{parameter.label}</legend>
+            <p className="mt-0.5 text-xs text-muted">{parameter.hint}</p>
+            <div className="mt-2.5 grid grid-cols-10 gap-1 rounded-lg bg-surface p-1" role="radiogroup" aria-label={parameter.label}>
+              {VALUES.map((value) => {
+                const selected = scores[parameter.key] === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setScores((prev) => ({ ...prev, [parameter.key]: value }))}
+                    className={cn(
+                      "h-9 rounded-md border text-sm transition",
+                      selected
+                        ? "border-primary bg-primary-soft font-semibold text-primary"
+                        : "border-transparent text-muted hover:bg-card hover:text-foreground",
+                    )}
+                  >
+                    {value}
+                  </button>
+                );
+              })}
             </div>
-            <p className="text-xs text-muted">{parameter.hint}</p>
-            <input
-              id={parameter.key}
-              name={parameter.key}
-              type="range"
-              min={RATING_MIN}
-              max={RATING_MAX}
-              step={1}
-              value={scores[parameter.key]}
-              onChange={(event) =>
-                setScores((prev) => ({
-                  ...prev,
-                  [parameter.key]: Number(event.target.value),
-                }))
-              }
-              className="w-full h-2 rounded appearance-none cursor-pointer accent-emerald-600"
-            />
-            <div className="flex justify-between text-xs text-muted">
-              <span>{RATING_MIN}</span>
-              <span>{RATING_MAX}</span>
-            </div>
-          </div>
+          </fieldset>
         ))}
       </div>
 
-      {/* Comment */}
-      <div className="space-y-2 pt-2 border-t border-border">
-        <label htmlFor="comment" className="block text-sm font-medium text-foreground">
+      <div className="mt-8">
+        <label htmlFor="comment" className="text-sm font-semibold">
           Additional feedback (optional)
         </label>
-        <p className="text-xs text-muted">
-          Shared anonymously. Be constructive and honest.
-        </p>
-        <textarea
+        <p className="mt-0.5 text-xs text-muted">Share your thoughts. Be constructive and honest.</p>
+        <Textarea
           id="comment"
-          name="comment"
           value={comment}
           onChange={(event) => setComment(event.target.value)}
           placeholder="Any additional thoughts..."
           maxLength={1500}
           rows={4}
-          className="w-full px-4 py-2.5 border border-border rounded text-sm bg-white outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 resize-none"
+          className="mt-2 resize-none"
         />
-        <p className="text-xs text-muted">{comment.length}/1500</p>
+        <p className="mt-1 text-right text-xs text-muted">{comment.length}/1500</p>
       </div>
 
-      {/* Error message */}
-      {message ? (
-        <div className={cn(
-          "p-3 rounded text-sm",
-          message.includes("couldn't")
-            ? "bg-red-50 text-red-700 border border-red-200"
-            : "bg-green-50 text-green-700 border border-green-200"
-        )}>
-          {message}
-        </div>
-      ) : null}
-
-      {/* Actions */}
-      <div className="flex gap-3 pt-4 border-t border-border">
-        <Link
-          href="/dashboard"
-          className="px-4 py-2 text-sm font-medium text-foreground hover:bg-surface rounded transition"
-        >
+      <div className="mt-4 flex gap-3">
+        <Button type="button" variant="outline" onClick={() => router.push("/dashboard")}>
           Cancel
-        </Link>
-        <button
-          type="submit"
-          disabled={state === "sending"}
-          className="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-        >
-          {state === "sending" ? "Submitting…" : "Submit feedback"}
-        </button>
+        </Button>
+        <Button type="submit" disabled={sending}>
+          {sending ? "Submitting…" : editing ? "Update feedback" : "Submit feedback"}
+        </Button>
       </div>
     </form>
   );

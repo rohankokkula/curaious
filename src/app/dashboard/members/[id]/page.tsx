@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Mail, MapPin, Star } from "lucide-react";
 import { Avatar } from "@/components/dashboard/Avatar";
+import { EditProfileDialog } from "@/components/dashboard/EditProfileDialog";
 import { ProfileTabs } from "@/components/dashboard/ProfileTabs";
+import { ShareProfileButton } from "@/components/dashboard/ShareProfileButton";
+import { getActiveCohort } from "@/lib/cohort";
 import { fetchInternal } from "@/lib/internalFetch";
 import {
   emptyAggregate,
@@ -21,6 +25,11 @@ type ProfileRow = {
   name: string;
   email: string;
   role: "member" | "admin";
+  avatar_url: string | null;
+  headline: string | null;
+  location: string | null;
+  bio: string | null;
+  tags: string[] | null;
 };
 
 type TalkRow = {
@@ -63,7 +72,7 @@ function Card({
   className?: string;
 }) {
   return (
-    <div className={`rounded-xl border border-border bg-white p-6 ${className ?? ""}`}>
+    <div className={`rounded-xl border border-border bg-card p-6 ${className ?? ""}`}>
       {children}
     </div>
   );
@@ -72,7 +81,7 @@ function Card({
 function StatusBadge({ status }: { status: TalkStatus }) {
   if (status === "approved") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-800">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-1 text-[11px] font-semibold text-primary">
         <svg
           width="12"
           height="12"
@@ -91,7 +100,7 @@ function StatusBadge({ status }: { status: TalkStatus }) {
   }
 
   return (
-    <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-800">
+    <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
       Pending review
     </span>
   );
@@ -105,7 +114,7 @@ function ScoreBar({ label, value }: { label: string; value: number | null }) {
       <span className="w-28 shrink-0 text-xs text-muted">{label}</span>
       <span className="h-2 flex-1 overflow-hidden rounded-full bg-surface">
         <span
-          className="block h-full rounded-full bg-emerald-600"
+          className="block h-full rounded-full bg-primary"
           style={{ width: `${pct}%` }}
         />
       </span>
@@ -127,7 +136,7 @@ export default async function MemberProfilePage({
     return (
       <Card>
         <p className="text-sm text-muted">
-          Season 1 isn&rsquo;t connected to its database yet.
+          This app isn&rsquo;t connected to its database yet.
         </p>
       </Card>
     );
@@ -148,7 +157,7 @@ export default async function MemberProfilePage({
 
   const { data: member } = await supabase
     .from("profiles")
-    .select("id, name, email, role")
+    .select("id, name, email, role, avatar_url, headline, location, bio, tags")
     .eq("id", id)
     .maybeSingle<ProfileRow>();
 
@@ -160,6 +169,7 @@ export default async function MemberProfilePage({
     .eq("id", user.id)
     .maybeSingle<{ role: "member" | "admin" }>();
 
+  const cohort = await getActiveCohort();
   const isSelf = user.id === member.id;
   const isAdmin = viewer?.role === "admin";
   // Feedback *given* is private to its author and to admins — gated here, and
@@ -266,7 +276,7 @@ export default async function MemberProfilePage({
             <div className="mt-5">
               <Link
                 href="/dashboard"
-                className="inline-block rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                className="inline-block rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
               >
                 Browse sessions
               </Link>
@@ -298,7 +308,7 @@ export default async function MemberProfilePage({
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
                 href={`/dashboard/talks/${talk.id}/present`}
-                className="rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-white transition hover:bg-foreground/90"
+                className="rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-foreground/90"
               >
                 View presentation deck
               </Link>
@@ -342,6 +352,15 @@ export default async function MemberProfilePage({
                       / {RATING_MAX}
                     </span>
                   </p>
+                  <div className="mt-1.5 flex gap-0.5 text-amber-400">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Star
+                        key={n}
+                        className="size-5"
+                        fill={(aggregate.averages.overall ?? 0) / 2 >= n - 0.25 ? "currentColor" : "none"}
+                      />
+                    ))}
+                  </div>
                   <p className="mt-1 text-xs text-muted">
                     {aggregate.count}{" "}
                     {aggregate.count === 1 ? "response" : "responses"}
@@ -444,20 +463,50 @@ export default async function MemberProfilePage({
 
   return (
     <div className="space-y-6">
-      <Card className="bg-surface/60">
-        <div className="flex flex-wrap items-start gap-6">
-          <Avatar name={member.name} size="lg" />
-
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
-              Season 1 · {member.role === "admin" ? "Curator" : "Member"}
-            </p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">
-              {member.name}
-            </h1>
-            {isSelf || isAdmin ? (
-              <p className="mt-2 text-sm text-muted">{member.email}</p>
+      <Card className="bg-surface/60 p-6 md:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div className="flex min-w-0 flex-1 flex-wrap items-start gap-6">
+            <Avatar name={member.name} src={member.avatar_url} size="xl" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
+                {cohort?.name ?? "Cohort"} · {member.role === "admin" ? "Curator" : "Member"}
+              </p>
+              <h1 className="mt-1 text-4xl font-bold tracking-tight">{member.name}</h1>
+              {member.headline ? <p className="mt-1 text-lg text-muted">{member.headline}</p> : null}
+              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">
+                {member.location ? (
+                  <span className="inline-flex items-center gap-1.5"><MapPin className="size-4" />{member.location}</span>
+                ) : null}
+                {isSelf || isAdmin ? (
+                  <span className="inline-flex items-center gap-1.5"><Mail className="size-4" />{member.email}</span>
+                ) : null}
+              </div>
+              {member.bio ? <p className="mt-4 max-w-2xl leading-relaxed text-muted">{member.bio}</p> : null}
+              {member.tags && member.tags.length > 0 ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {member.tags.map((tag) => (
+                    <span key={tag} className="rounded-full bg-card px-3 py-1 text-sm text-muted ring-1 ring-border">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {isSelf ? (
+              <EditProfileDialog
+                profile={{
+                  name: member.name,
+                  headline: member.headline,
+                  location: member.location,
+                  bio: member.bio,
+                  tags: member.tags ?? [],
+                  avatar_url: member.avatar_url,
+                }}
+              />
             ) : null}
+            <ShareProfileButton />
           </div>
         </div>
       </Card>

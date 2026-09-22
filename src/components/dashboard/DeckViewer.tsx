@@ -86,7 +86,7 @@ export function DeckViewer({ talkId }: { talkId: string }) {
           type="button"
           onClick={toggleFullscreen}
           disabled={state !== "ready"}
-          className="focus-ring rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="focus-ring rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isFullscreen ? "exit fullscreen" : "present fullscreen"}
         </button>

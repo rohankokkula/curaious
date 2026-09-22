@@ -17,7 +17,7 @@ function dateParts(date: string) {
 
 function CheckBadge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-medium text-emerald-800">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2 py-1 text-[11px] font-medium text-primary">
       <svg
         width="12"
         height="12"
@@ -50,7 +50,7 @@ function SlotAction({
     return slot.talkId ? (
       <Link
         href={`/dashboard/talks/${slot.talkId}/present`}
-        className="block rounded-md bg-emerald-600 px-3 py-2 text-center text-xs font-semibold text-white transition hover:bg-emerald-700"
+        className="block rounded-md bg-primary px-3 py-2 text-center text-xs font-semibold text-primary-foreground transition hover:bg-primary/90"
       >
         View details
       </Link>
@@ -80,7 +80,7 @@ function SlotAction({
   return (
     <Link
       href={`/dashboard/slots/${slot.id}/submit`}
-      className="block rounded-md bg-emerald-600 px-3 py-2 text-center text-xs font-semibold text-white transition hover:bg-emerald-700"
+      className="block rounded-md bg-primary px-3 py-2 text-center text-xs font-semibold text-primary-foreground transition hover:bg-primary/90"
     >
       Claim slot
     </Link>
@@ -97,11 +97,11 @@ export function ScheduleTimeline({
   return (
     <section
       id="schedule"
-      className="rounded-xl border border-border bg-white p-6"
+      className="rounded-xl border border-border bg-card p-6"
     >
       <h2 className="text-lg font-bold text-foreground">Season schedule</h2>
       <p className="mt-1 text-sm text-muted">
-        All key dates for Curaious Season 1. Claim one talk slot for the season.
+        All key dates for Curaious. Claim one talk slot for the season.
       </p>
 
       <div className="mt-6 flex gap-3 overflow-x-auto pb-2">
@@ -115,17 +115,17 @@ export function ScheduleTimeline({
               className={cn(
                 "flex min-w-[148px] flex-1 flex-col rounded-lg border p-4",
                 isSession
-                  ? "border-emerald-200 bg-emerald-50/60"
+                  ? "border-primary/30 bg-primary-soft"
                   : slot.isMine
-                    ? "border-emerald-300 bg-white"
-                    : "border-border bg-white",
+                    ? "border-primary bg-card"
+                    : "border-border bg-card",
               )}
             >
               <span
                 className={cn(
                   "mx-auto mb-3 h-1.5 w-1.5 rounded-full",
                   slot.status === "open" && !isSession
-                    ? "bg-emerald-500"
+                    ? "bg-primary-soft0"
                     : "bg-border",
                 )}
               />

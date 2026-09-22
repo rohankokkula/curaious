@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Avatar } from "@/components/dashboard/Avatar";
+import { getActiveCohort } from "@/lib/cohort";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -9,14 +10,15 @@ type ProfileRow = {
   id: string;
   name: string;
   role: "member" | "admin";
+  avatar_url: string | null;
 };
 
 export default async function MembersPage() {
   if (!isSupabaseConfigured) {
     return (
-      <div className="rounded-xl border border-border bg-white p-8">
+      <div className="rounded-xl border border-border bg-card p-8">
         <p className="text-sm text-muted">
-          Season 1 isn&rsquo;t connected to its database yet.
+          This app isn&rsquo;t connected to its database yet.
         </p>
       </div>
     );
@@ -27,9 +29,14 @@ export default async function MembersPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const cohort = await getActiveCohort();
+  const { data: memberships } = cohort
+    ? await supabase.from("cohort_members").select("profile_id").eq("cohort_id", cohort.id).eq("status", "active")
+    : { data: [] };
   const { data: members } = await supabase
     .from("profiles")
-    .select("id, name, role")
+    .select("id, name, role, avatar_url")
+    .in("id", (memberships ?? []).map((m) => m.profile_id))
     .order("name", { ascending: true })
     .returns<ProfileRow[]>();
 
@@ -39,18 +46,18 @@ export default async function MembersPage() {
     <div className="space-y-6">
       <header>
         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
-          Season 1
+          {cohort?.name}
         </p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">
           Members
         </h1>
         <p className="mt-1 text-muted">
-          Everyone in the Curaious Season 1 cohort.
+          Everyone in the Curaious {cohort?.name} cohort.
         </p>
       </header>
 
       {roster.length === 0 ? (
-        <div className="rounded-xl border border-border bg-white p-8">
+        <div className="rounded-xl border border-border bg-card p-8">
           <p className="text-sm text-muted">
             Nobody has signed in yet. Members appear here after their first login.
           </p>
@@ -61,9 +68,9 @@ export default async function MembersPage() {
             <Link
               key={member.id}
               href={`/dashboard/members/${member.id}`}
-              className="flex items-center gap-3 rounded-xl border border-border bg-white p-4 transition hover:bg-surface"
+              className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 transition hover:bg-surface"
             >
-              <Avatar name={member.name} />
+              <Avatar name={member.name} src={member.avatar_url} />
               <div className="min-w-0">
                 <p className="truncate font-semibold text-foreground">
                   {member.name}
