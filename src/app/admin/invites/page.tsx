@@ -34,7 +34,7 @@ export default async function AdminInvitesPage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">{cohort?.name}</p>
         <h1 className="text-4xl font-bold text-foreground mb-2">Invite Members</h1>
         <p className="text-lg text-muted max-w-2xl">
-          Only these emails can sign in. You must manually add them here — we
+          Only these emails can sign in. You must manually add them here; we
           won&rsquo;t email them automatically.
         </p>
       </header>

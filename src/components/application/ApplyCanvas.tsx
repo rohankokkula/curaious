@@ -372,7 +372,7 @@ export function ApplyCanvas({
           <FormShell direction={direction}>
             <LargeTextarea
               label="what does your week usually look like right now?"
-              helper="optional — but helpful if you want to add context."
+              helper="optional, but helpful if you want to add context."
               name="currentWork"
               value={data.currentWork}
               onChange={(event) =>
@@ -570,7 +570,7 @@ export function ApplyCanvas({
           <FormShell direction={direction}>
             <LargeTextarea
               label="anything you want to show us?"
-              helper="optional links — github, portfolio, project, research, linkedin post. one per line is fine."
+              helper="optional links: github, portfolio, project, research, linkedin post. one per line is fine."
               name="portfolioOrProjectLinks"
               value={data.portfolioOrProjectLinks}
               onChange={(event) =>

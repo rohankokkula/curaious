@@ -17,10 +17,10 @@ function DialogContent({
 }: React.ComponentProps<typeof D.Content> & { title: string }) {
   return (
     <D.Portal>
-      <D.Overlay className="fixed inset-0 z-50 bg-black/50" />
+      <D.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-overlay-hide data-[state=open]:animate-overlay-show" />
       <D.Content
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-6 shadow-xl",
+          "fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md rounded-xl border border-border bg-card p-6 shadow-xl data-[state=closed]:animate-dialog-hide data-[state=open]:animate-dialog-show",
           className,
         )}
         {...props}

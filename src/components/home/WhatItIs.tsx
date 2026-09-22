@@ -22,18 +22,15 @@ export function WhatItIs() {
         <div className="space-y-6">
           <p data-reveal className="prose-quiet">
             it&apos;s a group where you spend enough time with the same nine
-            people to actually know what they&apos;re working on, what
-            they&apos;re learning, and what they&apos;re curious about.
+            people to actually know what they&apos;re working on.
           </p>
           <p data-reveal className="prose-quiet">
-            ten people from very different backgrounds and very different parts
-            of the world, all curious about the same thing. students, founders,
-            developers, pms, researchers, designers, open source contributors,
-            and people quietly experimenting with ai day to day.
+            students, founders, researchers, designers. ten different
+            backgrounds, all curious about the same thing.
           </p>
           <p data-reveal className="text-base leading-relaxed text-foreground md:text-lg">
-            no audience, no keynote, no networking round. just a table small
-            enough that everyone has to show up as themselves.
+            no audience, no keynote. just a table small enough that everyone
+            has to show up as themselves.
           </p>
         </div>
       </div>

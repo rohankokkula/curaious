@@ -6,23 +6,19 @@ import { useScrollReveal } from "@/lib/useScrollReveal";
 const PAYOFFS = [
   {
     who: "a founder",
-    what: "could walk out with their first handful of real users.",
+    what: "walks out with their first handful of real users.",
   },
   {
     who: "a student",
-    what: "could get honest feedback on their project instead of polite encouragement.",
+    what: "gets honest feedback instead of polite encouragement.",
   },
   {
     who: "a developer",
-    what: "could find the collaborator they've been trying to find on the internet.",
+    what: "finds the collaborator they'd been looking for.",
   },
   {
     who: "a researcher",
-    what: "could find nine people who actually care what their work is about.",
-  },
-  {
-    who: "someone who knows a tool cold",
-    what: "could teach the rest of the group in an afternoon.",
+    what: "finds nine people who actually care what the work is about.",
   },
 ];
 

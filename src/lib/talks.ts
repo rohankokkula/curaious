@@ -9,21 +9,27 @@ export type TalkStatus = (typeof TALK_STATUSES)[number];
 export const SLOT_TYPES = ["kickoff", "talk", "recognition"] as const;
 export type SlotType = (typeof SLOT_TYPES)[number];
 
-/** What a member is allowed to know about a slot on the calendar. */
-export type SlotStatus = "open" | "pending" | "approved";
+/** A single talk claim inside a slot, as much of it as a member is allowed to see. */
+export type SlotTalk = {
+  talkId: string;
+  /** Only ever set once approved — pending claims stay anonymous unless it's yours. */
+  title: string | null;
+  presenterName: string | null;
+  status: "pending" | "approved";
+  isMine: boolean;
+};
 
+/** A slot can hold more than one talk — e.g. two or three lightning talks in one session. */
 export type SlotView = {
   id: string;
   date: string;
   label: string;
   type: SlotType;
-  status: SlotStatus;
-  /** Only ever set once the talk is approved — pending claims stay anonymous. */
-  presenterName: string | null;
-  title: string | null;
-  /** Set when the viewer is the presenter of this slot's talk. */
-  isMine?: boolean;
-  talkId?: string | null;
+  capacity: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  talks: SlotTalk[];
+  isFull: boolean;
 };
 
 export const talkSubmissionSchema = z.object({

@@ -19,11 +19,20 @@ export async function PATCH(request: Request) {
     );
   }
 
-  const { name, headline, location, bio, tags } = parsed.data;
+  const { name, headline, location, bio, tags, linkedinUrl, twitterUrl, githubUrl } = parsed.data;
   // Runs as the user, so the profiles_update_own RLS policy is the enforcement.
   const { error } = await supabase
     .from("profiles")
-    .update({ name, headline: headline || null, location: location || null, bio: bio || null, tags })
+    .update({
+      name,
+      headline: headline || null,
+      location: location || null,
+      bio: bio || null,
+      tags,
+      linkedin_url: linkedinUrl || null,
+      twitter_url: twitterUrl || null,
+      github_url: githubUrl || null,
+    })
     .eq("id", user.id);
 
   if (error) {

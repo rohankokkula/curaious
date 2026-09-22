@@ -1,7 +1,10 @@
 /**
  * Shared editorial content for the homepage.
- * Plain data only — no layout, no animation, no 3D math.
+ * Plain data only, no layout, no animation, no 3D math.
  */
+
+/** Every "apply" surface on the public site points here instead of an in-house form. */
+export const INVITE_FORM_URL = "https://forms.gle/W59rTYSjBfYP14FF6";
 
 export interface Persona {
   /** Short one-line description of someone who could be at the table. */
@@ -9,20 +12,17 @@ export interface Persona {
 }
 
 /**
- * "Who you might sit next to" — the only place persona examples appear on the
- * site. Deliberately framed as people, not as presentation topics.
+ * "Who you might sit next to." Framed as people, not as presentation topics.
+ * Kept short on purpose: six is enough to make the point without turning the
+ * section into a scroll.
  */
 export const PERSONAS: Persona[] = [
-  { line: "someone who launched their first product on product hunt last month" },
-  { line: "a college student looking for someone to sanity-check their project" },
-  { line: "someone automating half their week with claude and a pile of scripts" },
-  { line: "someone who actually understands video generation pipelines, higgsfield and all" },
-  { line: "someone working on ai security, thinking about how models get broken" },
-  { line: "someone who reads eval papers for fun, and is halfway through writing one" },
-  { line: "someone prototyping with voice models and still chasing the latency" },
-  { line: "someone maintaining an open-source repo, quietly looking for contributors" },
-  { line: "someone building an ai sre tool that makes sense of telemetry data" },
-  { line: "someone who isn't building anything yet and just wants to know what's real" },
+  { line: "someone who shipped their first product last month" },
+  { line: "a student sanity-checking a project with real users" },
+  { line: "someone automating half their week with a pile of scripts" },
+  { line: "someone who actually understands video generation pipelines" },
+  { line: "someone thinking hard about how models get broken" },
+  { line: "someone who reads eval papers for fun" },
 ];
 
 export interface FeedbackCategory {
@@ -31,28 +31,29 @@ export interface FeedbackCategory {
 }
 
 /**
- * What the room rates a talk on. Mechanism description only — no scores,
- * no per-person numbers.
+ * What the room rates a talk on, matching the five categories in the actual
+ * feedback form (see RATING_PARAMETERS in lib/ratings.ts) so this page never
+ * says something the product doesn't do.
  */
 export const FEEDBACK_CATEGORIES: FeedbackCategory[] = [
   {
-    title: "clarity",
-    description: "how easy it was to follow if you'd never seen the topic before",
-  },
-  {
     title: "content",
-    description: "whether what was covered was relevant and well put together",
+    description: "was it clear, accurate, worth the room's time",
   },
   {
     title: "depth",
-    description: "how far past the surface the research actually went",
+    description: "how far past the surface it actually went",
   },
   {
     title: "delivery",
-    description: "how it was presented — pace, confidence, holding the room",
+    description: "pace, confidence, whether it held the room",
   },
   {
-    title: "usefulness",
-    description: "whether anyone walked away with something they can use",
+    title: "takeaways",
+    description: "whether anyone walks away with something to use",
+  },
+  {
+    title: "overall",
+    description: "the room's one honest read on the talk",
   },
 ];

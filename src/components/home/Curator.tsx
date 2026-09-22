@@ -31,7 +31,7 @@ export function Curator() {
 
         <div className="space-y-6">
           <p data-reveal className="prose-quiet">
-            i put each cohort together myself — i read the applications, pick the
+            i put each cohort together myself. i read the applications, pick the
             ten, and try to build a room where the mix of people is the point.
             then i stay in it for the whole season.
           </p>

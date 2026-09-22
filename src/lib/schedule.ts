@@ -7,6 +7,7 @@ export const slotInputSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "pick a date"),
   type: z.enum(SLOT_TYPES),
   label: z.string().trim().min(1, "give it a label").max(60),
+  capacity: z.number().int().min(1).max(10).default(2),
   startsAt: time,
   endsAt: time,
 });
@@ -36,5 +37,6 @@ export type EditorSlot = {
   startsAt: string | null;
   endsAt: string | null;
   sortOrder: number;
-  talk: { id: string; title: string; presenter: string; status: "pending" | "approved" } | null;
+  capacity: number;
+  talks: { id: string; title: string; presenter: string; status: "pending" | "approved" }[];
 };

@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarDays, Mic, MessageSquare, TrendingUp } from "lucide-react";
 import { Section, SectionKicker, SectionTitle } from "@/components/home/Section";
 import { FEEDBACK_CATEGORIES } from "@/lib/content";
 import { useScrollReveal } from "@/lib/useScrollReveal";
@@ -7,23 +8,23 @@ import { useScrollReveal } from "@/lib/useScrollReveal";
 const CADENCE = [
   {
     step: "four weekends",
-    detail:
-      "a season runs across four weekends with the same ten people every time. nothing resets, nobody new walks in halfway.",
+    detail: "same ten people, every time. nothing resets.",
+    icon: CalendarDays,
   },
   {
     step: "one or two take the floor",
-    detail:
-      "each weekend, one or two of the ten present a topic — something they know well, or something they're still working out.",
+    detail: "something they know well, or something they're still working out.",
+    icon: Mic,
   },
   {
     step: "the other nine respond",
-    detail:
-      "everyone else in the room gives structured feedback on the same set of parameters, plus notes in their own words.",
+    detail: "structured feedback, plus notes in their own words.",
+    icon: MessageSquare,
   },
   {
-    step: "it follows you through the season",
-    detail:
-      "feedback is collected every weekend, so by the end you have a record of how you present — not just a vague memory of it.",
+    step: "it follows you",
+    detail: "by the end, a record of how you present, not a memory of it.",
+    icon: TrendingUp,
   },
 ];
 
@@ -52,11 +53,9 @@ export function HowItWorks() {
       </div>
 
       <ol ref={cadenceRef} className="mt-14 grid gap-10 md:mt-20 md:grid-cols-2 md:gap-x-16 md:gap-y-14">
-        {CADENCE.map((item, index) => (
+        {CADENCE.map((item) => (
           <li key={item.step} className="border-t border-border/40 pt-6">
-            <p className="font-mono text-[11px] tracking-[0.12em] text-accent/70">
-              {String(index + 1).padStart(2, "0")}
-            </p>
+            <item.icon aria-hidden className="size-5 text-accent" strokeWidth={1.5} />
             <h3 className="heading-display mt-3 text-xl md:text-2xl">
               {item.step}
             </h3>

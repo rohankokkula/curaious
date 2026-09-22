@@ -1,29 +1,31 @@
 "use client";
 
+import { BookOpen, Lightbulb, MonitorPlay, Sparkles, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { StarRating } from "@/components/dashboard/StarRating";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-import {
-  RATING_MAX,
-  RATING_MIN,
-  RATING_PARAMETERS,
-  type RatingParameterKey,
-} from "@/lib/ratings";
+import { RATING_PARAMETERS, type RatingParameterKey } from "@/lib/ratings";
 
 type Scores = Record<RatingParameterKey, number>;
 
 const DEFAULT_SCORES: Scores = {
-  understanding: 7,
-  content: 7,
-  research_depth: 7,
-  delivery: 7,
-  usefulness: 7,
+  understanding: 0,
+  content: 0,
+  research_depth: 0,
+  delivery: 0,
+  usefulness: 0,
 };
 
-const VALUES = Array.from({ length: RATING_MAX - RATING_MIN + 1 }, (_, i) => RATING_MIN + i);
+const ICONS: Record<(typeof RATING_PARAMETERS)[number]["icon"], typeof BookOpen> = {
+  content: BookOpen,
+  depth: Lightbulb,
+  delivery: MonitorPlay,
+  takeaways: Sparkles,
+  overall: Users,
+};
 
 export function RatingForm({
   talkId,
@@ -47,10 +49,11 @@ export function RatingForm({
   );
   const [comment, setComment] = useState(initial?.comment ?? "");
   const [sending, setSending] = useState(false);
+  const complete = RATING_PARAMETERS.every((p) => scores[p.key] > 0);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (sending) return;
+    if (sending || !complete) return;
     setSending(true);
 
     try {
@@ -68,7 +71,6 @@ export function RatingForm({
       }
 
       toast.success(editing ? "Feedback updated" : "Feedback submitted");
-      router.push("/dashboard");
       router.refresh();
     } catch {
       toast.error("Couldn't save that. Try again in a moment.");
@@ -78,65 +80,53 @@ export function RatingForm({
 
   return (
     <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-card p-5">
-      <h2 className="text-base font-bold">Rate the talk</h2>
-      <p className="mt-1 text-sm text-muted">Give a score for each category based on your experience.</p>
+      <h2 className="text-base font-bold">Your feedback</h2>
+      <p className="mt-1 text-sm text-muted">Rate this talk across {RATING_PARAMETERS.length} parameters</p>
 
-      <div className="mt-6 space-y-6">
-        {RATING_PARAMETERS.map((parameter) => (
-          <fieldset key={parameter.key}>
-            <legend className="text-sm font-semibold">{parameter.label}</legend>
-            <p className="mt-0.5 text-xs text-muted">{parameter.hint}</p>
-            <div className="mt-2.5 grid grid-cols-10 gap-1 rounded-lg bg-surface p-1" role="radiogroup" aria-label={parameter.label}>
-              {VALUES.map((value) => {
-                const selected = scores[parameter.key] === value;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    onClick={() => setScores((prev) => ({ ...prev, [parameter.key]: value }))}
-                    className={cn(
-                      "h-9 rounded-md border text-sm transition",
-                      selected
-                        ? "border-primary bg-primary-soft font-semibold text-primary"
-                        : "border-transparent text-muted hover:bg-card hover:text-foreground",
-                    )}
-                  >
-                    {value}
-                  </button>
-                );
-              })}
+      <div className="mt-5 space-y-4">
+        {RATING_PARAMETERS.map((parameter) => {
+          const Icon = ICONS[parameter.icon];
+          return (
+            <div key={parameter.key} className="flex items-start gap-3">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                <Icon className="size-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">{parameter.label}</p>
+                <p className="mt-0.5 text-xs text-muted">{parameter.hint}</p>
+                <div className="mt-1.5">
+                  <StarRating
+                    label={parameter.label}
+                    value={scores[parameter.key]}
+                    onChange={(v) => setScores((prev) => ({ ...prev, [parameter.key]: v }))}
+                  />
+                </div>
+              </div>
             </div>
-          </fieldset>
-        ))}
+          );
+        })}
       </div>
 
-      <div className="mt-8">
+      <div className="mt-6 border-t border-border pt-5">
         <label htmlFor="comment" className="text-sm font-semibold">
-          Additional feedback (optional)
+          Additional comments (optional)
         </label>
-        <p className="mt-0.5 text-xs text-muted">Share your thoughts. Be constructive and honest.</p>
         <Textarea
           id="comment"
           value={comment}
           onChange={(event) => setComment(event.target.value)}
-          placeholder="Any additional thoughts..."
+          placeholder="Share your thoughts, suggestions or feedback..."
           maxLength={1500}
-          rows={4}
+          rows={3}
           className="mt-2 resize-none"
         />
         <p className="mt-1 text-right text-xs text-muted">{comment.length}/1500</p>
       </div>
 
-      <div className="mt-4 flex gap-3">
-        <Button type="button" variant="outline" onClick={() => router.push("/dashboard")}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={sending}>
-          {sending ? "Submitting…" : editing ? "Update feedback" : "Submit feedback"}
-        </Button>
-      </div>
+      <Button type="submit" disabled={sending || !complete} className="mt-4 w-full">
+        {sending ? "Submitting…" : editing ? "Update feedback" : "Submit feedback"}
+      </Button>
+      <p className="mt-2 text-center text-xs text-muted">Your feedback is anonymous.</p>
     </form>
   );
 }

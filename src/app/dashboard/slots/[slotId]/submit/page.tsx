@@ -12,6 +12,7 @@ type SlotRow = {
   slot_date: string;
   slot_type: string;
   label: string;
+  capacity: number;
 };
 
 function Notice({
@@ -65,7 +66,7 @@ export default async function SubmitTalkPage({
 
   const { data: slot } = await supabase
     .from("session_slots")
-    .select("id, slot_date, slot_type, label")
+    .select("id, slot_date, slot_type, label, capacity")
     .eq("id", slotId)
     .maybeSingle<SlotRow>();
 
@@ -74,7 +75,7 @@ export default async function SubmitTalkPage({
   if (slot.slot_type !== "talk") {
     return (
       <Notice heading="not a talk slot">
-        {slot.label} isn&rsquo;t a slot anyone presents in — it belongs to the
+        {slot.label} isn&rsquo;t a slot anyone presents in. It belongs to the
         whole table.
       </Notice>
     );
@@ -83,18 +84,29 @@ export default async function SubmitTalkPage({
   // Under RLS this only sees approved talks plus the viewer's own, which is
   // deliberate: another member's pending claim stays anonymous. /api/talks
   // does the authoritative open/taken check and answers 409 if it lost a race.
-  const { data: visibleClaim } = await supabase
+  const { data: visibleClaims } = await supabase
     .from("talks")
     .select("id, status, presenter_id")
     .eq("slot_id", slot.id)
     .neq("status", "rejected")
-    .maybeSingle<{ id: string; status: string; presenter_id: string }>();
+    .returns<{ id: string; status: string; presenter_id: string }[]>();
 
-  if (visibleClaim) {
+  const claims = visibleClaims ?? [];
+  const mine = claims.find((claim) => claim.presenter_id === user.id);
+
+  if (mine) {
     return (
       <Notice heading="this slot is taken">
-        {visibleClaim.presenter_id === user.id
-          ? "this is your slot already. your submission is on your profile."
+        this is your slot already. your submission is on your profile.
+      </Notice>
+    );
+  }
+
+  if (claims.length >= slot.capacity) {
+    return (
+      <Notice heading="this slot is full">
+        {slot.capacity > 1
+          ? `all ${slot.capacity} spots here are taken. pick another open slot.`
           : "someone else has this one. pick another open slot."}
       </Notice>
     );
@@ -116,20 +128,6 @@ export default async function SubmitTalkPage({
   }
 
   return (
-    <div className="max-w-2xl space-y-8">
-      <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted">
-          {slot.label} · {formatSlotDate(slot.slot_date)}
-        </p>
-        <h1 className="text-3xl font-bold text-foreground">
-          Submit your talk
-        </h1>
-        <p className="text-sm text-muted">
-          Add your title, description, and PDF deck. An admin reviews submissions before your talk appears on the calendar.
-        </p>
-      </header>
-
-      <TalkSubmitForm slotId={slot.id} />
-    </div>
+    <TalkSubmitForm slotId={slot.id} slotLabel={slot.label} slotDate={formatSlotDate(slot.slot_date)} />
   );
 }

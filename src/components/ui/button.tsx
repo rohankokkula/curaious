@@ -4,15 +4,15 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg text-sm font-semibold whitespace-nowrap transition outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg text-sm font-semibold tracking-[-0.01em] whitespace-nowrap transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        dark: "bg-foreground text-background hover:bg-foreground/90",
-        outline: "border border-border bg-card text-foreground hover:bg-surface",
+        default: "bg-primary text-primary-foreground shadow-sm hover:shadow-md hover:bg-primary/90",
+        dark: "bg-foreground text-background shadow-sm hover:shadow-md hover:bg-foreground/90",
+        outline: "border border-border bg-card text-foreground hover:border-foreground/20 hover:bg-surface",
         ghost: "text-muted hover:bg-surface hover:text-foreground",
-        destructive: "bg-destructive text-white hover:bg-destructive/90",
+        destructive: "bg-destructive text-white shadow-sm hover:shadow-md hover:bg-destructive/90",
       },
       size: {
         default: "h-10 px-4",

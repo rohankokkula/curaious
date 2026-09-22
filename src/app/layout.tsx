@@ -27,15 +27,13 @@ const mono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "curaious — nine people who know what you're working on",
-    template: "%s",
+    default: "curaious",
+    template: "%s · curaious",
   },
-  description:
-    "a small AI learning circle in hyderabad. ten people, four weekends, one table. cohort 01 has 10 seats.",
+  description: "a private circle of ten, meeting for four weekends to build in public and give each other real feedback.",
   openGraph: {
-    title: "curaious — nine people who know what you're working on",
-    description:
-      "ten people, four weekends, one table. a small AI learning circle in hyderabad — you present once, the other nine give you real feedback.",
+    title: "curaious",
+    description: "a private circle of ten, meeting for four weekends to build in public and give each other real feedback.",
     type: "website",
   },
 };

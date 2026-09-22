@@ -11,6 +11,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 export const dynamic = "force-dynamic";
 
 type RatingRow = {
+  rater_id: string;
   understanding: number;
   content: number;
   research_depth: number;
@@ -24,11 +25,11 @@ function round(value: number) {
 }
 
 /**
- * Aggregated feedback for one talk. Runs with the service-role client so it can
- * read every rating, but only ever returns averages and comment text — rater
- * identity is dropped before the response is built. The base `ratings` table
- * stays locked to rater-or-admin, so this route is the only way peer feedback
- * becomes visible, and it can't leak who said what.
+ * Aggregated feedback for one talk. Runs with the service-role client so it
+ * can read every rating — the base `ratings` table stays locked to
+ * rater-or-admin, so this route is the only way peer feedback becomes
+ * visible. Comments carry the rater's name; feedback here is attributed, not
+ * anonymous.
  */
 export async function GET(
   _request: Request,
@@ -60,10 +61,8 @@ export async function GET(
 
   const { data, error } = await admin
     .from("ratings")
-    // No rater_id, no created_at: nothing that could be correlated back to a
-    // person. Ordering by id keeps it stable but non-chronological.
     .select(
-      "understanding, content, research_depth, delivery, usefulness, comment",
+      "rater_id, understanding, content, research_depth, delivery, usefulness, comment",
     )
     .eq("talk_id", talk.id)
     .order("id", { ascending: true })
@@ -102,9 +101,26 @@ export async function GET(
     overallTotal / (rows.length * RATING_PARAMETERS.length),
   );
 
-  aggregate.comments = rows
-    .map((row) => row.comment?.trim())
-    .filter((comment): comment is string => Boolean(comment));
+  const commentRows = rows.filter((row) => row.comment?.trim());
+
+  if (commentRows.length > 0) {
+    const { data: raters } = await admin
+      .from("profiles")
+      .select("id, name, avatar_url")
+      .in("id", commentRows.map((row) => row.rater_id))
+      .returns<{ id: string; name: string; avatar_url: string | null }[]>();
+
+    const raterById = new Map((raters ?? []).map((r) => [r.id, r]));
+
+    aggregate.comments = commentRows.map((row) => {
+      const rater = raterById.get(row.rater_id);
+      return {
+        raterName: rater?.name ?? "A member",
+        raterAvatarUrl: rater?.avatar_url ?? null,
+        text: row.comment!.trim(),
+      };
+    });
+  }
 
   return NextResponse.json({ ok: true, talkId: talk.id, aggregate });
 }

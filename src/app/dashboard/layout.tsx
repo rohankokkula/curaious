@@ -10,11 +10,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const items: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", icon: "home", exact: true },
-    ...(viewer
-      ? [{ href: `/dashboard/members/${viewer.id}`, label: "My Profile", icon: "user" as const }]
-      : []),
     { href: "/dashboard/schedule", label: "Schedule", icon: "calendar" },
+    { href: "/dashboard/talks", label: "Talks", icon: "talks" },
     { href: "/dashboard/members", label: "Members", icon: "users" },
+    { href: "/dashboard/resources", label: "Resources", icon: "resources" },
     ...(viewer?.role === "admin" ? [{ href: "/admin", label: "Admin", icon: "shield" as const }] : []),
   ];
 

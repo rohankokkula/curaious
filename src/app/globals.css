@@ -9,26 +9,30 @@
   --accent-soft: rgba(212, 98, 58, 0.08);
   --surface: #f9fafb;
   --card: #ffffff;
-  --primary: #059669;
-  --primary-foreground: #ffffff;
-  --primary-soft: #ecfdf5;
+  --primary: #18181b;
+  --primary-foreground: #fafafa;
+  --primary-soft: #f1f1f3;
   --destructive: #dc2626;
+  --success: #15803d;
+  --success-soft: #f0fdf4;
   color-scheme: light;
 }
 
 .dark {
-  --background: #0b0f14;
-  --foreground: #e5e7eb;
-  --muted: #9ca3af;
-  --border: #232b36;
-  --accent: #e57a55;
-  --accent-soft: rgba(229, 122, 85, 0.14);
-  --surface: #121821;
-  --card: #10151c;
-  --primary: #10b981;
-  --primary-foreground: #04130d;
-  --primary-soft: rgba(16, 185, 129, 0.14);
+  --background: #0b0c0e;
+  --foreground: #e4e4e7;
+  --muted: #9a9aa2;
+  --border: #26262b;
+  --accent: #c9c9d1;
+  --accent-soft: rgba(201, 201, 209, 0.1);
+  --surface: #141417;
+  --card: #18181b;
+  --primary: #e4e4e7;
+  --primary-foreground: #101012;
+  --primary-soft: rgba(228, 228, 231, 0.12);
   --destructive: #f87171;
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, 0.12);
   color-scheme: dark;
 }
 
@@ -47,6 +51,8 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-soft: var(--primary-soft);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
   --font-sans: var(--font-body);
   --font-serif: var(--font-display);
   --font-mono: var(--font-mono);
@@ -67,6 +73,74 @@ body {
 ::selection {
   background: var(--accent-soft);
   color: var(--foreground);
+}
+
+/* ── Shared motion primitives ────────────────────────────────────────────
+   Kept intentionally small and quick (120-220ms) — the goal is "the UI
+   acknowledged what I did", not decoration. Radix components drive these
+   through their own data-state attribute, so open/close both animate and
+   Radix waits for the animation to finish before unmounting. Respects
+   prefers-reduced-motion by collapsing everything to an instant, no-motion
+   fade so nothing is forced on people who've asked their OS to avoid it. */
+@keyframes overlay-show {
+  from { opacity: 0; }
+}
+@keyframes overlay-hide {
+  to { opacity: 0; }
+}
+@keyframes content-show {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+}
+@keyframes content-hide {
+  to { opacity: 0; transform: scale(0.96) translateY(-4px); }
+}
+/* Centered-dialog variant: the resting transform (centering) has to live
+   inside the keyframe itself, since the animation owns `transform` for as
+   long as the element is mounted. */
+@keyframes dialog-show {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes dialog-hide {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+}
+@keyframes drawer-show {
+  from { transform: translateX(-100%); }
+}
+@keyframes drawer-hide {
+  to { transform: translateX(-100%); }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
+.animate-overlay-show { animation: overlay-show 150ms ease-out; }
+.animate-overlay-hide { animation: overlay-hide 150ms ease-in forwards; }
+.animate-content-show { animation: content-show 160ms cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-content-hide { animation: content-hide 120ms ease-in forwards; }
+.animate-dialog-show { animation: dialog-show 180ms cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-dialog-hide { animation: dialog-hide 150ms ease-in forwards; }
+.animate-drawer-show { animation: drawer-show 220ms cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-drawer-hide { animation: drawer-hide 180ms ease-in forwards; }
+.animate-fade-up { animation: fade-up 260ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-fade-in { animation: fade-in 200ms ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-overlay-show, .animate-overlay-hide, .animate-content-show, .animate-content-hide,
+  .animate-drawer-show, .animate-drawer-hide, .animate-fade-up, .animate-fade-in {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+    transform: none !important;
+  }
+  .animate-dialog-show, .animate-dialog-hide {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+    transform: translate(-50%, -50%) !important;
+  }
 }
 
 .heading-display {

@@ -95,7 +95,7 @@ export async function POST(request: Request) {
       {
         ok: false,
         error: "deck_not_pdf",
-        message: "pdf only, please — it's what the fullscreen viewer expects.",
+        message: "pdf only, please, it's what the fullscreen viewer expects.",
       },
       { status: 400 },
     );
@@ -116,9 +116,9 @@ export async function POST(request: Request) {
 
   const { data: slot } = await admin
     .from("session_slots")
-    .select("id, slot_type")
+    .select("id, slot_type, capacity")
     .eq("id", slotId)
-    .maybeSingle<{ id: string; slot_type: string }>();
+    .maybeSingle<{ id: string; slot_type: string; capacity: number }>();
 
   if (!slot || slot.slot_type !== "talk") {
     return NextResponse.json(
@@ -131,17 +131,17 @@ export async function POST(request: Request) {
     );
   }
 
-  // Authoritative re-checks. The partial unique indexes below are the real
-  // guard under concurrency; these two only exist to produce a kinder message.
-  const { data: slotTaken } = await admin
+  // Authoritative re-check. The unique index on (presenter_id) below is the
+  // real guard under concurrency for "one talk per person"; a slot filling up
+  // concurrently can still race past this count, so the insert can still 409.
+  const { count: slotCount } = await admin
     .from("talks")
-    .select("id")
+    .select("id", { count: "exact", head: true })
     .eq("slot_id", slot.id)
-    .neq("status", "rejected")
-    .maybeSingle();
+    .neq("status", "rejected");
 
-  if (slotTaken) {
-    return conflict("that slot just got taken. pick another one.");
+  if ((slotCount ?? 0) >= slot.capacity) {
+    return conflict("that slot is full. pick another one.");
   }
 
   const { data: mine } = await admin

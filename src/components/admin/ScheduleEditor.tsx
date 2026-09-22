@@ -16,6 +16,8 @@ import type { EditorSlot } from "@/lib/schedule";
 import { SLOT_TYPES } from "@/lib/talks";
 import { cn } from "@/lib/utils";
 
+type EditorTalk = EditorSlot["talks"][number];
+
 const fmtDay = (d: string) =>
   new Date(`${d}T00:00:00Z`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 
@@ -29,7 +31,7 @@ async function call(url: string, method: string, body?: unknown) {
   if (!res.ok || !json.ok) throw new Error(json.message ?? "something went wrong.");
 }
 
-function TalkChip({ talk }: { talk: NonNullable<EditorSlot["talk"]> }) {
+function TalkChip({ talk }: { talk: EditorTalk }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `talk:${talk.id}` });
   return (
     <div
@@ -53,6 +55,7 @@ function TalkChip({ talk }: { talk: NonNullable<EditorSlot["talk"]> }) {
 function SlotCard({ slot, onEdit, onDelete }: { slot: EditorSlot; onEdit: () => void; onDelete: () => void }) {
   const drag = useDraggable({ id: `slot:${slot.id}` });
   const drop = useDroppable({ id: `slot:${slot.id}` });
+  const open = Math.max(0, slot.capacity - slot.talks.length);
   return (
     <div
       ref={(node) => {
@@ -61,7 +64,7 @@ function SlotCard({ slot, onEdit, onDelete }: { slot: EditorSlot; onEdit: () => 
       }}
       className={cn(
         "rounded-lg border border-border bg-card p-3 transition",
-        drop.isOver && "border-primary ring-2 ring-primary/30",
+        drop.isOver && "border-foreground ring-2 ring-foreground/20",
         drag.isDragging && "opacity-40",
       )}
     >
@@ -79,6 +82,7 @@ function SlotCard({ slot, onEdit, onDelete }: { slot: EditorSlot; onEdit: () => 
           <p className="truncate text-sm font-semibold capitalize">{slot.label}</p>
           <p className="text-xs text-muted">
             {slot.type}
+            {slot.type === "talk" ? ` · ${slot.talks.length}/${slot.capacity}` : ""}
             {slot.startsAt ? ` · ${slot.startsAt.slice(0, 5)}${slot.endsAt ? `–${slot.endsAt.slice(0, 5)}` : ""}` : ""}
           </p>
         </div>
@@ -90,12 +94,15 @@ function SlotCard({ slot, onEdit, onDelete }: { slot: EditorSlot; onEdit: () => 
         </button>
       </div>
       {slot.type === "talk" ? (
-        <div className="mt-2">
-          {slot.talk ? (
-            <TalkChip talk={slot.talk} />
-          ) : (
-            <p className="rounded-md border border-dashed border-border px-2 py-1.5 text-xs text-muted">Open — drop a talk here</p>
-          )}
+        <div className="mt-2 space-y-1.5">
+          {slot.talks.map((talk) => (
+            <TalkChip key={talk.id} talk={talk} />
+          ))}
+          {open > 0 ? (
+            <p className="rounded-md border border-dashed border-border px-2 py-1.5 text-xs text-muted">
+              {open} open, drop a talk here
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -109,7 +116,7 @@ function DayColumn({ date, children, onAdd }: { date: string; children: React.Re
       ref={setNodeRef}
       className={cn(
         "flex w-64 shrink-0 flex-col gap-2 rounded-xl border border-border bg-surface p-3",
-        isOver && "border-primary ring-2 ring-primary/30",
+        isOver && "border-foreground ring-2 ring-foreground/20",
       )}
     >
       <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">{fmtDay(date)}</p>
@@ -121,7 +128,7 @@ function DayColumn({ date, children, onAdd }: { date: string; children: React.Re
   );
 }
 
-type Draft = { id: string | null; date: string; type: EditorSlot["type"]; label: string; startsAt: string; endsAt: string };
+type Draft = { id: string | null; date: string; type: EditorSlot["type"]; label: string; capacity: number; startsAt: string; endsAt: string };
 
 export function ScheduleEditor({ cohortId, initial }: { cohortId: string; initial: EditorSlot[] }) {
   const router = useRouter();
@@ -132,6 +139,7 @@ export function ScheduleEditor({ cohortId, initial }: { cohortId: string; initia
 
   const dates = [...new Set(slots.map((s) => s.date))].sort();
   const byDate = (d: string) => slots.filter((s) => s.date === d).sort((a, b) => a.sortOrder - b.sortOrder);
+  const totalTalks = slots.filter((s) => s.type === "talk").reduce((sum, s) => sum + s.talks.length, 0);
 
   async function persist<T>(next: EditorSlot[], previous: EditorSlot[], run: () => Promise<T>, ok?: string) {
     setSlots(next);
@@ -175,12 +183,18 @@ export function ScheduleEditor({ cohortId, initial }: { cohortId: string; initia
       );
     } else if (from.startsWith("talk:") && over.startsWith("slot:")) {
       const talkId = from.slice(5);
-      const source = slots.find((s) => s.talk?.id === talkId);
+      const source = slots.find((s) => s.talks.some((t) => t.id === talkId));
       const target = slots.find((s) => s.id === over.slice(5));
       if (!source || !target || source.id === target.id) return;
       if (target.type !== "talk") return toast.error("Talks can only go in talk slots.");
+      if (target.talks.length >= target.capacity) return toast.error("That slot is full.");
+      const talk = source.talks.find((t) => t.id === talkId)!;
       const next = slots.map((s) =>
-        s.id === source.id ? { ...s, talk: target.talk } : s.id === target.id ? { ...s, talk: source.talk } : s,
+        s.id === source.id
+          ? { ...s, talks: s.talks.filter((t) => t.id !== talkId) }
+          : s.id === target.id
+            ? { ...s, talks: [...s.talks, talk] }
+            : s,
       );
       void persist(next, slots, () => call(`/api/admin/talks/${talkId}/move`, "POST", { slotId: target.id }), "Talk moved");
     }
@@ -188,32 +202,37 @@ export function ScheduleEditor({ cohortId, initial }: { cohortId: string; initia
 
   async function saveDraft() {
     if (!draft) return;
-    const body = { date: draft.date, type: draft.type, label: draft.label, startsAt: draft.startsAt || null, endsAt: draft.endsAt || null };
+    const body = { date: draft.date, type: draft.type, label: draft.label, capacity: draft.capacity, startsAt: draft.startsAt || null, endsAt: draft.endsAt || null };
     try {
       if (draft.id) await call(`/api/admin/slots/${draft.id}`, "PATCH", body);
       else await call("/api/admin/slots", "POST", { ...body, cohortId });
       toast.success("Slot saved");
       setDraft(null);
       router.refresh();
-      // refresh() re-renders the server page; sync local state from the new props via key remount.
     } catch (e) {
       toast.error((e as Error).message);
     }
   }
 
   async function remove(slot: EditorSlot) {
-    if (slot.talk) return toast.error("This slot has a talk. Move the talk first.");
+    if (slot.talks.length > 0) return toast.error("This slot has talks. Move them first.");
     const previous = slots;
     void persist(slots.filter((s) => s.id !== slot.id), previous, () => call(`/api/admin/slots/${slot.id}`, "DELETE"), "Slot deleted");
   }
 
-  const overlay = active?.startsWith("slot:") ? slots.find((s) => s.id === active.slice(5))?.label : active?.startsWith("talk:") ? "Talk" : null;
-  const blank = (date: string): Draft => ({ id: null, date, type: "talk", label: "", startsAt: "", endsAt: "" });
+  const overlayLabel = active?.startsWith("slot:")
+    ? slots.find((s) => s.id === active.slice(5))?.label
+    : active?.startsWith("talk:")
+      ? slots.flatMap((s) => s.talks).find((t) => t.id === active.slice(5))?.title
+      : null;
+  const blank = (date: string): Draft => ({ id: null, date, type: "talk", label: "", capacity: 2, startsAt: "", endsAt: "" });
 
   return (
     <>
-      <div className="mb-4 flex justify-between gap-3">
-        <p className="text-sm text-muted">Drag slots between days to reorder. Drag a talk onto another slot to move or swap it.</p>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted">
+          {totalTalks} talks scheduled. Drag slots between days to reorder. Drag a talk onto another slot to move it.
+        </p>
         <Button onClick={() => setDraft(blank(dates[0] ?? new Date().toISOString().slice(0, 10)))}>
           <Plus className="size-4" /> Add slot
         </Button>
@@ -227,7 +246,7 @@ export function ScheduleEditor({ cohortId, initial }: { cohortId: string; initia
                 <SlotCard
                   key={slot.id}
                   slot={slot}
-                  onEdit={() => setDraft({ id: slot.id, date: slot.date, type: slot.type, label: slot.label, startsAt: slot.startsAt?.slice(0, 5) ?? "", endsAt: slot.endsAt?.slice(0, 5) ?? "" })}
+                  onEdit={() => setDraft({ id: slot.id, date: slot.date, type: slot.type, label: slot.label, capacity: slot.capacity, startsAt: slot.startsAt?.slice(0, 5) ?? "", endsAt: slot.endsAt?.slice(0, 5) ?? "" })}
                   onDelete={() => remove(slot)}
                 />
               ))}
@@ -235,7 +254,7 @@ export function ScheduleEditor({ cohortId, initial }: { cohortId: string; initia
           ))}
           {dates.length === 0 ? <p className="text-sm text-muted">No slots yet. Add the first one.</p> : null}
         </div>
-        <DragOverlay>{overlay ? <div className="rounded-lg border border-primary bg-card px-3 py-2 text-sm font-semibold capitalize shadow-lg">{overlay}</div> : null}</DragOverlay>
+        <DragOverlay>{overlayLabel ? <div className="rounded-lg border border-foreground bg-card px-3 py-2 text-sm font-semibold capitalize shadow-lg">{overlayLabel}</div> : null}</DragOverlay>
       </DndContext>
 
       <Dialog open={draft !== null} onOpenChange={(o) => !o && setDraft(null)}>
@@ -245,11 +264,18 @@ export function ScheduleEditor({ cohortId, initial }: { cohortId: string; initia
               <label className="block text-sm font-medium">Label
                 <Input className="mt-1.5" value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} placeholder="Talk 1a" />
               </label>
-              <label className="block text-sm font-medium">Type
-                <select className="mt-1.5 h-10 w-full rounded-lg border border-border bg-card px-3 text-sm" value={draft.type} onChange={(e) => setDraft({ ...draft, type: e.target.value as Draft["type"] })}>
-                  {SLOT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block text-sm font-medium">Type
+                  <select className="mt-1.5 h-10 w-full rounded-lg border border-border bg-card px-3 text-sm" value={draft.type} onChange={(e) => setDraft({ ...draft, type: e.target.value as Draft["type"] })}>
+                    {SLOT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </label>
+                {draft.type === "talk" ? (
+                  <label className="block text-sm font-medium">Talks in this slot
+                    <Input className="mt-1.5" type="number" min={1} max={10} value={draft.capacity} onChange={(e) => setDraft({ ...draft, capacity: Number(e.target.value) || 1 })} />
+                  </label>
+                ) : null}
+              </div>
               <label className="block text-sm font-medium">Date
                 <Input className="mt-1.5" type="date" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} />
               </label>

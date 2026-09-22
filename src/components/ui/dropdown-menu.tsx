@@ -17,7 +17,7 @@ function DropdownMenuContent({
       <DM.Content
         sideOffset={sideOffset}
         className={cn(
-          "z-50 min-w-36 rounded-lg border border-border bg-card p-1 text-sm text-foreground shadow-lg",
+          "z-50 min-w-36 rounded-lg border border-border bg-card p-1 text-sm text-foreground shadow-lg origin-[var(--radix-dropdown-menu-content-transform-origin)] data-[state=closed]:animate-content-hide data-[state=open]:animate-content-show",
           className,
         )}
         {...props}

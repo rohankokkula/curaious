@@ -12,6 +12,9 @@ type SlotRow = {
   slot_type: SlotType;
   label: string;
   sort_order: number;
+  capacity: number;
+  starts_at: string | null;
+  ends_at: string | null;
 };
 
 type TalkRow = {
@@ -40,7 +43,7 @@ export async function GET() {
 
   // Service-role, because a member's own RLS view can't see other members'
   // pending claims — and it shouldn't. We compute the sanitized shape here
-  // instead: a pending slot is reported as taken, with no name attached.
+  // instead: a pending talk is reported with no name attached.
   const admin = createSupabaseAdminClient();
 
   const { data: season } = await admin
@@ -63,7 +66,7 @@ export async function GET() {
 
   const { data: slotRows, error: slotError } = await admin
     .from("session_slots")
-    .select("id, slot_date, slot_type, label, sort_order")
+    .select("id, slot_date, slot_type, label, sort_order, capacity, starts_at, ends_at")
     .eq("season_id", season.id)
     .order("sort_order", { ascending: true })
     .returns<SlotRow[]>();
@@ -105,45 +108,41 @@ export async function GET() {
     }
   }
 
-  const bySlot = new Map(talks.map((talk) => [talk.slot_id, talk]));
+  const talksBySlot = new Map<string, TalkRow[]>();
+  for (const talk of talks) {
+    talksBySlot.set(talk.slot_id, [...(talksBySlot.get(talk.slot_id) ?? []), talk]);
+  }
 
   const payload: SlotView[] = slots.map((slot) => {
-    const talk = bySlot.get(slot.id);
-
-    if (!talk) {
-      return {
-        id: slot.id,
-        date: slot.slot_date,
-        label: slot.label,
-        type: slot.slot_type,
-        status: "open",
-        presenterName: null,
-        title: null,
-        isMine: false,
-        talkId: null,
-      };
-    }
-
-    const isMine = talk.presenter_id === user.id;
-    const approved = talk.status === "approved";
+    const slotTalks = talksBySlot.get(slot.id) ?? [];
 
     return {
       id: slot.id,
       date: slot.slot_date,
       label: slot.label,
       type: slot.slot_type,
-      status: approved ? "approved" : "pending",
-      // Identity only leaves the server once an admin has approved the talk —
-      // or if you're looking at your own claim.
-      presenterName:
-        approved || isMine ? (names.get(talk.presenter_id) ?? null) : null,
-      title: approved || isMine ? talk.title : null,
-      isMine,
-      talkId: approved || isMine ? talk.id : null,
+      capacity: slot.capacity,
+      startsAt: slot.starts_at,
+      endsAt: slot.ends_at,
+      isFull: slotTalks.length >= slot.capacity,
+      talks: slotTalks.map((talk) => {
+        const isMine = talk.presenter_id === user.id;
+        const approved = talk.status === "approved";
+
+        return {
+          talkId: talk.id,
+          // Identity only leaves the server once an admin has approved the
+          // talk — or if you're looking at your own claim.
+          title: approved || isMine ? talk.title : null,
+          presenterName: approved || isMine ? (names.get(talk.presenter_id) ?? null) : null,
+          status: talk.status,
+          isMine,
+        };
+      }),
     };
   });
 
-  const mySlotTaken = payload.some((slot) => slot.isMine);
+  const hasActiveTalk = talks.some((talk) => talk.presenter_id === user.id);
 
   return NextResponse.json({
     ok: true,
@@ -153,7 +152,7 @@ export async function GET() {
       startsOn: season.starts_on,
       endsOn: season.ends_on,
     },
-    hasActiveTalk: mySlotTaken,
+    hasActiveTalk,
     slots: payload,
   });
 }

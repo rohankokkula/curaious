@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { INVITE_FORM_URL } from "@/lib/content";
 
 export function Hero() {
   const root = useRef<HTMLElement>(null);
@@ -12,7 +12,7 @@ export function Hero() {
     () => {
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-      // Entrance only — plays once on mount, never tied to scroll position.
+      // Entrance only: plays once on mount, never tied to scroll position.
       gsap.from('[data-hero-rise="true"]', {
         opacity: 0,
         y: 22,
@@ -29,49 +29,36 @@ export function Hero() {
       ref={root}
       className="relative flex min-h-[calc(100svh-4.5rem)] items-center px-5 pb-24 pt-10 md:px-8 md:pb-32 md:pt-16"
     >
-      <div className="mx-auto w-full max-w-5xl">
+      <div className="relative mx-auto w-full max-w-5xl">
         <p
           data-hero-rise="true"
           className="font-mono text-[11px] uppercase tracking-[0.24em] text-muted"
         >
-          cohort 01 · hyderabad · 10 seats
+          ten seats · two speakers a session
         </p>
 
         <h1
           data-hero-rise="true"
           className="heading-display mt-7 max-w-3xl text-balance text-[2.15rem] leading-[1.1] md:mt-9 md:text-[4.25rem] md:leading-[1.04]"
         >
-          you don&apos;t need a bigger network.
+          10 curious minds around ai.
           <span className="mt-2 block text-muted md:mt-3">
-            you need nine people who know what you&apos;re working on.
+            everyone teaches, everyone learns.
           </span>
         </h1>
 
-        <p
-          data-hero-rise="true"
-          className="prose-quiet mt-7 max-w-xl md:mt-9"
-        >
-          curaious is a small ai learning circle. ten people, four weekends, one
-          table — you take the floor once, you get real feedback, and you leave
-          knowing exactly what the other nine are building.
-        </p>
-
-        <div
-          data-hero-rise="true"
-          className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 md:mt-12"
-        >
-          <Link
-            href="/apply"
+        <div data-hero-rise="true" className="mt-10 md:mt-12">
+          <a
+            href={INVITE_FORM_URL}
+            target="_blank"
+            rel="noreferrer"
             className="focus-ring group inline-flex items-center gap-3 bg-foreground px-6 py-3.5 font-mono text-[11px] uppercase tracking-[0.2em] text-background transition hover:bg-accent hover:text-foreground"
           >
-            apply for a seat
+            get an invite
             <span aria-hidden className="transition group-hover:translate-x-1">
               →
             </span>
-          </Link>
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
-            takes about 10 minutes
-          </p>
+          </a>
         </div>
 
         <p

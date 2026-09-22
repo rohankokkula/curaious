@@ -20,7 +20,7 @@ export default async function AdminSchedulePage() {
   const supabase = await createSupabaseServerClient();
   const { data: rows } = await supabase
     .from("session_slots")
-    .select("id, slot_date, slot_type, label, sort_order, starts_at, ends_at")
+    .select("id, slot_date, slot_type, label, sort_order, starts_at, ends_at, capacity")
     .eq("season_id", cohort.id)
     .order("slot_date")
     .order("sort_order");
@@ -33,27 +33,31 @@ export default async function AdminSchedulePage() {
     ? await supabase.from("profiles").select("id, name").in("id", presenterIds)
     : { data: [] };
   const names = new Map((people ?? []).map((p) => [p.id, p.name as string]));
-  const bySlot = new Map((talks ?? []).map((t) => [t.slot_id, t]));
+  const talksBySlot = new Map<string, typeof talks>();
+  for (const t of talks ?? []) talksBySlot.set(t.slot_id, [...(talksBySlot.get(t.slot_id) ?? []), t]);
 
-  const slots: EditorSlot[] = (rows ?? []).map((r) => {
-    const t = bySlot.get(r.id);
-    return {
-      id: r.id,
-      date: r.slot_date,
-      label: r.label,
-      type: r.slot_type,
-      startsAt: r.starts_at,
-      endsAt: r.ends_at,
-      sortOrder: r.sort_order,
-      talk: t ? { id: t.id, title: t.title, presenter: names.get(t.presenter_id) ?? "Unknown", status: t.status } : null,
-    };
-  });
+  const slots: EditorSlot[] = (rows ?? []).map((r) => ({
+    id: r.id,
+    date: r.slot_date,
+    label: r.label,
+    type: r.slot_type,
+    startsAt: r.starts_at,
+    endsAt: r.ends_at,
+    sortOrder: r.sort_order,
+    capacity: r.capacity,
+    talks: (talksBySlot.get(r.id) ?? []).map((t) => ({
+      id: t.id,
+      title: t.title,
+      presenter: names.get(t.presenter_id) ?? "Unknown",
+      status: t.status,
+    })),
+  }));
 
   return (
     <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-bold tracking-tight">Schedule</h1>
-        <p className="mt-1 text-muted">{cohort.name} — edit sessions, slots and talk assignments.</p>
+        <p className="mt-1 text-muted">{cohort.name}: edit sessions, slots and talk assignments.</p>
       </header>
       {/* key remounts the editor with fresh server data after each refresh */}
       <ScheduleEditor key={JSON.stringify(slots)} cohortId={cohort.id} initial={slots} />

@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { getActiveCohort } from "@/lib/cohort";
 import { loadCohortFeedback } from "@/lib/feedback";
-import { RATING_PARAMETERS } from "@/lib/ratings";
+import { RATING_MAX, RATING_PARAMETERS } from "@/lib/ratings";
 
 export const dynamic = "force-dynamic";
 
@@ -46,8 +46,8 @@ export default async function AdminAnalyticsPage() {
             return (
               <div key={p.key} className="flex items-center gap-3">
                 <span className="w-32 shrink-0 text-sm text-muted">{p.label}</span>
-                <span className="h-2 flex-1 overflow-hidden rounded-full bg-surface"><span className="block h-full rounded-full bg-primary" style={{ width: `${((v ?? 0) / 10) * 100}%` }} /></span>
-                <span className="w-8 text-right text-sm font-semibold">{v ?? "—"}</span>
+                <span className="h-2 flex-1 overflow-hidden rounded-full bg-surface"><span className="block h-full rounded-full bg-primary" style={{ width: `${((v ?? 0) / RATING_MAX) * 100}%` }} /></span>
+                <span className="w-8 text-right text-sm font-semibold">{v ?? "–"}</span>
               </div>
             );
           })}

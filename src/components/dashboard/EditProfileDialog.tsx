@@ -16,6 +16,9 @@ type Profile = {
   bio: string | null;
   tags: string[];
   avatar_url: string | null;
+  linkedin_url: string | null;
+  twitter_url: string | null;
+  github_url: string | null;
 };
 
 /** Center-crop to a 512px square JPEG so uploads stay small and consistent. */
@@ -52,6 +55,9 @@ export function EditProfileDialog({ profile }: { profile: Profile }) {
     location: profile.location ?? "",
     bio: profile.bio ?? "",
     tags: profile.tags.join(", "),
+    linkedinUrl: profile.linkedin_url ?? "",
+    twitterUrl: profile.twitter_url ?? "",
+    githubUrl: profile.github_url ?? "",
   });
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -150,6 +156,20 @@ export function EditProfileDialog({ profile }: { profile: Profile }) {
             Interests <span className="font-normal text-muted">(comma separated, up to 8)</span>
             <Input className="mt-1.5" value={form.tags} onChange={set("tags")} placeholder="AI, Open Source, Community" />
           </label>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <label className="block text-sm font-medium">
+              LinkedIn
+              <Input className="mt-1.5" value={form.linkedinUrl} onChange={set("linkedinUrl")} placeholder="https://linkedin.com/in/…" />
+            </label>
+            <label className="block text-sm font-medium">
+              X / Twitter
+              <Input className="mt-1.5" value={form.twitterUrl} onChange={set("twitterUrl")} placeholder="https://x.com/…" />
+            </label>
+            <label className="block text-sm font-medium">
+              GitHub
+              <Input className="mt-1.5" value={form.githubUrl} onChange={set("githubUrl")} placeholder="https://github.com/…" />
+            </label>
+          </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>

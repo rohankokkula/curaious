@@ -8,7 +8,7 @@ export type InviteListItem = {
 };
 
 function formatDate(value: string | null) {
-  if (!value) return "—";
+  if (!value) return "–";
   return new Date(value).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",

@@ -60,7 +60,7 @@ export async function PATCH(
         ok: false,
         error: "validation_failed",
         details: parsed.error.flatten().fieldErrors,
-        message: "approve or reject — nothing else.",
+        message: "approve or reject, nothing else.",
       },
       { status: 400 },
     );

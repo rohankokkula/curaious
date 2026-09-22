@@ -41,7 +41,7 @@ export default async function AdminOverviewPage() {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data: slots } = await supabase.from("session_slots").select("id, slot_date, slot_type, label").eq("season_id", cohort.id).order("slot_date").order("sort_order");
+  const { data: slots } = await supabase.from("session_slots").select("id, slot_date, slot_type, label, capacity").eq("season_id", cohort.id).order("slot_date").order("sort_order");
   const slotIds = (slots ?? []).map((s) => s.id);
   const [{ data: talks }, { count: memberCount }, invites] = await Promise.all([
     slotIds.length ? supabase.from("talks").select("slot_id, status").in("slot_id", slotIds).neq("status", "rejected") : Promise.resolve({ data: [] as { slot_id: string; status: string }[] }),
@@ -51,7 +51,8 @@ export default async function AdminOverviewPage() {
 
   const pending = (talks ?? []).filter((t) => t.status === "pending").length;
   const talkSlots = (slots ?? []).filter((s) => s.slot_type === "talk");
-  const filled = talkSlots.filter((s) => (talks ?? []).some((t) => t.slot_id === s.id)).length;
+  const totalCapacity = talkSlots.reduce((sum, s) => sum + s.capacity, 0);
+  const filled = (talks ?? []).length;
   const inviteRows = invites?.ok ? (invites.invites ?? []) : [];
   const unaccepted = inviteRows.filter((i) => !i.acceptedAt).length;
 
@@ -71,7 +72,7 @@ export default async function AdminOverviewPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat value={pending} label="Talks awaiting review" hint="Review and approve" href="/admin/talks" icon={FileText} />
-        <Stat value={`${filled} / ${talkSlots.length}`} label="Talk slots filled" hint={`Across ${byDate.size} days`} href="/admin/schedule" icon={CalendarDays} />
+        <Stat value={`${filled} / ${totalCapacity}`} label="Talk spots filled" hint={`Across ${byDate.size} days`} href="/admin/schedule" icon={CalendarDays} />
         <Stat value={memberCount ?? 0} label="Members" hint={`of ${cohort.capacity} seats`} href="/admin/members" icon={Users} />
         <Stat value={unaccepted} label="Invites not signed in" hint={`${inviteRows.length} invited`} href="/admin/invites" icon={Mail} />
       </div>

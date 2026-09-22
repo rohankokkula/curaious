@@ -1,37 +1,43 @@
 import { z } from "zod";
 
+/** Order and copy match the "Your feedback" panel on the talk page. */
 export const RATING_PARAMETERS = [
   {
-    key: "understanding",
-    label: "Understanding",
-    hint: "Did they actually understand what they were talking about?",
-  },
-  {
     key: "content",
-    label: "Content",
-    hint: "Was the material itself worth the room's time?",
+    label: "Content Quality",
+    hint: "How clear, accurate and valuable was the content?",
+    icon: "content",
   },
   {
     key: "research_depth",
-    label: "Research / Depth",
-    hint: "Did they go past the surface?",
+    label: "Technical Depth",
+    hint: "Right level of depth and technical insight?",
+    icon: "depth",
   },
   {
     key: "delivery",
-    label: "Delivery",
-    hint: "Was it clear, paced, easy to follow?",
+    label: "Delivery & Clarity",
+    hint: "How engaging and clear was the delivery?",
+    icon: "delivery",
   },
   {
     key: "usefulness",
-    label: "Usefulness",
-    hint: "Will you use any of this?",
+    label: "Practical Takeaways",
+    hint: "How useful are the takeaways for real-world use?",
+    icon: "takeaways",
+  },
+  {
+    key: "understanding",
+    label: "Overall Experience",
+    hint: "Overall, how would you rate this talk?",
+    icon: "overall",
   },
 ] as const;
 
 export type RatingParameterKey = (typeof RATING_PARAMETERS)[number]["key"];
 
 export const RATING_MIN = 1;
-export const RATING_MAX = 10;
+export const RATING_MAX = 5;
 
 const score = z.coerce
   .number()
@@ -63,11 +69,16 @@ export type RatingAverages = Record<RatingParameterKey, number | null> & {
   overall: number | null;
 };
 
+export type RatingComment = {
+  raterName: string;
+  raterAvatarUrl: string | null;
+  text: string;
+};
+
 export type RatingAggregate = {
   count: number;
   averages: RatingAverages;
-  /** Rater identity is deliberately stripped before this leaves the server. */
-  comments: string[];
+  comments: RatingComment[];
 };
 
 export function emptyAggregate(): RatingAggregate {

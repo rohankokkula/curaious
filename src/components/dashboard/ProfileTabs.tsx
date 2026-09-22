@@ -56,7 +56,7 @@ export function ProfileTabs({ tabs }: { tabs: ProfileTab[] }) {
               type="button"
               onClick={() => setActive(tab.id)}
               className={cn(
-                "-mb-px flex items-center gap-2 border-b-2 px-1 pb-3 text-sm transition",
+                "-mb-px flex items-center gap-2 border-b-2 px-1 pb-3 text-sm transition-colors duration-150",
                 isActive
                   ? "border-foreground font-semibold text-foreground"
                   : "border-transparent text-muted hover:text-foreground",
@@ -69,7 +69,9 @@ export function ProfileTabs({ tabs }: { tabs: ProfileTab[] }) {
         })}
       </div>
 
-      <div>{current?.content}</div>
+      <div key={current?.id} className="animate-fade-in">
+        {current?.content}
+      </div>
     </div>
   );
 }

@@ -23,6 +23,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const { error } = await guard.admin.rpc("move_talk", { p_talk: id, p_slot: body.data.slotId });
   if (error) {
+    if (error.message.includes("slot full")) {
+      return NextResponse.json({ ok: false, message: "that slot is full." }, { status: 409 });
+    }
     console.error("api/admin/talks/move failed", error.message);
     return NextResponse.json({ ok: false, message: "couldn't move that talk." }, { status: 500 });
   }
