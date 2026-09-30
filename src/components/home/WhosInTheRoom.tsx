@@ -4,15 +4,17 @@ import { Section, SectionKicker, SectionTitle } from "@/components/home/Section"
 import { PERSONAS } from "@/lib/content";
 import { useScrollReveal } from "@/lib/useScrollReveal";
 
-/** Same avatar palette as the real Avatar component, so this reads as an
- * actual member roster, not a styled list. */
+/** Same six-color avatar story as the real Avatar component, in the tones
+ * that hold up on the landing page's dark palette (this page doesn't
+ * follow the theme toggle, so these are stated outright rather than as
+ * `dark:` variants). */
 const PALETTE = [
-  "bg-emerald-100 text-emerald-700",
-  "bg-sky-100 text-sky-700",
-  "bg-amber-100 text-amber-700",
-  "bg-violet-100 text-violet-700",
-  "bg-rose-100 text-rose-700",
-  "bg-teal-100 text-teal-700",
+  "bg-emerald-500/15 text-emerald-300",
+  "bg-sky-500/15 text-sky-300",
+  "bg-amber-500/15 text-amber-300",
+  "bg-violet-500/15 text-violet-300",
+  "bg-rose-500/15 text-rose-300",
+  "bg-teal-500/15 text-teal-300",
 ];
 
 function initialsFor(line: string) {

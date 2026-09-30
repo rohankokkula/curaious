@@ -10,8 +10,11 @@ import { WhosInTheRoom } from "@/components/home/WhosInTheRoom";
 import { WhyItsNotJustSessions } from "@/components/home/WhyItsNotJustSessions";
 
 export default function Home() {
+  // `landing-dark` pins the whole public site to the stage palette (see
+  // globals.css) rather than letting it follow the theme toggle — the page
+  // is one continuous dark room, hero to footer.
   return (
-    <>
+    <div className="landing-dark">
       <Header />
       <main>
         <Hero />
@@ -24,6 +27,6 @@ export default function Home() {
         <ClosingCta />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

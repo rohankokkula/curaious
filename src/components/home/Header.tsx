@@ -37,13 +37,20 @@ export function Header() {
     >
       <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-4 md:flex-nowrap md:px-8 md:py-5">
         <Link href="/" className="focus-ring flex items-center gap-3">
-          <CuraiousLogo className="text-lg opacity-90" />
+          <CuraiousLogo
+            className={cn("text-lg", scrolled ? "text-foreground opacity-90" : "text-white opacity-95")}
+          />
           <span className="sr-only">curaious home</span>
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">
           <GoogleSignInButton
-            className="focus-ring flex items-center gap-2 border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.2em] text-foreground transition hover:border-accent hover:text-accent disabled:opacity-60 sm:px-4"
+            className={cn(
+              "focus-ring flex items-center gap-2 border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.2em] transition disabled:opacity-60 sm:px-4",
+              scrolled
+                ? "border-border text-foreground hover:border-accent hover:text-accent"
+                : "border-white/25 text-white hover:border-white",
+            )}
             iconClassName="size-3.5"
             idleLabel="log in"
             loadingLabel="signing in…"
@@ -53,7 +60,12 @@ export function Header() {
             href={INVITE_FORM_URL}
             target="_blank"
             rel="noreferrer"
-            className="focus-ring bg-foreground px-3 py-2 font-mono text-[11px] uppercase tracking-[0.2em] text-background transition hover:bg-accent sm:px-4"
+            className={cn(
+              "focus-ring px-3 py-2 font-mono text-[11px] uppercase tracking-[0.2em] transition sm:px-4",
+              scrolled
+                ? "bg-foreground text-background hover:bg-accent"
+                : "bg-white text-black hover:bg-white/90",
+            )}
           >
             get an invite
           </a>

@@ -57,7 +57,7 @@ export function ProductPreview() {
   const ref = useScrollReveal<HTMLDivElement>({ selector: "[data-reveal]", stagger: 0.1, y: 18 });
 
   return (
-    <Section id="preview" className="border-t-0">
+    <Section id="preview" seam={false}>
       <div ref={ref} className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <div data-reveal>
           <AppWindow title="schedule">

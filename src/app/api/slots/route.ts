@@ -23,6 +23,7 @@ type TalkRow = {
   presenter_id: string;
   title: string;
   status: "pending" | "approved";
+  deck_path: string | null;
 };
 
 export async function GET() {
@@ -83,7 +84,7 @@ export async function GET() {
 
   const { data: talkRows } = await admin
     .from("talks")
-    .select("id, slot_id, presenter_id, title, status")
+    .select("id, slot_id, presenter_id, title, status, deck_path")
     .in(
       "slot_id",
       slots.map((slot) => slot.id),
@@ -137,6 +138,9 @@ export async function GET() {
           presenterName: approved || isMine ? (names.get(talk.presenter_id) ?? null) : null,
           status: talk.status,
           isMine,
+          // Only worth rendering once the talk (and so its deck) is actually
+          // visible — a pending claim's deck stays as hidden as its title.
+          hasDeck: (approved || isMine) && Boolean(talk.deck_path),
         };
       }),
     };

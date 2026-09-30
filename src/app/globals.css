@@ -36,6 +36,39 @@
   color-scheme: dark;
 }
 
+/* ── The public landing page ─────────────────────────────────────────────
+   The marketing site is one continuous cinematic piece, so it opts out of
+   the light/dark toggle entirely and is always the dark "stage" palette.
+   (The app behind the login still follows the toggle.) Scoping the same
+   custom properties means every token class already in use — bg-card,
+   text-muted, border-border, bg-surface — resolves dark here without
+   touching a single component. */
+.landing-dark {
+  --background: #050506;
+  --foreground: #f2f2f4;
+  --muted: #8c8c96;
+  --border: #23232b;
+  --accent: #e08a5a;
+  --accent-soft: rgba(224, 138, 90, 0.12);
+  --surface: #0b0b0f;
+  --card: #0e0e13;
+  --primary: #f2f2f4;
+  --primary-foreground: #0a0a0c;
+  --primary-soft: rgba(242, 242, 244, 0.1);
+  --destructive: #f87171;
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, 0.12);
+  color-scheme: dark;
+  background: var(--background);
+}
+
+/* keeps overscroll and the area behind the page dark too, without needing
+   a client component just to set a class on <body> */
+html:has(.landing-dark) {
+  background: #050506;
+  color-scheme: dark;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -111,6 +144,13 @@ body {
 @keyframes drawer-hide {
   to { transform: translateX(-100%); }
 }
+/* Right-anchored counterpart to the drawer, for side panels. */
+@keyframes sheet-show {
+  from { transform: translateX(100%); }
+}
+@keyframes sheet-hide {
+  to { transform: translateX(100%); }
+}
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(6px); }
 }
@@ -126,12 +166,15 @@ body {
 .animate-dialog-hide { animation: dialog-hide 150ms ease-in forwards; }
 .animate-drawer-show { animation: drawer-show 220ms cubic-bezier(0.16, 1, 0.3, 1); }
 .animate-drawer-hide { animation: drawer-hide 180ms ease-in forwards; }
+.animate-sheet-show { animation: sheet-show 240ms cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-sheet-hide { animation: sheet-hide 180ms ease-in forwards; }
 .animate-fade-up { animation: fade-up 260ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 .animate-fade-in { animation: fade-in 200ms ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-overlay-show, .animate-overlay-hide, .animate-content-show, .animate-content-hide,
-  .animate-drawer-show, .animate-drawer-hide, .animate-fade-up, .animate-fade-in {
+  .animate-drawer-show, .animate-drawer-hide, .animate-sheet-show, .animate-sheet-hide,
+  .animate-fade-up, .animate-fade-in {
     animation-duration: 1ms;
     animation-delay: 0ms;
     transform: none !important;
@@ -148,8 +191,87 @@ body {
   @apply tracking-tight;
 }
 
+/* Section seam. A hairline that fades out at both edges reads as depth
+   rather than a table rule — the flat full-width border looked fine on
+   white but boxes the page in on near-black. */
+.section-seam::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--border) 18%,
+    var(--border) 82%,
+    transparent
+  );
+}
+
 .prose-quiet {
   @apply text-base leading-relaxed text-muted md:text-lg;
+}
+
+/* Hand-rolled instead of @tailwindcss/typography (not installed, and this is
+   the only place markdown renders) — shared by the article editor's live
+   preview, the dashboard's own-article preview, and the public article page. */
+.markdown-body {
+  @apply text-[15px] leading-relaxed text-foreground md:text-base;
+}
+.markdown-body > * + * {
+  @apply mt-4;
+}
+.markdown-body h1 {
+  font-family: var(--font-display), Georgia, serif;
+  @apply tracking-tight mt-8 text-2xl leading-tight first:mt-0 md:text-3xl;
+}
+.markdown-body h2 {
+  font-family: var(--font-display), Georgia, serif;
+  @apply tracking-tight mt-7 text-xl leading-tight first:mt-0 md:text-2xl;
+}
+.markdown-body h3 {
+  @apply mt-6 text-lg font-bold first:mt-0;
+}
+.markdown-body p {
+  @apply leading-relaxed;
+}
+.markdown-body a {
+  @apply text-accent underline underline-offset-4;
+}
+.markdown-body ul {
+  @apply list-disc space-y-1.5 pl-5;
+}
+.markdown-body ol {
+  @apply list-decimal space-y-1.5 pl-5;
+}
+.markdown-body blockquote {
+  @apply border-l-2 border-border pl-4 text-muted italic;
+}
+.markdown-body code {
+  @apply rounded bg-surface px-1.5 py-0.5 font-mono text-[0.85em];
+}
+.markdown-body pre {
+  @apply overflow-x-auto rounded-lg bg-surface p-4;
+}
+.markdown-body pre code {
+  @apply bg-transparent p-0;
+}
+.markdown-body img {
+  @apply rounded-lg;
+}
+.markdown-body hr {
+  @apply border-border;
+}
+.markdown-body table {
+  @apply w-full border-collapse text-sm;
+}
+.markdown-body th,
+.markdown-body td {
+  @apply border border-border px-3 py-2 text-left;
+}
+.markdown-body th {
+  @apply bg-surface font-semibold;
 }
 
 .focus-ring {

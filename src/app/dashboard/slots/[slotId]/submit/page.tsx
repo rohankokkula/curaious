@@ -15,26 +15,32 @@ type SlotRow = {
   capacity: number;
 };
 
+/** The way out depends on why you're here: if you still need a slot, that's
+ * the schedule; if you've already submitted, it's your talks. */
 function Notice({
   heading,
   children,
+  action = { href: "/dashboard/schedule", label: "Back to schedule" },
 }: {
   heading: string;
   children: React.ReactNode;
+  action?: { href: string; label: string };
 }) {
   return (
     <div className="max-w-2xl bg-card border border-border rounded-lg p-8 space-y-4">
       <h1 className="text-xl font-semibold text-foreground">{heading}</h1>
       <p className="text-sm text-muted">{children}</p>
       <Link
-        href="/dashboard"
+        href={action.href}
         className="inline-block px-4 py-2 bg-foreground text-primary-foreground text-sm font-medium rounded hover:bg-foreground/90 transition"
       >
-        Back to calendar
+        {action.label}
       </Link>
     </div>
   );
 }
+
+const TO_TALKS = { href: "/dashboard/talks", label: "Go to talks" };
 
 export default async function SubmitTalkPage({
   params,
@@ -96,8 +102,8 @@ export default async function SubmitTalkPage({
 
   if (mine) {
     return (
-      <Notice heading="this slot is taken">
-        this is your slot already. your submission is on your profile.
+      <Notice heading="this slot is yours" action={TO_TALKS}>
+        you&rsquo;ve already claimed this one. your submission is under talks.
       </Notice>
     );
   }
@@ -121,7 +127,7 @@ export default async function SubmitTalkPage({
 
   if (myActiveTalk) {
     return (
-      <Notice heading="you already have a talk in play">
+      <Notice heading="you already have a talk in play" action={TO_TALKS}>
         one at a time. if it gets sent back you can claim a different slot.
       </Notice>
     );

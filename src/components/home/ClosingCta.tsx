@@ -11,7 +11,18 @@ export function ClosingCta() {
   });
 
   return (
-    <Section id="apply-cta" className="bg-surface">
+    <Section id="apply-cta" className="overflow-hidden bg-surface">
+      {/* same ambient light as the hero, so the page closes in the room it
+          opened in */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-40 -right-24 size-80 rounded-full bg-emerald-600/15 blur-3xl md:size-[28rem]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-32 top-0 size-72 rounded-full bg-teal-500/10 blur-3xl md:size-96"
+      />
+
       <div ref={ref} className="max-w-3xl">
         <SectionKicker data-reveal index="06" label="ten seats" />
 

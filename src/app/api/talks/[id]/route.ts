@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { loadTalkAccess } from "@/lib/talkAccess";
+import { recordingUpdateSchema } from "@/lib/recording";
 import { DECKS_BUCKET, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -50,6 +51,62 @@ export async function GET(
       isPresenter,
     },
   });
+}
+
+/**
+ * Attach (or clear) the session recording. The presenter owns their own
+ * talk's link; an admin can set it for anyone, since they're the one
+ * collecting recordings after a session.
+ */
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  if (!isSupabaseConfigured || !hasServiceRoleKey) {
+    return NextResponse.json(
+      { ok: false, error: "server_not_configured", message: "not available yet." },
+      { status: 503 },
+    );
+  }
+
+  const { id } = await params;
+  const { admin, talk, isPresenter, isAdmin, userId } = await loadTalkAccess(id);
+
+  if (!userId) {
+    return NextResponse.json({ ok: false, error: "unauthorized", message: "sign in first." }, { status: 401 });
+  }
+
+  if (!talk || !(isPresenter || isAdmin)) {
+    return NextResponse.json({ ok: false, error: "not_found", message: "no talk here." }, { status: 404 });
+  }
+
+  const parsed = recordingUpdateSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json(
+      { ok: false, error: "bad_request", message: parsed.error.issues[0]?.message ?? "bad request." },
+      { status: 400 },
+    );
+  }
+
+  const recordingUrl = parsed.data.recordingUrl || null;
+  const { error } = await admin
+    .from("talks")
+    .update({
+      recording_url: recordingUrl,
+      recording_added_at: recordingUrl ? new Date().toISOString() : null,
+      recording_added_by: recordingUrl ? userId : null,
+    })
+    .eq("id", talk.id);
+
+  if (error) {
+    console.error("api/talks/[id]: recording update failed", error.message);
+    return NextResponse.json(
+      { ok: false, error: "update_failed", message: "couldn't save that link." },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({ ok: true, recordingUrl });
 }
 
 /**

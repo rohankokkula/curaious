@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { ScheduleEditor } from "@/components/admin/ScheduleEditor";
+import { SeasonTimeline } from "@/components/dashboard/SeasonTimeline";
 import { getActiveCohort } from "@/lib/cohort";
 import type { EditorSlot } from "@/lib/schedule";
+import type { SlotView } from "@/lib/talks";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +28,11 @@ export default async function AdminSchedulePage() {
     .order("sort_order");
   const ids = (rows ?? []).map((r) => r.id);
   const { data: talks } = ids.length
-    ? await supabase.from("talks").select("id, slot_id, title, status, presenter_id").in("slot_id", ids).neq("status", "rejected")
+    ? await supabase
+        .from("talks")
+        .select("id, slot_id, title, status, presenter_id, deck_path")
+        .in("slot_id", ids)
+        .neq("status", "rejected")
     : { data: [] };
   const presenterIds = [...new Set((talks ?? []).map((t) => t.presenter_id))];
   const { data: people } = presenterIds.length
@@ -53,14 +59,50 @@ export default async function AdminSchedulePage() {
     })),
   }));
 
+  // The same week-by-week view the cohort sees, built from the rows already
+  // loaded above. Admins read every talk under RLS, so nothing is withheld
+  // here the way it is for members in /api/slots.
+  const timeline: SlotView[] = slots
+    .map((slot) => ({
+      id: slot.id,
+      date: slot.date,
+      label: slot.label,
+      type: slot.type,
+      capacity: slot.capacity,
+      startsAt: slot.startsAt,
+      endsAt: slot.endsAt,
+      isFull: slot.talks.length >= slot.capacity,
+      // Built from the raw `talks` rows (via talksBySlot), not slot.talks —
+      // EditorSlot's shape doesn't carry deck_path, and the drag/drop editor
+      // has no reason to grow one just for this.
+      talks: (talksBySlot.get(slot.id) ?? []).map((talk) => ({
+        talkId: talk.id,
+        title: talk.title,
+        presenterName: names.get(talk.presenter_id) ?? "Unknown",
+        status: talk.status as "pending" | "approved",
+        isMine: false,
+        hasDeck: Boolean(talk.deck_path),
+      })),
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
   return (
     <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-bold tracking-tight">Schedule</h1>
         <p className="mt-1 text-muted">{cohort.name}: edit sessions, slots and talk assignments.</p>
       </header>
-      {/* key remounts the editor with fresh server data after each refresh */}
-      <ScheduleEditor key={JSON.stringify(slots)} cohortId={cohort.id} initial={slots} />
+
+      <SeasonTimeline slots={timeline} viewerHasActiveTalk={false} mode="admin" />
+
+      <section className="space-y-4 border-t border-border pt-6">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight">Edit</h2>
+          <p className="mt-1 text-sm text-muted">Add, reorder and reassign slots.</p>
+        </div>
+        {/* key remounts the editor with fresh server data after each refresh */}
+        <ScheduleEditor key={JSON.stringify(slots)} cohortId={cohort.id} initial={slots} />
+      </section>
     </div>
   );
 }

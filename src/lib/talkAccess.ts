@@ -28,6 +28,9 @@ export type TalkRecord = {
   submitted_at: string;
   reviewed_at: string | null;
   rejection_reason: string | null;
+  recording_url: string | null;
+  /** Scoring is a moderated window the curator opens and closes by hand. */
+  ratings_open: boolean;
 };
 
 export type TalkAccess = {
@@ -40,7 +43,7 @@ export type TalkAccess = {
 };
 
 const TALK_COLUMNS =
-  "id, slot_id, presenter_id, title, description, deck_path, status, submitted_at, reviewed_at, rejection_reason";
+  "id, slot_id, presenter_id, title, description, deck_path, status, submitted_at, reviewed_at, rejection_reason, recording_url, ratings_open";
 
 export async function loadTalkAccess(talkId: string): Promise<TalkAccess> {
   const admin = createSupabaseAdminClient();

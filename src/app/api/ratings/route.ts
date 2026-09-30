@@ -78,6 +78,20 @@ async function save(request: Request, mode: "create" | "update") {
     );
   }
 
+  // Scoring is moderated: the curator opens the window after the talk has been
+  // given and closes it when the room is done. Also enforced in the `ratings`
+  // insert/update policies, since this route bypasses RLS.
+  if (!talk.ratings_open) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "ratings_closed",
+        message: "scoring isn't open for this talk right now.",
+      },
+      { status: 409 },
+    );
+  }
+
   const payload = {
     ...scores,
     comment: comment && comment.length > 0 ? comment : null,

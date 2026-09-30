@@ -19,11 +19,7 @@ type TalkRow = {
 
 export default async function AdminTalksPage() {
   if (!isSupabaseConfigured) {
-    return (
-      <p className="prose-quiet">
-        season 1 isn&rsquo;t connected to its database yet.
-      </p>
-    );
+    return <p className="text-sm text-muted">Season 1 isn&rsquo;t connected to its database yet.</p>;
   }
 
   const supabase = await createSupabaseServerClient();
@@ -81,16 +77,12 @@ export default async function AdminTalksPage() {
   });
 
   return (
-    <div className="space-y-10">
-      <header className="space-y-3">
-        <p className="story-whisper">review queue</p>
-        <h1 className="heading-display text-3xl leading-tight md:text-4xl">
-          talks awaiting review
-        </h1>
-        <p className="prose-quiet max-w-2xl">
-          nobody else sees who claimed a slot until you approve it. approving
-          puts their name and title on the calendar; sending it back frees the
-          slot.
+    <div className="space-y-6">
+      <header>
+        <h1 className="text-3xl font-bold tracking-tight">Talks awaiting review</h1>
+        <p className="mt-1 text-muted">
+          Nobody else sees who claimed a slot until you approve it. Approving puts their
+          name and title on the calendar; sending it back frees the slot.
         </p>
       </header>
 

@@ -4,17 +4,17 @@ import { ArrowLeft, Check, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useRef, useState } from "react";
+import { DeckThumbnail } from "@/components/dashboard/DeckThumbnail";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { MAX_DECK_BYTES, MAX_DECK_MB, talkSubmissionSchema } from "@/lib/talks";
 import { cn } from "@/lib/utils";
 
 type Errors = { title?: string; description?: string; deck?: string };
-type Step = "details" | "review" | "submitted";
+type Step = "details" | "submitted";
 
 const STEPS: { id: Step; label: string }[] = [
   { id: "details", label: "Details" },
-  { id: "review", label: "Review" },
   { id: "submitted", label: "Submitted" },
 ];
 
@@ -74,8 +74,10 @@ export function TalkSubmitForm({
     setErrors((prev) => ({ ...prev, deck: file ? validateDeck(file) : undefined }));
   }
 
-  function goToReview(event: React.FormEvent) {
+  async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (sending) return;
+
     const parsed = talkSubmissionSchema.safeParse({ title, description });
     const nextErrors: Errors = {};
     if (!parsed.success) {
@@ -86,11 +88,7 @@ export function TalkSubmitForm({
     nextErrors.deck = validateDeck(deck);
     setErrors(nextErrors);
     if (Object.values(nextErrors).some(Boolean)) return;
-    setStep("review");
-  }
 
-  async function submit() {
-    if (sending) return;
     setSending(true);
     setMessage(null);
 
@@ -146,35 +144,15 @@ export function TalkSubmitForm({
           </span>
           <h2 className="mt-4 text-lg font-semibold">Submitted for review</h2>
           <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
-            Until it&rsquo;s approved, the slot shows as claimed without your name. You can check your profile anytime.
+            Until it&rsquo;s approved, the slot shows as claimed without your name. You can
+            follow it under talks.
           </p>
           <Button asChild className="mt-5">
-            <Link href="/dashboard/schedule">Back to schedule</Link>
+            <Link href="/dashboard/talks">Go to talks</Link>
           </Button>
         </div>
-      ) : step === "review" ? (
-        <div className="rounded-xl border border-border bg-card p-6">
-          <p className="text-xs font-semibold tracking-wide text-muted uppercase">Talk title</p>
-          <p className="mt-1 text-lg font-semibold">{title}</p>
-          <p className="mt-5 text-xs font-semibold tracking-wide text-muted uppercase">Description</p>
-          <p className="mt-1 whitespace-pre-wrap text-muted">{description}</p>
-          <p className="mt-5 text-xs font-semibold tracking-wide text-muted uppercase">Presentation deck</p>
-          <div className="mt-1 flex items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm">
-            <span>{deck?.name}</span>
-            <span className="text-muted">{deck ? `${(deck.size / (1024 * 1024)).toFixed(1)}MB` : ""}</span>
-          </div>
-
-          {message ? <p className="mt-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
-
-          <div className="mt-6 flex gap-3 border-t border-border pt-5">
-            <Button type="button" variant="outline" onClick={() => setStep("details")}>Back to edit</Button>
-            <Button type="button" onClick={submit} disabled={sending}>
-              {sending ? "Submitting…" : "Submit for review"}
-            </Button>
-          </div>
-        </div>
       ) : (
-        <form onSubmit={goToReview} className="rounded-xl border border-border bg-card p-6">
+        <form onSubmit={submit} className="rounded-xl border border-border bg-card p-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="space-y-6">
               <div>
@@ -237,18 +215,36 @@ export function TalkSubmitForm({
                   setFile(e.dataTransfer.files?.[0] ?? null);
                 }}
                 className={cn(
-                  "mt-2 flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition",
+                  "group relative mt-2 flex aspect-video w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-lg border-2 border-dashed text-center transition",
+                  deck ? "p-0" : "p-6",
                   dragOver ? "border-primary bg-primary-soft" : errors.deck ? "border-destructive/50" : "border-border hover:bg-surface",
                 )}
               >
-                <span className="flex size-9 items-center justify-center rounded-lg bg-surface text-muted">
-                  <Upload className="size-4" />
-                </span>
-                <p className="text-sm">
-                  <span className="font-semibold text-foreground">Click to upload</span> <span className="text-muted">or drag and drop</span>
-                </p>
-                <p className="text-xs text-muted">PDF (max {MAX_DECK_MB}MB)</p>
-                {deck ? <p className="mt-1 max-w-full truncate text-xs font-medium text-foreground">{deck.name}</p> : null}
+                {deck ? (
+                  <>
+                    <DeckThumbnail file={deck} className="absolute inset-0 bg-surface" />
+                    {/* Filename sits over the preview so the whole tile stays
+                        clickable for swapping the file out. */}
+                    <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-gradient-to-t from-black/80 to-transparent px-3 pt-8 pb-2.5 text-left">
+                      <span className="min-w-0 flex-1 truncate text-xs font-medium text-white">
+                        {deck.name}
+                      </span>
+                      <span className="shrink-0 text-[11px] text-white/70 group-hover:text-white">
+                        Replace
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex size-9 items-center justify-center rounded-lg bg-surface text-muted">
+                      <Upload className="size-4" />
+                    </span>
+                    <p className="text-sm">
+                      <span className="font-semibold text-foreground">Click to upload</span> <span className="text-muted">or drag and drop</span>
+                    </p>
+                    <p className="text-xs text-muted">PDF (max {MAX_DECK_MB}MB)</p>
+                  </>
+                )}
                 <input
                   ref={fileRef}
                   type="file"
@@ -261,11 +257,17 @@ export function TalkSubmitForm({
             </div>
           </div>
 
+          {message ? (
+            <p className="mt-6 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{message}</p>
+          ) : null}
+
           <div className="mt-6 flex justify-between border-t border-border pt-5">
             <Button asChild variant="outline">
               <Link href="/dashboard/schedule">Cancel</Link>
             </Button>
-            <Button type="submit">Submit for review →</Button>
+            <Button type="submit" disabled={sending}>
+              {sending ? "Submitting…" : "Submit for review →"}
+            </Button>
           </div>
         </form>
       )}

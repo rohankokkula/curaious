@@ -9,6 +9,7 @@ const ITEMS: NavItem[] = [
   { href: "/admin", label: "Overview", icon: "home", exact: true },
   { href: "/admin/cohorts", label: "Cohorts", icon: "layers" },
   { href: "/admin/talks", label: "Talks", icon: "file" },
+  { href: "/admin/resources", label: "Articles", icon: "resources" },
   { href: "/admin/members", label: "Members", icon: "users" },
   { href: "/admin/invites", label: "Invites", icon: "mail" },
   { href: "/admin/schedule", label: "Schedule", icon: "calendar" },

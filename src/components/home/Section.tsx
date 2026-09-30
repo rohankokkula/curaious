@@ -2,19 +2,23 @@ import { cn } from "@/lib/utils";
 
 interface SectionProps extends React.ComponentProps<"section"> {
   children: React.ReactNode;
+  /** Set false for a section that should flow straight on from the one
+   * above it with no seam between them. */
+  seam?: boolean;
 }
 
 /** Shared vertical rhythm + measure for every homepage section. */
-export function Section({ className, children, ...rest }: SectionProps) {
+export function Section({ className, children, seam = true, ...rest }: SectionProps) {
   return (
     <section
       className={cn(
-        "border-t border-border/40 px-5 py-20 md:px-8 md:py-32",
+        "relative px-5 py-20 md:px-8 md:py-32",
+        seam && "section-seam",
         className,
       )}
       {...rest}
     >
-      <div className="mx-auto w-full max-w-5xl">{children}</div>
+      <div className="relative mx-auto w-full max-w-5xl">{children}</div>
     </section>
   );
 }

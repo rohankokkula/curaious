@@ -5,9 +5,12 @@ import { DeleteTalkButton } from "@/components/dashboard/DeleteTalkButton";
 import { Avatar } from "@/components/dashboard/Avatar";
 import { EditProfileDialog } from "@/components/dashboard/EditProfileDialog";
 import { ProfileTabs } from "@/components/dashboard/ProfileTabs";
+import { RecordingCard } from "@/components/dashboard/RecordingCard";
 import { ShareProfileButton } from "@/components/dashboard/ShareProfileButton";
 import { getActiveCohort } from "@/lib/cohort";
 import { fetchInternal } from "@/lib/internalFetch";
+import { canSee, resolveVisibility } from "@/lib/profile";
+import { RECORDINGS_VISIBLE_TO, SAMPLE_RECORDING_URL } from "@/lib/recording";
 import {
   emptyAggregate,
   RATING_MAX,
@@ -44,6 +47,7 @@ type ProfileRow = {
   linkedin_url: string | null;
   twitter_url: string | null;
   github_url: string | null;
+  visibility: unknown;
 };
 
 type TalkRow = {
@@ -54,6 +58,7 @@ type TalkRow = {
   status: TalkStatus;
   deck_path: string | null;
   rejection_reason: string | null;
+  recording_url: string | null;
 };
 
 type GivenRatingRow = Record<RatingParameterKey, number> & {
@@ -120,6 +125,17 @@ function StatusBadge({ status }: { status: TalkStatus }) {
   );
 }
 
+/** Quiet marker on a field that's only on screen because it's your own
+ * profile — so you can tell at a glance what the rest of the cohort can't see. */
+function OnlyYou({ when }: { when: boolean }) {
+  if (!when) return null;
+  return (
+    <span className="ml-2 inline-flex items-center rounded-full bg-surface px-2 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-muted ring-1 ring-border">
+      only you
+    </span>
+  );
+}
+
 function ScoreBar({ label, value }: { label: string; value: number | null }) {
   const pct = value === null ? 0 : (value / RATING_MAX) * 100;
 
@@ -171,7 +187,9 @@ export default async function MemberProfilePage({
 
   const { data: member } = await supabase
     .from("profiles")
-    .select("id, name, email, role, avatar_url, headline, location, bio, tags, linkedin_url, twitter_url, github_url")
+    .select(
+      "id, name, email, role, avatar_url, headline, location, bio, tags, linkedin_url, twitter_url, github_url, visibility",
+    )
     .eq("id", id)
     .maybeSingle<ProfileRow>();
 
@@ -190,6 +208,16 @@ export default async function MemberProfilePage({
   // Members don't see who's an admin — mirrors the filter on the roster page.
   if (member.role === "admin" && !isSelf && !isAdmin) notFound();
 
+  // What this member chose to show. You and admins always see the lot; the
+  // toggles govern what everyone else gets.
+  const visibility = resolveVisibility(member.visibility);
+  const show = (key: Parameters<typeof canSee>[1]) =>
+    canSee(visibility, key, { isSelf, isAdmin });
+  /** Marks a field that's only on screen because it's you looking. */
+  const hiddenFromOthers = (key: Parameters<typeof canSee>[1]) =>
+    isSelf && !visibility[key];
+  const canSeeRecording = RECORDINGS_VISIBLE_TO === "admin" ? isAdmin : show("recording");
+
   // Feedback *given* is private to its author and to admins — gated here, and
   // backed by the `ratings` select policy so a direct query can't get round it.
   const canSeeGiven = isSelf || isAdmin;
@@ -198,7 +226,7 @@ export default async function MemberProfilePage({
   // presenter and admins.
   const { data: talk } = await supabase
     .from("talks")
-    .select("id, slot_id, title, description, status, deck_path, rejection_reason")
+    .select("id, slot_id, title, description, status, deck_path, rejection_reason, recording_url")
     .eq("presenter_id", member.id)
     .neq("status", "rejected")
     .maybeSingle<TalkRow>();
@@ -275,12 +303,14 @@ export default async function MemberProfilePage({
 
   const presentationTab = (
     <div className="space-y-6">
-      {!talk ? (
+      {!talk || !show("talk") ? (
         <Card>
           <p className="text-sm text-muted">
-            {isSelf
-              ? "You haven't claimed a slot yet."
-              : "No talk on the calendar yet."}
+            {talk && !show("talk")
+              ? "This member keeps their talk private."
+              : isSelf
+                ? "You haven't claimed a slot yet."
+                : "No talk on the calendar yet."}
           </p>
 
           {sentBack ? (
@@ -365,11 +395,23 @@ export default async function MemberProfilePage({
         </Card>
       )}
 
-      {talk && talk.status === "approved" ? (
+      {/* Recordings stay admin-only until RECORDINGS_VISIBLE_TO is widened.
+          With no recording saved yet, an admin still gets the card rendered
+          against a sample link so the layout can be checked. */}
+      {talk && talk.status === "approved" && canSeeRecording ? (
+        <RecordingCard
+          url={talk.recording_url ?? SAMPLE_RECORDING_URL}
+          title={talk.title}
+          isSample={!talk.recording_url}
+        />
+      ) : null}
+
+      {talk && talk.status === "approved" && show("scores") ? (
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <h3 className="text-base font-bold text-foreground">
               Scores from cohort
+              <OnlyYou when={hiddenFromOthers("scores")} />
             </h3>
 
             {!aggregate || aggregate.count === 0 ? (
@@ -416,9 +458,14 @@ export default async function MemberProfilePage({
           <Card>
             <h3 className="text-base font-bold text-foreground">
               Feedback from cohort
+              <OnlyYou when={hiddenFromOthers("feedback")} />
             </h3>
 
-            {!aggregate || aggregate.comments.length === 0 ? (
+            {!show("feedback") ? (
+              <p className="mt-4 text-sm text-muted">
+                This member keeps their written feedback private.
+              </p>
+            ) : !aggregate || aggregate.comments.length === 0 ? (
               <p className="mt-4 text-sm text-muted">No notes in yet.</p>
             ) : (
               <ul className="mt-4 space-y-3">
@@ -503,23 +550,42 @@ export default async function MemberProfilePage({
                 {cohort?.name ?? "Cohort"}
               </p>
               <h1 className="mt-1 text-4xl font-bold tracking-tight">{member.name}</h1>
-              {member.headline ? <p className="mt-1 text-lg text-muted">{member.headline}</p> : null}
+              {member.headline && show("headline") ? (
+                <p className="mt-1 text-lg text-muted">
+                  {member.headline}
+                  <OnlyYou when={hiddenFromOthers("headline")} />
+                </p>
+              ) : null}
               <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">
-                {member.location ? (
-                  <span className="inline-flex items-center gap-1.5"><MapPin className="size-4" />{member.location}</span>
+                {member.location && show("location") ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <MapPin className="size-4" />
+                    {member.location}
+                    <OnlyYou when={hiddenFromOthers("location")} />
+                  </span>
                 ) : null}
-                {isSelf || isAdmin ? (
-                  <span className="inline-flex items-center gap-1.5"><Mail className="size-4" />{member.email}</span>
+                {show("email") ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Mail className="size-4" />
+                    {member.email}
+                    <OnlyYou when={hiddenFromOthers("email")} />
+                  </span>
                 ) : null}
               </div>
-              {member.bio ? <p className="mt-4 max-w-2xl leading-relaxed text-muted">{member.bio}</p> : null}
-              {member.tags && member.tags.length > 0 ? (
-                <div className="mt-4 flex flex-wrap gap-2">
+              {member.bio && show("bio") ? (
+                <p className="mt-4 max-w-2xl leading-relaxed text-muted">
+                  {member.bio}
+                  <OnlyYou when={hiddenFromOthers("bio")} />
+                </p>
+              ) : null}
+              {member.tags && member.tags.length > 0 && show("tags") ? (
+                <div className="mt-4 flex flex-wrap items-center gap-2">
                   {member.tags.map((tag) => (
                     <span key={tag} className="rounded-full bg-card px-3 py-1 text-sm text-muted ring-1 ring-border">
                       {tag}
                     </span>
                   ))}
+                  <OnlyYou when={hiddenFromOthers("tags")} />
                 </div>
               ) : null}
             </div>
@@ -537,6 +603,7 @@ export default async function MemberProfilePage({
                   linkedin_url: member.linkedin_url,
                   twitter_url: member.twitter_url,
                   github_url: member.github_url,
+                  visibility: member.visibility,
                 }}
               />
             ) : null}

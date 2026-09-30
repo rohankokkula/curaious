@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { CalendarDays, CheckCircle2, MessageSquare, Mic } from "lucide-react";
+import { SlideDeck } from "@/components/dashboard/SlideDeck";
 import { cohortMonthLabel, getActiveCohort } from "@/lib/cohort";
 import { fetchInternal } from "@/lib/internalFetch";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient, getViewerProfile } from "@/lib/supabase/server";
 import type { SlotView } from "@/lib/talks";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +65,19 @@ export default async function DashboardPage() {
   const today = new Date().toISOString().slice(0, 10);
   const nextUp = slots.find((slot) => slot.date >= today) ?? slots[0];
 
+  const supabase = await createSupabaseServerClient();
+
+  // /api/slots only carries what the calendar needs. This card now shows the
+  // description and the deck itself, so the full row is read separately —
+  // it's your own talk, so RLS allows it whatever the status.
+  const { data: myTalkDetail } = myTalk
+    ? await supabase
+        .from("talks")
+        .select("description, deck_path")
+        .eq("id", myTalk.talkId)
+        .maybeSingle<{ description: string; deck_path: string | null }>()
+    : { data: null };
+
   // "Feedback you owe" — every approved talk that isn't mine and I haven't rated yet.
   const approvedOthers = slots.flatMap((slot) =>
     slot.talks
@@ -72,7 +87,6 @@ export default async function DashboardPage() {
 
   let owedFeedback = approvedOthers;
   if (viewer && approvedOthers.length > 0) {
-    const supabase = await createSupabaseServerClient();
     const { data: myRatings } = await supabase
       .from("ratings")
       .select("talk_id")
@@ -95,25 +109,56 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="rounded-xl border border-border bg-card p-6">
-          <h2 className="flex items-center gap-2 text-base font-bold">
-            <Mic className="size-4 text-primary" /> Your talk
-          </h2>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <section className="rounded-xl border border-border bg-card p-6 lg:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="flex items-center gap-2 text-base font-bold">
+              <Mic className="size-4 text-primary" /> Your talk
+            </h2>
+            {myTalk ? (
+              <span
+                className={cn(
+                  "rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                  myTalk.status === "approved"
+                    ? "bg-success-soft text-success"
+                    : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+                )}
+              >
+                {myTalk.status === "approved" ? "Approved" : "In review"}
+              </span>
+            ) : null}
+          </div>
 
           {myTalk ? (
-            <div className="mt-4 flex items-center justify-between gap-4 rounded-lg bg-surface p-4">
-              <div className="min-w-0">
-                <p className="truncate font-semibold">{myTalk.title ?? "Your submission"}</p>
-                <p className="mt-0.5 text-sm text-muted">
-                  {myTalk.status === "approved" ? "Approved" : "Pending review"} · {myTalk.slotLabel}, {longDate(myTalk.slotDate)}
+            <div className="mt-4">
+              <h3 className="text-xl font-bold tracking-tight text-balance">
+                {myTalk.title ?? "Your submission"}
+              </h3>
+              <p className="mt-1 text-sm text-muted capitalize">
+                {myTalk.slotLabel}, {longDate(myTalk.slotDate)}
+              </p>
+
+              {myTalkDetail?.description ? (
+                <p className="mt-4 leading-relaxed whitespace-pre-wrap text-muted">
+                  {myTalkDetail.description}
                 </p>
+              ) : null}
+
+              <div className="mt-5">
+                {myTalkDetail?.deck_path ? (
+                  <SlideDeck talkId={myTalk.talkId} />
+                ) : (
+                  <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted">
+                    No deck attached to this talk.
+                  </p>
+                )}
               </div>
+
               <Link
                 href={`/dashboard/talks/${myTalk.talkId}/present`}
-                className="shrink-0 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+                className="mt-5 inline-block rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
               >
-                View
+                Open talk page
               </Link>
             </div>
           ) : (
@@ -129,18 +174,16 @@ export default async function DashboardPage() {
           )}
         </section>
 
-        <section className="rounded-xl border border-border bg-card p-6">
+        <section className="h-fit rounded-xl border border-border bg-card p-6">
           <h2 className="flex items-center gap-2 text-base font-bold">
             <CalendarDays className="size-4 text-primary" /> Next session
           </h2>
-          <div className="mt-4 flex items-center justify-between gap-4 rounded-lg bg-surface p-4">
-            <div>
-              <p className="font-semibold capitalize">{nextUp.label}</p>
-              <p className="mt-0.5 text-sm text-muted">{longDate(nextUp.date)}</p>
-            </div>
+          <div className="mt-4 rounded-lg bg-surface p-4">
+            <p className="font-semibold capitalize">{nextUp.label}</p>
+            <p className="mt-0.5 text-sm text-muted">{longDate(nextUp.date)}</p>
             <Link
               href="/dashboard/schedule"
-              className="shrink-0 rounded-md border border-border px-4 py-2 text-sm font-medium transition hover:bg-card"
+              className="mt-4 inline-block rounded-md border border-border px-4 py-2 text-sm font-medium transition hover:bg-card"
             >
               View schedule
             </Link>

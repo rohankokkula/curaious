@@ -17,6 +17,8 @@ export type SlotTalk = {
   presenterName: string | null;
   status: "pending" | "approved";
   isMine: boolean;
+  /** Whether a deck is attached, so the tile can render its first slide. */
+  hasDeck: boolean;
 };
 
 /** A slot can hold more than one talk — e.g. two or three lightning talks in one session. */

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DeleteTalkButton } from "@/components/dashboard/DeleteTalkButton";
 import { RatingForm } from "@/components/dashboard/RatingForm";
+import { RatingWindowToggle } from "@/components/dashboard/RatingWindowToggle";
 import { SlideDeck } from "@/components/dashboard/SlideDeck";
 import { SpeakerCard } from "@/components/dashboard/SpeakerCard";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ type TalkRow = {
   deck_path: string | null;
   slot_id: string;
   submitted_at: string;
+  ratings_open: boolean;
 };
 
 type SlotRow = { label: string; slot_date: string; starts_at: string | null; ends_at: string | null; season_id: string };
@@ -49,13 +51,18 @@ export default async function TalkPage({ params }: { params: Promise<{ talkId: s
   // RLS does the gatekeeping: approved talks, plus your own, plus everything if you're an admin.
   const { data: talk } = await supabase
     .from("talks")
-    .select("id, title, description, status, presenter_id, deck_path, slot_id, submitted_at")
+    .select("id, title, description, status, presenter_id, deck_path, slot_id, submitted_at, ratings_open")
     .eq("id", talkId)
     .maybeSingle<TalkRow>();
 
   if (!talk) notFound();
 
   const isPresenter = talk.presenter_id === user?.id;
+
+  const { data: viewer } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle<{ role: "member" | "admin" }>()
+    : { data: null };
+  const isAdmin = viewer?.role === "admin";
 
   const [{ data: slot }, { data: presenter }] = await Promise.all([
     supabase.from("session_slots").select("label, slot_date, starts_at, ends_at, season_id").eq("id", talk.slot_id).maybeSingle<SlotRow>(),
@@ -136,14 +143,9 @@ export default async function TalkPage({ params }: { params: Promise<{ talkId: s
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-5">
           <div className="rounded-xl border border-border bg-card p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                {when ? <Badge>{when}</Badge> : null}
-                <h1 className="mt-3 text-2xl font-bold tracking-tight">{talk.title}</h1>
-                <p className="mt-2 leading-relaxed text-muted">{talk.description}</p>
-              </div>
-              {isPresenter ? <DeleteTalkButton talkId={talk.id} /> : null}
-            </div>
+            {when ? <Badge>{when}</Badge> : null}
+            <h1 className="mt-3 text-2xl font-bold tracking-tight">{talk.title}</h1>
+            <p className="mt-2 leading-relaxed text-muted">{talk.description}</p>
           </div>
 
           <div>
@@ -180,15 +182,38 @@ export default async function TalkPage({ params }: { params: Promise<{ talkId: s
         <div className="space-y-5">
           {presenter ? <SpeakerCard speaker={presenter} /> : null}
 
+          {isAdmin ? <RatingWindowToggle talkId={talk.id} open={talk.ratings_open} /> : null}
+
           {isPresenter ? (
-            <Notice>This is your talk. The rest of the cohort rates it once it&rsquo;s approved.</Notice>
+            <Notice>
+              This is your talk. The curator opens scoring once you&rsquo;ve given it, and the
+              rest of the cohort rates it then.
+            </Notice>
           ) : talk.status !== "approved" ? (
             <Notice>This talk hasn&rsquo;t been approved yet, so there&rsquo;s nothing to rate.</Notice>
           ) : !user ? (
             <Notice>Sign in to leave feedback.</Notice>
+          ) : !talk.ratings_open ? (
+            <Notice>
+              Scoring isn&rsquo;t open for this talk yet. The curator opens it once the talk
+              has been given.
+            </Notice>
           ) : (
             <RatingForm talkId={talk.id} initial={existing} />
           )}
+
+          {isPresenter ? (
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h2 className="text-sm font-semibold">Withdraw</h2>
+              <p className="mt-1 text-xs text-muted">
+                Removes this talk and frees the slot, so you can claim one again and submit
+                fresh. Any feedback on it goes too.
+              </p>
+              <div className="mt-3">
+                <DeleteTalkButton talkId={talk.id} />
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
