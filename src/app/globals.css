@@ -1,14 +1,75 @@
 @import "tailwindcss";
 
 :root {
-  --background: #000000;
-  --foreground: #e8e2d8;
-  --muted: #8a847a;
-  --border: #2a2824;
+  --background: #ffffff;
+  --foreground: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
   --accent: #d4623a;
-  --accent-soft: rgba(212, 98, 58, 0.15);
-  --surface: #0a0a0a;
+  --accent-soft: rgba(212, 98, 58, 0.08);
+  --surface: #f9fafb;
+  --card: #ffffff;
+  --primary: #18181b;
+  --primary-foreground: #fafafa;
+  --primary-soft: #f1f1f3;
+  --destructive: #dc2626;
+  --success: #15803d;
+  --success-soft: #f0fdf4;
+  color-scheme: light;
 }
+
+.dark {
+  --background: #0b0c0e;
+  --foreground: #e4e4e7;
+  --muted: #9a9aa2;
+  --border: #26262b;
+  --accent: #c9c9d1;
+  --accent-soft: rgba(201, 201, 209, 0.1);
+  --surface: #141417;
+  --card: #18181b;
+  --primary: #e4e4e7;
+  --primary-foreground: #101012;
+  --primary-soft: rgba(228, 228, 231, 0.12);
+  --destructive: #f87171;
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, 0.12);
+  color-scheme: dark;
+}
+
+/* ── The public landing page ─────────────────────────────────────────────
+   The marketing site is one continuous cinematic piece, so it opts out of
+   the light/dark toggle entirely and is always the dark "stage" palette.
+   (The app behind the login still follows the toggle.) Scoping the same
+   custom properties means every token class already in use — bg-card,
+   text-muted, border-border, bg-surface — resolves dark here without
+   touching a single component. */
+.landing-dark {
+  --background: #050506;
+  --foreground: #f2f2f4;
+  --muted: #8c8c96;
+  --border: #23232b;
+  --accent: #e08a5a;
+  --accent-soft: rgba(224, 138, 90, 0.12);
+  --surface: #0b0b0f;
+  --card: #0e0e13;
+  --primary: #f2f2f4;
+  --primary-foreground: #0a0a0c;
+  --primary-soft: rgba(242, 242, 244, 0.1);
+  --destructive: #f87171;
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, 0.12);
+  color-scheme: dark;
+  background: var(--background);
+}
+
+/* keeps overscroll and the area behind the page dark too, without needing
+   a client component just to set a class on <body> */
+html:has(.landing-dark) {
+  background: #050506;
+  color-scheme: dark;
+}
+
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
@@ -18,6 +79,13 @@
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
   --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
   --font-sans: var(--font-body);
   --font-serif: var(--font-display);
   --font-mono: var(--font-mono);
@@ -40,13 +108,170 @@ body {
   color: var(--foreground);
 }
 
+/* ── Shared motion primitives ────────────────────────────────────────────
+   Kept intentionally small and quick (120-220ms) — the goal is "the UI
+   acknowledged what I did", not decoration. Radix components drive these
+   through their own data-state attribute, so open/close both animate and
+   Radix waits for the animation to finish before unmounting. Respects
+   prefers-reduced-motion by collapsing everything to an instant, no-motion
+   fade so nothing is forced on people who've asked their OS to avoid it. */
+@keyframes overlay-show {
+  from { opacity: 0; }
+}
+@keyframes overlay-hide {
+  to { opacity: 0; }
+}
+@keyframes content-show {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+}
+@keyframes content-hide {
+  to { opacity: 0; transform: scale(0.96) translateY(-4px); }
+}
+/* Centered-dialog variant: the resting transform (centering) has to live
+   inside the keyframe itself, since the animation owns `transform` for as
+   long as the element is mounted. */
+@keyframes dialog-show {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes dialog-hide {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+}
+@keyframes drawer-show {
+  from { transform: translateX(-100%); }
+}
+@keyframes drawer-hide {
+  to { transform: translateX(-100%); }
+}
+/* Right-anchored counterpart to the drawer, for side panels. */
+@keyframes sheet-show {
+  from { transform: translateX(100%); }
+}
+@keyframes sheet-hide {
+  to { transform: translateX(100%); }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
+.animate-overlay-show { animation: overlay-show 150ms ease-out; }
+.animate-overlay-hide { animation: overlay-hide 150ms ease-in forwards; }
+.animate-content-show { animation: content-show 160ms cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-content-hide { animation: content-hide 120ms ease-in forwards; }
+.animate-dialog-show { animation: dialog-show 180ms cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-dialog-hide { animation: dialog-hide 150ms ease-in forwards; }
+.animate-drawer-show { animation: drawer-show 220ms cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-drawer-hide { animation: drawer-hide 180ms ease-in forwards; }
+.animate-sheet-show { animation: sheet-show 240ms cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-sheet-hide { animation: sheet-hide 180ms ease-in forwards; }
+.animate-fade-up { animation: fade-up 260ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-fade-in { animation: fade-in 200ms ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-overlay-show, .animate-overlay-hide, .animate-content-show, .animate-content-hide,
+  .animate-drawer-show, .animate-drawer-hide, .animate-sheet-show, .animate-sheet-hide,
+  .animate-fade-up, .animate-fade-in {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+    transform: none !important;
+  }
+  .animate-dialog-show, .animate-dialog-hide {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+    transform: translate(-50%, -50%) !important;
+  }
+}
+
 .heading-display {
   font-family: var(--font-display), Georgia, serif;
   @apply tracking-tight;
 }
 
+/* Section seam. A hairline that fades out at both edges reads as depth
+   rather than a table rule — the flat full-width border looked fine on
+   white but boxes the page in on near-black. */
+.section-seam::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--border) 18%,
+    var(--border) 82%,
+    transparent
+  );
+}
+
 .prose-quiet {
   @apply text-base leading-relaxed text-muted md:text-lg;
+}
+
+/* Hand-rolled instead of @tailwindcss/typography (not installed, and this is
+   the only place markdown renders) — shared by the article editor's live
+   preview, the dashboard's own-article preview, and the public article page. */
+.markdown-body {
+  @apply text-[15px] leading-relaxed text-foreground md:text-base;
+}
+.markdown-body > * + * {
+  @apply mt-4;
+}
+.markdown-body h1 {
+  font-family: var(--font-display), Georgia, serif;
+  @apply tracking-tight mt-8 text-2xl leading-tight first:mt-0 md:text-3xl;
+}
+.markdown-body h2 {
+  font-family: var(--font-display), Georgia, serif;
+  @apply tracking-tight mt-7 text-xl leading-tight first:mt-0 md:text-2xl;
+}
+.markdown-body h3 {
+  @apply mt-6 text-lg font-bold first:mt-0;
+}
+.markdown-body p {
+  @apply leading-relaxed;
+}
+.markdown-body a {
+  @apply text-accent underline underline-offset-4;
+}
+.markdown-body ul {
+  @apply list-disc space-y-1.5 pl-5;
+}
+.markdown-body ol {
+  @apply list-decimal space-y-1.5 pl-5;
+}
+.markdown-body blockquote {
+  @apply border-l-2 border-border pl-4 text-muted italic;
+}
+.markdown-body code {
+  @apply rounded bg-surface px-1.5 py-0.5 font-mono text-[0.85em];
+}
+.markdown-body pre {
+  @apply overflow-x-auto rounded-lg bg-surface p-4;
+}
+.markdown-body pre code {
+  @apply bg-transparent p-0;
+}
+.markdown-body img {
+  @apply rounded-lg;
+}
+.markdown-body hr {
+  @apply border-border;
+}
+.markdown-body table {
+  @apply w-full border-collapse text-sm;
+}
+.markdown-body th,
+.markdown-body td {
+  @apply border border-border px-3 py-2 text-left;
+}
+.markdown-body th {
+  @apply bg-surface font-semibold;
 }
 
 .focus-ring {
@@ -90,428 +315,5 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-}
-
-@keyframes seat-pulse {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.85;
-    transform: scale(1.08);
-  }
-}
-
-.seat-pulse {
-  animation: seat-pulse 3s ease-in-out infinite;
-}
-
-.table-label {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.45rem;
-  width: 100%;
-}
-
-.table-label-kicker {
-  font-family: var(--font-mono);
-  font-size: 0.48em;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(28, 28, 26, 0.42);
-}
-
-.table-label-divider {
-  width: 2rem;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(28, 28, 26, 0.16) 50%,
-    transparent
-  );
-}
-
-.table-label-body {
-  font-family: var(--font-display), Georgia, serif;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  color: #1a1a18;
-  white-space: pre;
-  text-align: center;
-  line-height: 1.28;
-  width: 100%;
-}
-
-.table-label--header .table-label-body {
-  font-weight: 400;
-  color: #242420;
-  line-height: 1.32;
-}
-
-.table-seat-label {
-  font-family: var(--font-display), Georgia, serif;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  color: #1a1a18;
-  white-space: nowrap;
-  line-height: 1.15;
-}
-
-/* ── Table center stack ── */
-.table-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  width: 210px;
-}
-
-.table-logo {
-  display: block;
-  width: auto;
-  height: 1.75rem;
-}
-
-.table-weekend-intro {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.08rem;
-}
-
-.table-weekend-line {
-  font-family: var(--font-display), Georgia, serif;
-  font-size: 1rem;
-  font-weight: 400;
-  line-height: 1.32;
-  letter-spacing: -0.02em;
-  color: #1a1a18;
-  text-align: center;
-}
-
-/* ── Seat topic cards (glass satellites) ── */
-.seat-topic-card {
-  width: 148px;
-  padding: 0.65rem 0.75rem 0.7rem;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--seat-accent) 35%, transparent);
-  background: linear-gradient(
-    145deg,
-    rgba(12, 14, 22, 0.82) 0%,
-    rgba(8, 10, 16, 0.72) 100%
-  );
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-    0 8px 28px rgba(0, 0, 0, 0.45);
-  opacity: 0.58;
-  transform: scale(0.94);
-  transition:
-    opacity 0.35s ease,
-    transform 0.35s ease,
-    border-color 0.35s ease,
-    box-shadow 0.35s ease;
-}
-
-.seat-topic-card--active {
-  opacity: 1;
-  transform: scale(1);
-  border-color: color-mix(in srgb, var(--seat-accent) 75%, transparent);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
-    0 0 24px var(--seat-glow),
-    0 12px 32px rgba(0, 0, 0, 0.5);
-}
-
-.seat-topic-card--user.seat-topic-card--active {
-  border-color: color-mix(in srgb, var(--seat-accent) 90%, white);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.1) inset,
-    0 0 32px var(--seat-glow),
-    0 0 48px rgba(232, 197, 71, 0.2),
-    0 12px 36px rgba(0, 0, 0, 0.55);
-}
-
-.seat-topic-card--center {
-  width: 100%;
-  opacity: 1;
-  transform: none;
-}
-
-.seat-topic-card--center .seat-topic-card-topic {
-  text-align: center;
-}
-
-.seat-topic-card--mobile {
-  width: 140px;
-  padding: 0.55rem 0.6rem 0.6rem;
-}
-
-.seat-topic-card-header {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-bottom: 0.4rem;
-}
-
-.seat-topic-card-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--seat-accent) 50%, transparent);
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 500;
-  color: var(--seat-accent);
-  letter-spacing: 0.02em;
-}
-
-.seat-topic-card-icon {
-  font-size: 10px;
-  color: var(--seat-accent);
-  line-height: 1;
-}
-
-.seat-topic-card-persona {
-  font-family: var(--font-mono);
-  font-size: 8px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  color: var(--seat-accent);
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.seat-topic-card-topic {
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 1.4;
-  color: rgba(235, 232, 226, 0.88);
-  text-align: left;
-}
-
-.seat-topic-card--mobile .seat-topic-card-topic {
-  font-size: 9px;
-  line-height: 1.35;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .seat-topic-card {
-    transition: none;
-  }
-}
-
-/* ── Story chrome (corner UI) ── */
-.story-chrome {
-  position: absolute;
-  inset: 0;
-  z-index: 15;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 1.5rem 1.75rem;
-  pointer-events: none;
-}
-
-.story-chrome-logo {
-  display: block;
-  width: auto;
-  height: 1.05rem;
-  filter: brightness(0) invert(0.9);
-}
-
-.story-chrome-tag {
-  margin-top: 0.2rem;
-  font-family: var(--font-mono);
-  font-size: 0.55rem;
-  font-weight: 500;
-  letter-spacing: 0.2em;
-  color: rgba(235, 230, 222, 0.38);
-  text-transform: uppercase;
-}
-
-.story-chrome-right {
-  text-align: right;
-}
-
-.story-chrome-round {
-  font-family: var(--font-display), Georgia, serif;
-  font-size: 0.95rem;
-  font-weight: 400;
-  color: rgba(235, 230, 222, 0.88);
-}
-
-.story-chrome-sub {
-  margin-top: 0.15rem;
-  font-family: var(--font-mono);
-  font-size: 0.55rem;
-  letter-spacing: 0.12em;
-  color: rgba(235, 230, 222, 0.38);
-}
-
-/* ── Feedback center (scores phase) ── */
-.feedback-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 220px;
-  text-align: center;
-  color: #1a1a18;
-}
-
-.feedback-center--mobile {
-  width: 180px;
-}
-
-.feedback-center-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.15rem;
-  margin-bottom: 0.5rem;
-}
-
-.feedback-center-kicker {
-  font-family: var(--font-mono);
-  font-size: 7px;
-  font-weight: 500;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: rgba(26, 26, 24, 0.45);
-}
-
-.feedback-center-step {
-  font-family: var(--font-mono);
-  font-size: 8px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  color: rgba(26, 26, 24, 0.55);
-}
-
-.feedback-center-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  margin-bottom: 0.45rem;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--feedback-accent) 55%, transparent);
-  background: color-mix(in srgb, var(--feedback-accent) 12%, transparent);
-  box-shadow: 0 0 18px var(--feedback-glow);
-  font-family: var(--font-display), Georgia, serif;
-  font-size: 0.85rem;
-  color: var(--feedback-accent);
-}
-
-.feedback-center-title {
-  font-family: var(--font-display), Georgia, serif;
-  font-size: 1.35rem;
-  font-weight: 400;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  color: #1a1a18;
-}
-
-.feedback-center-subtitle {
-  margin-top: 0.2rem;
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 0.65rem;
-  color: rgba(26, 26, 24, 0.55);
-}
-
-.feedback-center-question {
-  margin-top: 0.45rem;
-  max-width: 200px;
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 0.6rem;
-  line-height: 1.45;
-  color: rgba(26, 26, 24, 0.48);
-}
-
-.feedback-center-average-value {
-  font-family: var(--font-display), Georgia, serif;
-  font-size: 1.75rem;
-  font-weight: 400;
-  line-height: 1;
-  color: var(--feedback-accent);
-  text-shadow: 0 0 24px var(--feedback-glow);
-}
-
-.feedback-center-dots {
-  display: flex;
-  gap: 0.35rem;
-  margin-top: 0.55rem;
-}
-
-.feedback-center-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(26, 26, 24, 0.2);
-}
-
-.feedback-center-dot--active {
-  background: var(--feedback-accent);
-  box-shadow: 0 0 8px var(--feedback-glow);
-}
-
-/* ── Score pills around table ── */
-.score-pill {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 999px;
-  border: 1.5px solid color-mix(in srgb, var(--seat-accent) 70%, transparent);
-  background: rgba(255, 252, 246, 0.92);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.5) inset,
-    0 0 16px var(--seat-glow),
-    0 4px 12px rgba(0, 0, 0, 0.25);
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  color: #1a1a18;
-  transform: scale(0.92);
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
-}
-
-.score-pill--active {
-  transform: scale(1.08);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.6) inset,
-    0 0 24px var(--seat-glow),
-    0 0 36px color-mix(in srgb, var(--seat-accent) 35%, transparent),
-    0 6px 16px rgba(0, 0, 0, 0.3);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .score-pill {
-    transition: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .seat-pulse {
-    animation: none;
   }
 }

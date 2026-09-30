@@ -21,12 +21,35 @@ npm run lint
 
 ## environment variables
 
-Create `.env.local` in the project root:
+Copy [`.env.example`](.env.example) to `.env.local` and fill it in:
+
+```bash
+cp .env.example .env.local
+```
+
+The application-form pipeline needs:
 
 ```bash
 GOOGLE_SHEETS_WEBHOOK_URL=
 GOOGLE_SHEETS_WEBHOOK_SECRET=
 ```
+
+Season 1 (login, dashboard, admin) additionally needs:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+SUPABASE_STORAGE_DECKS_BUCKET=decks
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` bypasses row level security. It is only ever read
+inside route handlers — never prefix it with `NEXT_PUBLIC_`.
+
+Without the Supabase variables the site still builds and the public pages still
+work; `/login`, `/dashboard` and `/admin` report that season 1 isn't connected
+yet.
 
 Example:
 
@@ -131,6 +154,97 @@ Each submission creates one row with:
 - `portfolio_or_project_links`
 - `agreement`
 - `raw_payload_json`
+
+## Season 1 setup
+
+Season 1 is the live cohort: invited members sign in with a magic link, see the
+fixed October 2026 calendar, claim one of six talk slots, submit a title,
+description and PDF deck, get approved by an admin, present the deck fullscreen
+in-browser (screen-shared into Google Meet — Meet itself isn't integrated), and
+get rated by the other nine on five parameters, 1–10 each.
+
+These steps have to be done by hand, once.
+
+### step 1 — create the Supabase project
+
+Create a project at [supabase.com](https://supabase.com). Note the project URL,
+the `anon` key and the `service_role` key from **Project Settings → API**.
+
+### step 2 — enable magic-link auth
+
+**Authentication → Providers → Email**: enable it, and enable **Email OTP /
+Magic Link**. There are no passwords in this app.
+
+### step 3 — set the auth URLs
+
+**Authentication → URL Configuration**:
+
+- **Site URL**: your site's origin (e.g. `http://localhost:3000` locally, your
+  real domain in production)
+- **Redirect URLs**: add `{SITE_URL}/auth/callback`
+
+This must match `NEXT_PUBLIC_SITE_URL` in `.env.local`, or the magic link will
+bounce.
+
+### step 4 — create the decks bucket
+
+**Storage → New bucket**: name it exactly `decks` and leave it **private**
+(public access off). Decks are only ever served through signed URLs minted by
+`/api/talks/[id]/deck/view`, which checks who is asking first.
+
+### step 5 — run the migration
+
+Open [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql)
+and **edit the placeholder admin email at the bottom of the file** before
+running it:
+
+```sql
+INSERT INTO invites (name, email, role) VALUES ('Admin', 'you@example.com', 'admin');
+```
+
+That row is the only way to get an admin account — sign-in is gated on the
+`invites` table and the role comes from the invite. Then paste the whole file
+into **SQL Editor** and run it. It creates the tables, row level security
+policies, the `is_admin()` helper, Season 1, and the eight fixed dates:
+
+| date | slot |
+| --- | --- |
+| 2026-10-04 | kickoff |
+| 2026-10-10 / 10-11 | talk 1a / 1b |
+| 2026-10-17 / 10-18 | talk 2a / 2b |
+| 2026-10-24 / 10-25 | talk 3a / 3b |
+| 2026-10-31 | recognitions |
+
+### step 6 — fill in `.env.local`
+
+Copy `.env.example` to `.env.local` and paste in the four Supabase values.
+Restart the dev server.
+
+### step 7 — sign in and invite the cohort
+
+Go to `/login`, enter the admin email from step 5, click the link in the email,
+and you land on `/dashboard` with an **admin** link in the header. Add the ten
+members at `/admin/invites` (name + email). Adding someone does **not** email
+them — send them the `/login` link yourself.
+
+### notes
+
+- **Email rate limits.** Supabase's default hosted SMTP has a low send-rate cap.
+  That's fine for ~11 people, but if magic links start arriving late or not at
+  all, configure custom SMTP (Resend, Postmark, SES) under
+  **Authentication → SMTP Settings**.
+- **Upload size.** Decks are capped at 25MB, enforced client-side and in
+  `/api/talks`. If you deploy to a serverless platform with a request body limit
+  below that (Vercel functions cap request bodies at ~4.5MB), either keep decks
+  small or switch `/api/talks` to a direct-to-storage signed upload.
+- **Anonymity.** While a submission is pending, the calendar shows the slot as
+  claimed with no name attached; the presenter's name and title appear only once
+  an admin approves. Peer feedback is always shown without rater identity — the
+  `ratings` table is readable only by its own author and admins, and the
+  averages/comments come from `/api/talks/[id]/ratings`, which strips identity
+  before responding.
+- **One at a time.** A presenter can hold one pending-or-approved talk per
+  season, and a slot can hold one. Rejecting a talk frees both back up.
 
 ## troubleshooting
 
