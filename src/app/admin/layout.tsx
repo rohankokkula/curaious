@@ -6,13 +6,13 @@ import { getViewerProfile } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 const ITEMS: NavItem[] = [
-  { href: "/admin", label: "Overview", icon: "home", exact: true },
+  { href: "/admin", label: "Overview", icon: "home", exact: true, tab: true },
   { href: "/admin/cohorts", label: "Cohorts", icon: "layers" },
-  { href: "/admin/talks", label: "Talks", icon: "file" },
+  { href: "/admin/talks", label: "Talks", icon: "file", tab: true },
   { href: "/admin/resources", label: "Articles", icon: "resources" },
-  { href: "/admin/members", label: "Members", icon: "users" },
+  { href: "/admin/members", label: "Members", icon: "users", tab: true },
   { href: "/admin/invites", label: "Invites", icon: "mail" },
-  { href: "/admin/schedule", label: "Schedule", icon: "calendar" },
+  { href: "/admin/schedule", label: "Schedule", icon: "calendar", tab: true },
   { href: "/admin/feedback", label: "Feedback", icon: "message" },
   { href: "/admin/analytics", label: "Analytics", icon: "chart" },
   { href: "/dashboard", label: "Member View", icon: "eye" },

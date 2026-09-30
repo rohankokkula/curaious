@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { MarkdownRenderer } from "@/components/dashboard/MarkdownRenderer";
+import { MarkdownToolbar } from "@/components/dashboard/MarkdownToolbar";
 import { usePasteGuard } from "@/components/dashboard/PasteGuard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ export type ExistingArticle = {
 export function ArticleEditor({ existing }: { existing?: ExistingArticle }) {
   const router = useRouter();
   const guard = usePasteGuard();
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [title, setTitle] = useState(existing?.title ?? "");
   const [excerpt, setExcerpt] = useState(existing?.excerpt ?? "");
   const [body, setBody] = useState(existing?.body ?? "");
@@ -61,7 +63,7 @@ export function ArticleEditor({ existing }: { existing?: ExistingArticle }) {
 
     if (!res.ok || !json.ok) return toast.error(json.message ?? "couldn't save that.");
     toast.success(isEditing ? "Resubmitted for review" : "Submitted for review");
-    router.push("/dashboard/resources");
+    router.push("/dashboard/bookmarks");
     router.refresh();
   }
 
@@ -143,15 +145,19 @@ export function ArticleEditor({ existing }: { existing?: ExistingArticle }) {
         </div>
 
         {tab === "write" ? (
-          <Textarea
-            className="mt-2 min-h-[28rem] resize-y font-mono text-sm leading-relaxed"
-            required
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            onPaste={guard.onPaste}
-            onDrop={guard.onDrop}
-            placeholder={"Write it here, in your own words. Markdown works — headings, lists, `code`, > quotes, links, tables."}
-          />
+          <div className="mt-2">
+            <MarkdownToolbar textareaRef={bodyRef} onChange={setBody} />
+            <Textarea
+              ref={bodyRef}
+              className="min-h-[28rem] resize-y rounded-t-none font-mono text-sm leading-relaxed"
+              required
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              onPaste={guard.onPaste}
+              onDrop={guard.onDrop}
+              placeholder={"Write it here, in your own words. Markdown works: headings, lists, `code`, > quotes, links, tables."}
+            />
+          </div>
         ) : (
           <div className="mt-2 min-h-[28rem] rounded-lg border border-border bg-card p-5">
             {body.trim() ? (

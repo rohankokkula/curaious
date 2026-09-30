@@ -1,10 +1,7 @@
 import { AddInviteForm } from "@/components/admin/AddInviteForm";
-import {
-  InvitesTable,
-  type InviteListItem,
-} from "@/components/admin/InvitesTable";
+import { InvitesTable } from "@/components/admin/InvitesTable";
 import { getActiveCohort } from "@/lib/cohort";
-import { fetchInternal } from "@/lib/internalFetch";
+import { loadInvites } from "@/lib/invitesData";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 export const dynamic = "force-dynamic";
@@ -18,15 +15,10 @@ export default async function AdminInvitesPage() {
     );
   }
 
-  // `invites` is default-deny under RLS on purpose, so the list comes from the
-  // admin route (service-role, admin re-verified there).
-  const body = await fetchInternal<{
-    ok?: boolean;
-    invites?: InviteListItem[];
-  }>("/api/admin/invites");
-
-  const cohort = await getActiveCohort();
-  const invites = body?.ok ? (body.invites ?? []) : [];
+  // `invites` is default-deny under RLS on purpose, so this calls the same
+  // service-role read GET /api/admin/invites wraps, directly — this page is
+  // only reachable by an admin already (middleware + the admin layout).
+  const [cohort, invites] = await Promise.all([getActiveCohort(), loadInvites()]);
 
   return (
     <div className="space-y-8">
@@ -56,11 +48,7 @@ export default async function AdminInvitesPage() {
               <span className="text-sm text-muted">Manage {cohort?.name}</span>
             </div>
 
-            {!body?.ok ? (
-              <div className="p-6 bg-red-50 border border-red-200 rounded text-red-700 text-center">
-                Couldn&rsquo;t load the member list.
-              </div>
-            ) : invites.length === 0 ? (
+            {invites.length === 0 ? (
               <div className="p-12 text-center">
                 <p className="text-muted mb-2">No members added yet</p>
                 <p className="text-sm text-muted/70">Start by adding members on the left</p>

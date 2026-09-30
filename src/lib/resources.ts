@@ -54,7 +54,7 @@ export const resourceReviewSchema = z.object({
 export const articleInputSchema = z.object({
   title: z.string().trim().min(4, "at least 4 characters").max(140),
   excerpt: z.string().trim().min(10, "a line or two on what this is about").max(400),
-  body: z.string().trim().min(200, "give it some real length — this is a place for a full thought, not a note"),
+  body: z.string().trim().min(200, "give it some real length, this is a place for a full thought, not a note"),
   tags: tagsField,
 });
 export type ArticleInput = z.infer<typeof articleInputSchema>;

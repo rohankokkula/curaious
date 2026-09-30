@@ -62,7 +62,7 @@ export default async function WriteArticlePage({
           {existing ? "Edit your article" : "Write an article"}
         </h1>
         <p className="mt-1 text-muted">
-          Your own thinking, in your own words. An admin reviews it before it goes public.
+          Your own thinking, in your own words. Pasting is not allowed.
         </p>
       </header>
 

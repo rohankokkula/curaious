@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
@@ -25,7 +25,21 @@ const mono = IBM_Plex_Mono({
   display: "swap",
 });
 
+/** Draws under the notch/home indicator (padding handled with safe-area
+ * insets), and tints the browser chrome to match the app on phones so it
+ * reads as one surface rather than a site inside a browser. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
+};
+
 export const metadata: Metadata = {
+  appleWebApp: { capable: true, title: "curaious", statusBarStyle: "black-translucent" },
   title: {
     default: "curaious",
     template: "%s · curaious",

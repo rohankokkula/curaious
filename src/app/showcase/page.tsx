@@ -4,10 +4,10 @@ import { MapPin, Star } from "lucide-react";
 import { GithubIcon, LinkedinIcon, XIcon } from "@/components/icons/SocialIcons";
 import { CuraiousLogo } from "@/components/home/CuraiousLogo";
 import { Section, SectionKicker } from "@/components/home/Section";
-import { fetchInternal } from "@/lib/internalFetch";
 import { parseRecordingUrl } from "@/lib/recording";
 import { RATING_MAX, RATING_PARAMETERS } from "@/lib/ratings";
-import type { ShowcasePayload, ShowcaseSpeaker } from "@/lib/showcase";
+import type { ShowcaseSpeaker } from "@/lib/showcase";
+import { loadShowcase } from "@/lib/showcaseData";
 
 export const dynamic = "force-dynamic";
 
@@ -244,9 +244,7 @@ function Speaker({ speaker, index }: { speaker: ShowcaseSpeaker; index: number }
 }
 
 export default async function ShowcasePage() {
-  const data = await fetchInternal<ShowcasePayload>("/api/showcase");
-  const speakers = data?.ok ? data.speakers : [];
-  const cohort = data?.ok ? data.cohort : null;
+  const { speakers, cohort } = await loadShowcase();
 
   return (
     <div className="landing-dark min-h-screen">

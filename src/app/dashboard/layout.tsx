@@ -9,16 +9,23 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const [viewer, cohort] = await Promise.all([getViewerProfile(), getActiveCohort()]);
 
   const items: NavItem[] = [
-    { href: "/dashboard", label: "Dashboard", icon: "home", exact: true },
-    { href: "/dashboard/schedule", label: "Schedule", icon: "calendar" },
-    { href: "/dashboard/talks", label: "Talks", icon: "talks" },
-    { href: "/dashboard/members", label: "Members", icon: "users" },
-    { href: "/dashboard/resources", label: "Resources", icon: "resources" },
+    { href: "/dashboard", label: "Home", icon: "home", exact: true, tab: true },
+    { href: "/dashboard/schedule", label: "Schedule", icon: "calendar", tab: true },
+    { href: "/dashboard/talks", label: "Talks", icon: "talks", tab: true },
+    { href: "/dashboard/members", label: "Members", icon: "users", tab: true },
     ...(viewer?.role === "admin" ? [{ href: "/admin", label: "Admin", icon: "shield" as const }] : []),
   ];
 
+  // Rendered as their own group, pinned to the bottom of the sidebar —
+  // reference surfaces, not weekend-to-weekend items.
+  const secondaryItems: NavItem[] = [
+    { href: "/dashboard/resources/write", label: "Articles", icon: "articles" },
+    { href: "/dashboard/bookmarks", label: "Bookmarks", icon: "bookmark" },
+    { href: "/dashboard/resources", label: "Resources", icon: "resources" },
+  ];
+
   return (
-    <AppShell variant="member" items={items} viewer={viewer} cohort={cohort}>
+    <AppShell variant="member" items={items} secondaryItems={secondaryItems} viewer={viewer} cohort={cohort}>
       {children}
     </AppShell>
   );

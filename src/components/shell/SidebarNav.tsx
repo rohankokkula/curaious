@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BarChart3, BookOpen, CalendarDays, Eye, FileText, Home, Mail, MessageSquare, Mic2, Settings, Shield, User, Users, Layers,
+  BarChart3, Bookmark, BookOpen, CalendarDays, Eye, FileText, Home, Mail, MessageSquare, Mic2, Newspaper, Settings, Shield, User, Users, Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const NAV_ICONS = {
   home: Home, user: User, calendar: CalendarDays, users: Users, shield: Shield, file: FileText,
   mail: Mail, message: MessageSquare, chart: BarChart3, eye: Eye, settings: Settings, layers: Layers,
-  talks: Mic2, resources: BookOpen,
+  talks: Mic2, resources: BookOpen, bookmark: Bookmark, articles: Newspaper,
 };
 
 export type NavItem = {
@@ -20,6 +20,9 @@ export type NavItem = {
   /** exact-match only (for index routes like /dashboard) */
   exact?: boolean;
   badge?: number;
+  /** Pinned to the phone's bottom tab bar (max four); everything else lives
+   * in the More sheet. Desktop ignores this. */
+  tab?: boolean;
 };
 
 /** Longest matching href wins, so /dashboard/members doesn't light up /dashboard/members/<me>. */

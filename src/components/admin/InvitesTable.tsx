@@ -1,11 +1,4 @@
-export type InviteListItem = {
-  id: string;
-  name: string;
-  email: string;
-  role: "member" | "admin";
-  acceptedAt: string | null;
-  createdAt: string;
-};
+import type { InviteListItem } from "@/lib/invitesData";
 
 function formatDate(value: string | null) {
   if (!value) return "–";

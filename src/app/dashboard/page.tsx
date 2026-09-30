@@ -2,15 +2,12 @@ import Link from "next/link";
 import { CalendarDays, CheckCircle2, MessageSquare, Mic } from "lucide-react";
 import { SlideDeck } from "@/components/dashboard/SlideDeck";
 import { cohortMonthLabel, getActiveCohort } from "@/lib/cohort";
-import { fetchInternal } from "@/lib/internalFetch";
+import { loadSeasonSlots } from "@/lib/slots";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient, getViewerProfile } from "@/lib/supabase/server";
-import type { SlotView } from "@/lib/talks";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-
-type SlotsResponse = { ok?: boolean; hasActiveTalk?: boolean; slots?: SlotView[] };
 
 function EmptyState({ children }: { children: React.ReactNode }) {
   return (
@@ -39,13 +36,15 @@ export default async function DashboardPage() {
     return <EmptyState>The app isn&rsquo;t connected to its database yet.</EmptyState>;
   }
 
-  const body = await fetchInternal<SlotsResponse>("/api/slots");
-
-  if (!body?.ok) {
-    return <EmptyState>Couldn&rsquo;t load the season schedule. Reload the page and try again.</EmptyState>;
+  if (!viewer) {
+    return <EmptyState>Sign in to see your dashboard.</EmptyState>;
   }
 
-  const slots = body.slots ?? [];
+  // Calls straight into the same logic /api/slots itself calls, instead of
+  // this Server Component making an HTTP round trip to its own API route —
+  // free on `next dev`, a real extra hop plus a second function cold start
+  // on Vercel, for no reason on a page that's the whole point of being fast.
+  const { slots } = await loadSeasonSlots(viewer.id);
 
   if (slots.length === 0) {
     return <EmptyState>The season schedule hasn&rsquo;t been set up yet.</EmptyState>;

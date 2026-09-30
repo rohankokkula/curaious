@@ -61,7 +61,7 @@ export function LinkPreviewModal({
               loading="lazy"
             />
             <p className="pointer-events-none absolute inset-x-0 bottom-3 text-center text-xs text-muted">
-              Blank here? Plenty of sites don&rsquo;t allow this — use &ldquo;Open in new tab&rdquo; above.
+              Blank here? Plenty of sites don&rsquo;t allow this. Use &ldquo;Open in new tab&rdquo; above.
             </p>
           </div>
         </D.Content>

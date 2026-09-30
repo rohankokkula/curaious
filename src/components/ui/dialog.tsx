@@ -6,6 +6,11 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const Dialog = D.Root;
+
+/** The little grab bar at the top of a bottom sheet, phones only. */
+function SheetHandle() {
+  return <div aria-hidden className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-border md:hidden max-md:mt-2" />;
+}
 const DialogTrigger = D.Trigger;
 const DialogClose = D.Close;
 
@@ -20,17 +25,25 @@ function DialogContent({
       <D.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-overlay-hide data-[state=open]:animate-overlay-show" />
       <D.Content
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md rounded-xl border border-border bg-card p-6 shadow-xl data-[state=closed]:animate-dialog-hide data-[state=open]:animate-dialog-show",
+          "fixed z-50 border border-border bg-card shadow-xl outline-none",
+          // phone: a bottom sheet, the way an app asks a question
+          "max-md:inset-x-0 max-md:bottom-0 max-md:max-h-[90dvh] max-md:overflow-y-auto max-md:rounded-t-2xl max-md:border-x-0 max-md:border-b-0 max-md:p-5 max-md:pb-[calc(env(safe-area-inset-bottom)+1.25rem)]",
+          "max-md:data-[state=open]:animate-bottom-sheet-show max-md:data-[state=closed]:animate-bottom-sheet-hide",
+          // desktop: centred
+          "md:top-1/2 md:left-1/2 md:w-[calc(100%-2rem)] md:max-w-md md:rounded-xl md:p-6",
+          "md:data-[state=open]:animate-dialog-show md:data-[state=closed]:animate-dialog-hide",
           className,
+          "max-md:max-w-none!",
         )}
         {...props}
       >
+        <SheetHandle />
         <D.Title className="text-lg font-semibold">{title}</D.Title>
         <D.Description className="sr-only">{title}</D.Description>
         <div className="mt-4">{children}</div>
         <D.Close
           aria-label="Close"
-          className="absolute top-4 right-4 rounded-md p-1 text-muted hover:bg-surface"
+          className="absolute top-4 right-4 rounded-md p-1 text-muted hover:bg-surface max-md:hidden"
         >
           <X className="size-4" />
         </D.Close>
@@ -61,12 +74,20 @@ function SheetContent({
       <D.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-overlay-hide data-[state=open]:animate-overlay-show" />
       <D.Content
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-border bg-card shadow-xl outline-none data-[state=closed]:animate-sheet-hide data-[state=open]:animate-sheet-show",
+          "fixed z-50 flex flex-col border-border bg-card shadow-xl outline-none",
+          // phone: slides up from the bottom, full width
+          "max-md:inset-x-0 max-md:bottom-0 max-md:max-h-[92dvh] max-md:rounded-t-2xl max-md:border-t",
+          "max-md:data-[state=open]:animate-bottom-sheet-show max-md:data-[state=closed]:animate-bottom-sheet-hide",
+          // desktop: right-hand panel
+          "md:inset-y-0 md:right-0 md:w-full md:max-w-md md:border-l",
+          "md:data-[state=open]:animate-sheet-show md:data-[state=closed]:animate-sheet-hide",
           className,
+          "max-md:max-w-none!",
         )}
         {...props}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
+        <SheetHandle />
+        <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4 max-md:px-5 max-md:pt-1 max-md:pb-3">
           <div className="min-w-0">
             <D.Title className="text-lg font-semibold">{title}</D.Title>
             {description ? (
@@ -83,7 +104,9 @@ function SheetContent({
           </D.Close>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5 max-md:pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+          {children}
+        </div>
       </D.Content>
     </D.Portal>
   );

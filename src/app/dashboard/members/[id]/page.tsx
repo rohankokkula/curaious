@@ -8,16 +8,10 @@ import { ProfileTabs } from "@/components/dashboard/ProfileTabs";
 import { RecordingCard } from "@/components/dashboard/RecordingCard";
 import { ShareProfileButton } from "@/components/dashboard/ShareProfileButton";
 import { getActiveCohort } from "@/lib/cohort";
-import { fetchInternal } from "@/lib/internalFetch";
 import { canSee, resolveVisibility } from "@/lib/profile";
 import { RECORDINGS_VISIBLE_TO, SAMPLE_RECORDING_URL } from "@/lib/recording";
-import {
-  emptyAggregate,
-  RATING_MAX,
-  RATING_PARAMETERS,
-  type RatingAggregate,
-  type RatingParameterKey,
-} from "@/lib/ratings";
+import { RATING_MAX, RATING_PARAMETERS, type RatingParameterKey } from "@/lib/ratings";
+import { loadRatingAggregate } from "@/lib/ratingsAggregate";
 import { formatSlotDate, type TalkStatus } from "@/lib/talks";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -66,22 +60,6 @@ type GivenRatingRow = Record<RatingParameterKey, number> & {
   comment: string | null;
   created_at: string;
 };
-
-/**
- * Feedback received comes from the aggregation route, not a direct query:
- * `ratings` is locked to rater-or-admin under RLS, and that route is the only
- * thing that strips rater identity before returning scores and notes.
- */
-async function loadAggregate(talkId: string): Promise<RatingAggregate | null> {
-  const body = await fetchInternal<{
-    ok?: boolean;
-    aggregate?: RatingAggregate;
-  }>(`/api/talks/${talkId}/ratings`);
-
-  if (!body?.ok) return null;
-
-  return body.aggregate ?? emptyAggregate();
-}
 
 function Card({
   children,
@@ -240,7 +218,7 @@ export default async function MemberProfilePage({
     : { data: null };
 
   const aggregate =
-    talk && talk.status === "approved" ? await loadAggregate(talk.id) : null;
+    talk && talk.status === "approved" ? await loadRatingAggregate(talk.id) : null;
 
   // Rejected talks are hidden from the calendar, but the presenter (and the
   // curator) should still be able to read why it came back.
@@ -361,7 +339,11 @@ export default async function MemberProfilePage({
             {talk.description}
           </p>
 
-          {talk.status === "approved" && talk.deck_path ? (
+          {/* The deck itself is only for the presenter (or an admin) to open
+              from their own profile — everyone else's route to it is the
+              actual review page (/present), where viewing the deck is part
+              of rating the talk, not a standalone download. */}
+          {talk.status === "approved" && talk.deck_path && (isSelf || isAdmin) ? (
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
                 href={`/dashboard/talks/${talk.id}/present`}

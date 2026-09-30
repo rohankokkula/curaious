@@ -1,35 +1,16 @@
 import { NextResponse } from "next/server";
-import {
-  emptyAggregate,
-  RATING_PARAMETERS,
-  type RatingAggregate,
-} from "@/lib/ratings";
+import { loadRatingAggregate } from "@/lib/ratingsAggregate";
 import { loadTalkAccess } from "@/lib/talkAccess";
 import { hasServiceRoleKey } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 export const dynamic = "force-dynamic";
 
-type RatingRow = {
-  rater_id: string;
-  understanding: number;
-  content: number;
-  research_depth: number;
-  delivery: number;
-  usefulness: number;
-  comment: string | null;
-};
-
-function round(value: number) {
-  return Math.round(value * 10) / 10;
-}
-
 /**
- * Aggregated feedback for one talk. Runs with the service-role client so it
- * can read every rating — the base `ratings` table stays locked to
- * rater-or-admin, so this route is the only way peer feedback becomes
- * visible. Comments carry the rater's name; feedback here is attributed, not
- * anonymous.
+ * Aggregated feedback for one talk. Access-gated here for any client-side
+ * caller; the actual aggregation lives in ratingsAggregate.ts so Server
+ * Components (the member profile page) can call it directly instead of
+ * making an HTTP round trip back to this route.
  */
 export async function GET(
   _request: Request,
@@ -43,7 +24,7 @@ export async function GET(
   }
 
   const { id } = await params;
-  const { admin, talk, canView, userId } = await loadTalkAccess(id);
+  const { talk, canView, userId } = await loadTalkAccess(id);
 
   if (!userId) {
     return NextResponse.json(
@@ -59,68 +40,6 @@ export async function GET(
     );
   }
 
-  const { data, error } = await admin
-    .from("ratings")
-    .select(
-      "rater_id, understanding, content, research_depth, delivery, usefulness, comment",
-    )
-    .eq("talk_id", talk.id)
-    .order("id", { ascending: true })
-    .returns<RatingRow[]>();
-
-  if (error) {
-    console.error("api/talks/[id]/ratings: query failed", error.message);
-    return NextResponse.json(
-      { ok: false, error: "query_failed" },
-      { status: 500 },
-    );
-  }
-
-  const rows = data ?? [];
-
-  if (rows.length === 0) {
-    return NextResponse.json({
-      ok: true,
-      talkId: talk.id,
-      aggregate: emptyAggregate(),
-    });
-  }
-
-  const aggregate: RatingAggregate = emptyAggregate();
-  aggregate.count = rows.length;
-
-  let overallTotal = 0;
-
-  for (const parameter of RATING_PARAMETERS) {
-    const total = rows.reduce((sum, row) => sum + row[parameter.key], 0);
-    aggregate.averages[parameter.key] = round(total / rows.length);
-    overallTotal += total;
-  }
-
-  aggregate.averages.overall = round(
-    overallTotal / (rows.length * RATING_PARAMETERS.length),
-  );
-
-  const commentRows = rows.filter((row) => row.comment?.trim());
-
-  if (commentRows.length > 0) {
-    const { data: raters } = await admin
-      .from("profiles")
-      .select("id, name, avatar_url")
-      .in("id", commentRows.map((row) => row.rater_id))
-      .returns<{ id: string; name: string; avatar_url: string | null }[]>();
-
-    const raterById = new Map((raters ?? []).map((r) => [r.id, r]));
-
-    aggregate.comments = commentRows.map((row) => {
-      const rater = raterById.get(row.rater_id);
-      return {
-        raterName: rater?.name ?? "A member",
-        raterAvatarUrl: rater?.avatar_url ?? null,
-        text: row.comment!.trim(),
-      };
-    });
-  }
-
+  const aggregate = await loadRatingAggregate(talk.id);
   return NextResponse.json({ ok: true, talkId: talk.id, aggregate });
 }

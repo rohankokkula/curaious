@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Link2, Loader2, PenLine, Plus } from "lucide-react";
+import { Link2, Loader2, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -79,7 +79,7 @@ export function AddResourceDialog() {
           <Plus className="size-4" /> Add resource
         </Button>
       </DialogTrigger>
-      <SheetContent title="Share a link" description="A paper, tool, video — anything worth the room's time.">
+      <SheetContent title="Share a link" description="A paper, tool, or video worth the room's time.">
         <form onSubmit={submit} className="space-y-4">
           <label className="block text-sm font-medium">
             URL
@@ -155,17 +155,6 @@ export function AddResourceDialog() {
               placeholder="Why is this worth reading?"
             />
           </label>
-
-          <div className="rounded-lg bg-surface p-3">
-            <p className="flex items-center gap-2 text-xs text-muted">
-              <FileText className="size-3.5" /> Prefer to write something yourself instead of sharing a link?
-            </p>
-            <Button asChild type="button" variant="outline" size="sm" className="mt-2">
-              <a href="/dashboard/resources/write">
-                <PenLine className="size-3.5" /> Write an article
-              </a>
-            </Button>
-          </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>

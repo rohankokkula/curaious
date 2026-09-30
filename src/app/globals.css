@@ -19,16 +19,19 @@
 }
 
 .dark {
-  --background: #0b0c0e;
+  /* Pitch black, not dark gray — background is literal #000, and surface/card
+     step up from there only just enough to stay legible as distinct layers
+     (sidebar/header/cards were reading as "dark gray" before this). */
+  --background: #000000;
   --foreground: #e4e4e7;
   --muted: #9a9aa2;
-  --border: #26262b;
+  --border: #212124;
   --accent: #c9c9d1;
   --accent-soft: rgba(201, 201, 209, 0.1);
-  --surface: #141417;
-  --card: #18181b;
+  --surface: #0a0a0b;
+  --card: #0e0e10;
   --primary: #e4e4e7;
-  --primary-foreground: #101012;
+  --primary-foreground: #000000;
   --primary-soft: rgba(228, 228, 231, 0.12);
   --destructive: #f87171;
   --success: #4ade80;
@@ -144,6 +147,13 @@ body {
 @keyframes drawer-hide {
   to { transform: translateX(-100%); }
 }
+/* Bottom sheet: how every dialog and side panel presents on a phone. */
+@keyframes bottom-sheet-show {
+  from { transform: translateY(100%); }
+}
+@keyframes bottom-sheet-hide {
+  to { transform: translateY(100%); }
+}
 /* Right-anchored counterpart to the drawer, for side panels. */
 @keyframes sheet-show {
   from { transform: translateX(100%); }
@@ -162,18 +172,21 @@ body {
 .animate-overlay-hide { animation: overlay-hide 150ms ease-in forwards; }
 .animate-content-show { animation: content-show 160ms cubic-bezier(0.16, 1, 0.3, 1); }
 .animate-content-hide { animation: content-hide 120ms ease-in forwards; }
-.animate-dialog-show { animation: dialog-show 180ms cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-dialog-show { animation: dialog-show 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .animate-dialog-hide { animation: dialog-hide 150ms ease-in forwards; }
 .animate-drawer-show { animation: drawer-show 220ms cubic-bezier(0.16, 1, 0.3, 1); }
 .animate-drawer-hide { animation: drawer-hide 180ms ease-in forwards; }
 .animate-sheet-show { animation: sheet-show 240ms cubic-bezier(0.16, 1, 0.3, 1); }
 .animate-sheet-hide { animation: sheet-hide 180ms ease-in forwards; }
+.animate-bottom-sheet-show { animation: bottom-sheet-show 280ms cubic-bezier(0.32, 0.72, 0, 1); }
+.animate-bottom-sheet-hide { animation: bottom-sheet-hide 200ms ease-in forwards; }
 .animate-fade-up { animation: fade-up 260ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 .animate-fade-in { animation: fade-in 200ms ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-overlay-show, .animate-overlay-hide, .animate-content-show, .animate-content-hide,
   .animate-drawer-show, .animate-drawer-hide, .animate-sheet-show, .animate-sheet-hide,
+  .animate-bottom-sheet-show, .animate-bottom-sheet-hide,
   .animate-fade-up, .animate-fade-in {
     animation-duration: 1ms;
     animation-delay: 0ms;
@@ -316,4 +329,46 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+
+/* ── App feel on phones ──────────────────────────────────────────────────
+   Below md the signed-in area behaves like an installed app rather than a
+   website: no grey tap flash, no rubber-band scroll leaking past the page,
+   headings sized for a phone instead of a desktop hero, and content kept
+   clear of the bottom tab bar and the home indicator. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 767px) {
+  .app-shell {
+    overscroll-behavior-y: none;
+  }
+  .app-main h1.text-3xl,
+  .app-main h1.text-4xl {
+    font-size: 1.625rem;
+    line-height: 2rem;
+  }
+  .app-main header > p.mt-1,
+  .app-main header > p.mt-2 {
+    font-size: 0.875rem;
+  }
+}
+
+/* Horizontal chip/tab rows scroll sideways on narrow screens instead of
+   wrapping into a ragged block. */
+.scroll-row {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
 }

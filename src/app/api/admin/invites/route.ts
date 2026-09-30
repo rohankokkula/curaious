@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getActiveCohort } from "@/lib/cohort";
 import { requireAdmin } from "@/lib/adminAuth";
 import { escapeLike, inviteSchema, normalizeEmail } from "@/lib/invites";
+import { loadInvites, type InviteListItem } from "@/lib/invitesData";
 import { hasServiceRoleKey } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -40,31 +41,8 @@ export async function GET() {
     );
   }
 
-  const { data, error } = await guard.admin
-    .from("invites")
-    .select("id, name, email, role, accepted_at, created_at")
-    .order("created_at", { ascending: true })
-    .returns<InviteRow[]>();
-
-  if (error) {
-    console.error("api/admin/invites: list failed", error.message);
-    return NextResponse.json(
-      { ok: false, error: "query_failed", message: "couldn't load invites." },
-      { status: 500 },
-    );
-  }
-
-  return NextResponse.json({
-    ok: true,
-    invites: (data ?? []).map((invite) => ({
-      id: invite.id,
-      name: invite.name,
-      email: invite.email,
-      role: invite.role,
-      acceptedAt: invite.accepted_at,
-      createdAt: invite.created_at,
-    })),
-  });
+  const invites: InviteListItem[] = await loadInvites();
+  return NextResponse.json({ ok: true, invites });
 }
 
 export async function POST(request: Request) {

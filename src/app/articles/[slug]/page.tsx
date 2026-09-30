@@ -4,27 +4,9 @@ import { notFound } from "next/navigation";
 import { CuraiousLogo } from "@/components/home/CuraiousLogo";
 import { Section } from "@/components/home/Section";
 import { MarkdownRenderer } from "@/components/dashboard/MarkdownRenderer";
-import { fetchInternal } from "@/lib/internalFetch";
+import { loadArticleBySlug } from "@/lib/articleData";
 
 export const dynamic = "force-dynamic";
-
-type ArticlePayload = {
-  ok: boolean;
-  article?: {
-    title: string;
-    excerpt: string | null;
-    body: string;
-    tags: string[];
-    readMinutes: number | null;
-    publishedAt: string;
-    author: { id: string; name: string; headline: string | null; avatarUrl: string | null } | null;
-  };
-};
-
-async function loadArticle(slug: string) {
-  const data = await fetchInternal<ArticlePayload>(`/api/articles/${encodeURIComponent(slug)}`);
-  return data?.ok ? (data.article ?? null) : null;
-}
 
 export async function generateMetadata({
   params,
@@ -32,7 +14,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const article = await loadArticle(slug);
+  const article = await loadArticleBySlug(slug);
   if (!article) return { title: "Article not found" };
 
   // Deliberately no `robots: noindex` — unlike /showcase, a published
@@ -55,7 +37,7 @@ export default async function ArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const article = await loadArticle(slug);
+  const article = await loadArticleBySlug(slug);
   if (!article) notFound();
 
   return (

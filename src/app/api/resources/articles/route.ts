@@ -74,7 +74,7 @@ export async function POST(request: Request) {
 
   if (error) {
     if (error.code === UNIQUE_VIOLATION) {
-      return NextResponse.json({ ok: false, message: "that title just collided with another — tweak it and try again." }, { status: 409 });
+      return NextResponse.json({ ok: false, message: "that title just collided with another, tweak it and try again." }, { status: 409 });
     }
     console.error("api/resources/articles: insert failed", error.message);
     return NextResponse.json({ ok: false, message: "couldn't save that." }, { status: 500 });

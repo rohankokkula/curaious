@@ -4,13 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cohortMonthLabel, getActiveCohort } from "@/lib/cohort";
-import { fetchInternal } from "@/lib/internalFetch";
+import { loadInvites } from "@/lib/invitesData";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-
-type InvitesResponse = { ok?: boolean; invites?: { acceptedAt: string | null }[] };
 
 function Stat({ value, label, hint, href, icon: Icon }: { value: string | number; label: string; hint: string; href: string; icon: typeof Users }) {
   return (
@@ -43,17 +41,16 @@ export default async function AdminOverviewPage() {
   const supabase = await createSupabaseServerClient();
   const { data: slots } = await supabase.from("session_slots").select("id, slot_date, slot_type, label, capacity").eq("season_id", cohort.id).order("slot_date").order("sort_order");
   const slotIds = (slots ?? []).map((s) => s.id);
-  const [{ data: talks }, { count: memberCount }, invites] = await Promise.all([
+  const [{ data: talks }, { count: memberCount }, inviteRows] = await Promise.all([
     slotIds.length ? supabase.from("talks").select("slot_id, status").in("slot_id", slotIds).neq("status", "rejected") : Promise.resolve({ data: [] as { slot_id: string; status: string }[] }),
     supabase.from("cohort_members").select("profile_id", { count: "exact", head: true }).eq("cohort_id", cohort.id).eq("status", "active"),
-    fetchInternal<InvitesResponse>("/api/admin/invites"),
+    loadInvites(),
   ]);
 
   const pending = (talks ?? []).filter((t) => t.status === "pending").length;
   const talkSlots = (slots ?? []).filter((s) => s.slot_type === "talk");
   const totalCapacity = talkSlots.reduce((sum, s) => sum + s.capacity, 0);
   const filled = (talks ?? []).length;
-  const inviteRows = invites?.ok ? (invites.invites ?? []) : [];
   const unaccepted = inviteRows.filter((i) => !i.acceptedAt).length;
 
   const byDate = new Map<string, typeof slots>();

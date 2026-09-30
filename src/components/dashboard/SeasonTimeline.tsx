@@ -2,6 +2,20 @@ import Link from "next/link";
 import { FileText, Plus, Users } from "lucide-react";
 import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
 import type { SlotView } from "@/lib/talks";
+import { cn } from "@/lib/utils";
+
+/** Same six-color story as the avatar palette elsewhere, as a faint wash
+ * rather than a solid fill — a day card should still read as "card", just
+ * not every one the same neutral gray. Paired light/dark per color since
+ * this page follows the theme toggle, unlike the pinned-dark landing page. */
+const DAY_PALETTE = [
+  "bg-emerald-100/90 dark:bg-emerald-500/[0.16]",
+  "bg-sky-100/90 dark:bg-sky-500/[0.16]",
+  "bg-amber-100/90 dark:bg-amber-500/[0.16]",
+  "bg-violet-100/90 dark:bg-violet-500/[0.16]",
+  "bg-rose-100/90 dark:bg-rose-500/[0.16]",
+  "bg-teal-100/90 dark:bg-teal-500/[0.16]",
+];
 
 /** Monday-anchored ISO week key, used to group slots into one "Week N" row. */
 function weekKey(date: string) {
@@ -106,15 +120,26 @@ function DayColumn({
   slots,
   viewerHasActiveTalk,
   mode,
+  colorIndex,
+  swipeable = false,
 }: {
   slots: SlotView[];
   viewerHasActiveTalk: boolean;
   mode: TimelineMode;
+  colorIndex: number;
+  /** In a sideways-scrolling week on a phone: fixed card width + snap point. */
+  swipeable?: boolean;
 }) {
   const { weekday, day, month } = dateParts(slots[0].date);
 
   return (
-    <div className="min-w-0 flex-1 rounded-xl border border-border/60 bg-card/60 p-4 shadow-sm backdrop-blur-md">
+    <div
+      className={cn(
+        "min-w-0 flex-1 rounded-2xl border border-border/60 p-4 shadow-sm backdrop-blur-md sm:rounded-xl",
+        swipeable && "w-[86%] shrink-0 snap-start sm:w-auto sm:shrink",
+        DAY_PALETTE[colorIndex % DAY_PALETTE.length],
+      )}
+    >
       <p className="text-[11px] font-semibold text-muted">
         {weekday} {day} {month}
       </p>
@@ -175,47 +200,51 @@ export function SeasonTimeline({
   });
 
   return (
-    <div className="relative">
-      {/* Ambient color, not a light source anything sits "under" — same trick
-          as the landing hero's blurred orbs, toned down for a page that
-          follows the light/dark toggle instead of staying pinned dark. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-24 -top-16 size-72 rounded-full bg-teal-400/20 blur-3xl dark:bg-teal-500/10"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-20 top-1/3 size-72 rounded-full bg-violet-400/20 blur-3xl dark:bg-violet-500/10"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute bottom-0 left-1/3 size-72 rounded-full bg-amber-300/15 blur-3xl dark:bg-amber-500/10"
-      />
-
-      <div className="relative space-y-6">
-        {weeks.map((week, wi) => (
-          <div key={week.key} className="flex gap-3 sm:gap-5">
-            <div className="flex w-11 shrink-0 flex-col items-center sm:w-16">
-              <div className="flex size-11 shrink-0 flex-col items-center justify-center rounded-full border-2 border-border/60 bg-card/70 shadow-sm backdrop-blur-md sm:size-16">
-                <span className="hidden text-[10px] font-semibold text-muted sm:block">WEEK</span>
-                <span className="text-sm leading-tight font-bold sm:text-xl">{wi + 1}</span>
-              </div>
-              {wi < weeks.length - 1 ? <span className="mt-1 w-0.5 flex-1 bg-border" /> : null}
+    <div className="space-y-7 sm:space-y-6">
+      {weeks.map((week, wi) => (
+        <div key={week.key} className="sm:flex sm:gap-5">
+          {/* desktop/tablet: the vertical week rail */}
+          <div className="hidden w-16 shrink-0 flex-col items-center sm:flex">
+            <div className="flex size-16 shrink-0 flex-col items-center justify-center rounded-full border-2 border-border/60 bg-card/70 shadow-sm backdrop-blur-md">
+              <span className="text-[10px] font-semibold text-muted">WEEK</span>
+              <span className="text-xl leading-tight font-bold">{wi + 1}</span>
             </div>
-
-            <div className="mb-1 flex min-w-0 flex-1 flex-col gap-4 sm:flex-row">
-              {week.days.map((daySlots) => (
-                <DayColumn
-                  key={daySlots[0].date}
-                  slots={daySlots}
-                  viewerHasActiveTalk={viewerHasActiveTalk}
-                  mode={mode}
-                />
-              ))}
-            </div>
+            {wi < weeks.length - 1 ? <span className="mt-1 w-0.5 flex-1 bg-border" /> : null}
           </div>
-        ))}
-      </div>
+
+          {/* phone: a section header instead of a rail — the rail cost a
+              third of the screen width for one number */}
+          <div className="mb-3 flex items-center gap-3 sm:hidden">
+            <span className="rounded-full bg-foreground px-3 py-1 text-xs font-bold tracking-wide text-background">
+              Week {wi + 1}
+            </span>
+            <span className="h-px flex-1 bg-border" />
+            {week.days.length > 1 ? (
+              <span className="text-[11px] text-muted">swipe for {week.days.length} days</span>
+            ) : null}
+          </div>
+
+          {/* phone: days swipe sideways like cards in an app; wider screens lay them out side by side */}
+          <div
+            className={
+              week.days.length > 1
+                ? "scroll-row -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:mb-1 sm:min-w-0 sm:flex-1 sm:snap-none sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0"
+                : "sm:mb-1 sm:flex sm:min-w-0 sm:flex-1"
+            }
+          >
+            {week.days.map((daySlots, di) => (
+              <DayColumn
+                key={daySlots[0].date}
+                slots={daySlots}
+                viewerHasActiveTalk={viewerHasActiveTalk}
+                mode={mode}
+                colorIndex={wi * 2 + di}
+                swipeable={week.days.length > 1}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

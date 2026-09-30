@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { TalkSubmitForm } from "@/components/dashboard/TalkSubmitForm";
 import { formatSlotDate } from "@/lib/talks";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -100,13 +100,9 @@ export default async function SubmitTalkPage({
   const claims = visibleClaims ?? [];
   const mine = claims.find((claim) => claim.presenter_id === user.id);
 
-  if (mine) {
-    return (
-      <Notice heading="this slot is yours" action={TO_TALKS}>
-        you&rsquo;ve already claimed this one. your submission is under talks.
-      </Notice>
-    );
-  }
+  // Nothing to decide here — it's already theirs, so there's no reason to
+  // make them read a notice and click through it. Straight to the talk.
+  if (mine) redirect("/dashboard/talks");
 
   if (claims.length >= slot.capacity) {
     return (

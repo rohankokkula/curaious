@@ -4,28 +4,35 @@ import {
   createSupabaseAdminClient,
   hasServiceRoleKey,
 } from "@/lib/supabase/admin";
-import { isSupabaseConfigured, siteUrl } from "@/lib/supabase/config";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  // Derived from the request that actually arrived, not from a configured
+  // site URL: Vercel gives every deployment (prod, each preview) its own
+  // origin, and NEXT_PUBLIC_SITE_URL defaulted to http://localhost:3000 when
+  // unset — which silently sent every production redirect here to
+  // localhost, on a real deployment, for real users.
+  const origin = new URL(request.url).origin;
+
   if (!isSupabaseConfigured || !hasServiceRoleKey) {
-    return NextResponse.redirect(new URL("/login?error=not_configured", siteUrl()));
+    return NextResponse.redirect(new URL("/login?error=not_configured", origin));
   }
 
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
 
   if (!code) {
-    return NextResponse.redirect(new URL("/login?error=missing_code", siteUrl()));
+    return NextResponse.redirect(new URL("/login?error=missing_code", origin));
   }
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.user?.email) {
-    return NextResponse.redirect(new URL("/login?error=link_expired", siteUrl()));
+    return NextResponse.redirect(new URL("/login?error=link_expired", origin));
   }
 
   const user = data.user;
@@ -52,7 +59,7 @@ export async function GET(request: Request) {
 
   if (!adminRecord && !invite) {
     await supabase.auth.signOut();
-    return NextResponse.redirect(new URL("/login?error=not_invited", siteUrl()));
+    return NextResponse.redirect(new URL("/login?error=not_invited", origin));
   }
 
   const isAdmin = !!adminRecord;
@@ -77,7 +84,7 @@ export async function GET(request: Request) {
     if (insertError) {
       console.error("auth/callback: profile insert failed", insertError.message);
       await supabase.auth.signOut();
-      return NextResponse.redirect(new URL("/login?error=profile_failed", siteUrl()));
+      return NextResponse.redirect(new URL("/login?error=profile_failed", origin));
     }
   } else {
     // Update role if needed
@@ -117,5 +124,5 @@ export async function GET(request: Request) {
 
   // Redirect based on role
   const redirectUrl = isAdmin ? "/admin" : "/dashboard";
-  return NextResponse.redirect(new URL(redirectUrl, siteUrl()));
+  return NextResponse.redirect(new URL(redirectUrl, origin));
 }
