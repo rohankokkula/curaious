@@ -34,7 +34,7 @@ export function SlideDeck({ talkId }: { talkId: string }) {
         const pdfjs = await import("pdfjs-dist");
         pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
 
-        const response = await fetch(deckSrc, { cache: "no-store" });
+        const response = await fetch(deckSrc);
         if (!response.ok) throw new Error("access");
         const bytes = await response.arrayBuffer();
         const doc = await pdfjs.getDocument({ data: bytes }).promise;

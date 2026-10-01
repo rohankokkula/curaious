@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ArticleEditor, type ExistingArticle } from "@/components/dashboard/ArticleEditor";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -22,9 +22,7 @@ export default async function WriteArticlePage({
 }) {
   const { edit } = await searchParams;
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser();
 
   if (!user) {
     return <p className="text-sm text-muted">Sign in to write an article.</p>;

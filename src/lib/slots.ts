@@ -10,8 +10,18 @@
  * but a real extra network hop plus a second serverless invocation on
  * Vercel, on two of the most-visited pages in the app.
  */
+import { cache } from "react";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { SlotType, SlotView } from "@/lib/talks";
+
+type TalkRow = {
+  id: string;
+  presenter_id: string;
+  title: string;
+  status: "pending" | "approved";
+  deck_path: string | null;
+  presenter: { name: string } | null;
+};
 
 type SlotRow = {
   id: string;
@@ -22,15 +32,16 @@ type SlotRow = {
   capacity: number;
   starts_at: string | null;
   ends_at: string | null;
+  talks: TalkRow[];
 };
 
-type TalkRow = {
+type SeasonRow = {
   id: string;
-  slot_id: string;
-  presenter_id: string;
-  title: string;
-  status: "pending" | "approved";
-  deck_path: string | null;
+  name: string;
+  number: number;
+  starts_on: string;
+  ends_on: string;
+  session_slots: SlotRow[];
 };
 
 export type SeasonSlots = {
@@ -39,69 +50,41 @@ export type SeasonSlots = {
   slots: SlotView[];
 };
 
-export async function loadSeasonSlots(viewerId: string): Promise<SeasonSlots> {
+// Season → its slots → each slot's talks → each talk's presenter name, in a
+// single PostgREST request. This used to be four queries in a row (season,
+// then slots, then talks, then names), each waiting on the one before.
+// `profiles!presenter_id` picks the presenter FK, since talks.reviewed_by
+// points at profiles too.
+const SEASON_SELECT = `id, name, number, starts_on, ends_on,
+  session_slots (id, slot_date, slot_type, label, sort_order, capacity, starts_at, ends_at,
+    talks (id, presenter_id, title, status, deck_path, presenter:profiles!presenter_id (name))
+  )`;
+
+/** Cached per request: the dashboard home and the schedule both call it. */
+export const loadSeasonSlots = cache(async (viewerId: string): Promise<SeasonSlots> => {
   const admin = createSupabaseAdminClient();
 
-  const { data: season } = await admin
+  const { data: season, error } = await admin
     .from("seasons")
-    .select("id, name, number, starts_on, ends_on")
+    .select(SEASON_SELECT)
     .eq("is_active", true)
+    .neq("session_slots.talks.status", "rejected")
     .order("number", { ascending: false })
+    .order("sort_order", { referencedTable: "session_slots", ascending: true })
     .limit(1)
-    .maybeSingle<{ id: string; name: string; number: number; starts_on: string; ends_on: string }>();
+    .maybeSingle<SeasonRow>();
 
+  if (error) console.error("loadSeasonSlots: query failed", error.message);
   if (!season) {
     return { season: null, hasActiveTalk: false, slots: [] };
   }
 
-  const { data: slotRows, error: slotError } = await admin
-    .from("session_slots")
-    .select("id, slot_date, slot_type, label, sort_order, capacity, starts_at, ends_at")
-    .eq("season_id", season.id)
-    .order("sort_order", { ascending: true })
-    .returns<SlotRow[]>();
-
-  if (slotError) {
-    console.error("loadSeasonSlots: slot query failed", slotError.message);
-    return { season: null, hasActiveTalk: false, slots: [] };
-  }
-
-  const slots = slotRows ?? [];
-
-  const { data: talkRows } = await admin
-    .from("talks")
-    .select("id, slot_id, presenter_id, title, status, deck_path")
-    .in(
-      "slot_id",
-      slots.map((slot) => slot.id),
-    )
-    .neq("status", "rejected")
-    .returns<TalkRow[]>();
-
-  const talks = talkRows ?? [];
-
-  const presenterIds = [...new Set(talks.map((talk) => talk.presenter_id))];
-  const names = new Map<string, string>();
-
-  if (presenterIds.length > 0) {
-    const { data: profileRows } = await admin
-      .from("profiles")
-      .select("id, name")
-      .in("id", presenterIds)
-      .returns<{ id: string; name: string }[]>();
-
-    for (const profile of profileRows ?? []) {
-      names.set(profile.id, profile.name);
-    }
-  }
-
-  const talksBySlot = new Map<string, TalkRow[]>();
-  for (const talk of talks) {
-    talksBySlot.set(talk.slot_id, [...(talksBySlot.get(talk.slot_id) ?? []), talk]);
-  }
+  const slots = season.session_slots ?? [];
+  const talks = slots.flatMap((slot) => slot.talks ?? []);
+  const names = new Map(talks.map((talk) => [talk.presenter_id, talk.presenter?.name ?? null]));
 
   const payload: SlotView[] = slots.map((slot) => {
-    const slotTalks = talksBySlot.get(slot.id) ?? [];
+    const slotTalks = slot.talks ?? [];
 
     return {
       id: slot.id,
@@ -135,4 +118,4 @@ export async function loadSeasonSlots(viewerId: string): Promise<SeasonSlots> {
     hasActiveTalk,
     slots: payload,
   };
-}
+});

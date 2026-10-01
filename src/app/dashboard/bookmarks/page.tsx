@@ -2,7 +2,7 @@ import { ResourceGrid, type ResourceMetrics } from "@/components/dashboard/Resou
 import type { ResourceListItem } from "@/components/dashboard/ResourceCard";
 import { getActiveCohort } from "@/lib/cohort";
 import type { ResourceCategory } from "@/lib/resources";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +31,7 @@ async function loadResources(): Promise<{ resources: ResourceListItem[]; metrics
   if (!cohort) return { resources: [], metrics: { total: 0, contributors: 0, saves: 0 } };
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser();
   const { data: viewer } = user
     ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle<{ role: "member" | "admin" }>()
     : { data: null };

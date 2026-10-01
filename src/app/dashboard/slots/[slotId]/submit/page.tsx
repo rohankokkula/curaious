@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { TalkSubmitForm } from "@/components/dashboard/TalkSubmitForm";
 import { formatSlotDate } from "@/lib/talks";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -58,9 +58,7 @@ export default async function SubmitTalkPage({
   }
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser();
 
   if (!user) {
     return (

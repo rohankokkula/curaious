@@ -38,10 +38,13 @@ function Stars({ score, size = "size-3.5" }: { score: number; size?: string }) {
   );
 }
 
-/** A window frame that reads as "this is an actual screenshot," not decoration. */
+/** A window frame that reads as "this is an actual screenshot," not decoration.
+ * `flex-1` (inside a flex-column item), not `h-full`: h-full made the window
+ * as tall as its whole grid item — caption included — which pushed each
+ * caption out of its item and underneath the next card on phones. */
 function AppWindow({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border/60 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+    <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border/60 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
       <div className="flex items-center gap-2 border-b border-border/60 bg-surface px-4 py-2.5">
         <span className="size-2.5 rounded-full bg-border" />
         <span className="size-2.5 rounded-full bg-border" />
@@ -59,7 +62,7 @@ export function ProductPreview() {
   return (
     <Section id="preview" seam={false}>
       <div ref={ref} className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <div data-reveal>
+        <div data-reveal className="flex flex-col">
           <AppWindow title="schedule">
             <div className="space-y-4">
               {ROTATION.map((group) => (
@@ -93,7 +96,7 @@ export function ProductPreview() {
           </p>
         </div>
 
-        <div data-reveal>
+        <div data-reveal className="flex flex-col">
           <AppWindow title="your feedback">
             <div className="space-y-2.5">
               {RATINGS.map((r) => (
@@ -114,7 +117,7 @@ export function ProductPreview() {
           </p>
         </div>
 
-        <div data-reveal>
+        <div data-reveal className="flex flex-col">
           <AppWindow title="your profile">
             <div className="flex items-center gap-3">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[11px] font-semibold text-primary">

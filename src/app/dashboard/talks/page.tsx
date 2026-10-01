@@ -3,43 +3,49 @@ import { FileText } from "lucide-react";
 import { Avatar } from "@/components/dashboard/Avatar";
 import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
 import { getActiveCohort } from "@/lib/cohort";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function TalksPage() {
-  const cohort = await getActiveCohort();
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+type TalkRow = {
+  id: string;
+  title: string;
+  description: string;
+  presenter_id: string;
+  status: string;
+  deck_path: string | null;
+  slot: { label: string; season_id: string } | null;
+  presenter: { name: string; avatar_url: string | null } | null;
+};
 
-  const { data: slots } = cohort
-    ? await supabase.from("session_slots").select("id, slot_date, label").eq("season_id", cohort.id)
-    : { data: [] };
-  const slotIds = (slots ?? []).map((s) => s.id);
+export default async function TalksPage() {
+  const [cohort, supabase, user] = await Promise.all([
+    getActiveCohort(),
+    createSupabaseServerClient(),
+    getSessionUser(),
+  ]);
+
+  // One request: each talk with its slot (inner-joined so only this season's
+  // slots match) and its presenter. Was slots, then talks, then profiles,
+  // each waiting on the last.
   // RLS returns approved talks plus anything of your own, so a pending talk
   // comes back here only for the person who submitted it. Filtered explicitly
   // as well, since an admin's RLS view is wider than that.
-  const { data: talkRows } = slotIds.length
+  const { data: talkRows } = cohort
     ? await supabase
         .from("talks")
-        .select("id, title, description, presenter_id, slot_id, status, deck_path")
-        .in("slot_id", slotIds)
+        .select(
+          "id, title, description, presenter_id, status, deck_path, slot:session_slots!inner(label, season_id), presenter:profiles!presenter_id(name, avatar_url)",
+        )
+        .eq("slot.season_id", cohort.id)
         .neq("status", "rejected")
         .order("submitted_at", { ascending: true })
-    : { data: [] };
+        .returns<TalkRow[]>()
+    : { data: [] as TalkRow[] };
 
   const talks = (talkRows ?? []).filter(
     (talk) => talk.status === "approved" || talk.presenter_id === user?.id,
   );
-
-  const presenterIds = [...new Set(talks.map((t) => t.presenter_id))];
-  const { data: people } = presenterIds.length
-    ? await supabase.from("profiles").select("id, name, avatar_url").in("id", presenterIds)
-    : { data: [] };
-  const person = new Map((people ?? []).map((p) => [p.id, p]));
-  const slotById = new Map((slots ?? []).map((s) => [s.id, s]));
 
   return (
     <div className="space-y-6">
@@ -55,8 +61,8 @@ export default async function TalksPage() {
       ) : (
         <div className="divide-y divide-border rounded-xl border border-border bg-card sm:grid sm:grid-cols-2 sm:gap-4 sm:divide-y-0 sm:rounded-none sm:border-none sm:bg-transparent lg:grid-cols-3">
           {talks.map((talk) => {
-            const speaker = person.get(talk.presenter_id);
-            const slot = slotById.get(talk.slot_id);
+            const speaker = talk.presenter;
+            const slot = talk.slot;
             return (
               <Link
                 key={talk.id}

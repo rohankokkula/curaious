@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { supabaseAnonKey, supabaseUrl } from "./config";
 
 /**
@@ -29,14 +30,27 @@ export async function createSupabaseServerClient() {
   });
 }
 
-/** Convenience: the current auth user, or null. */
-export async function getSessionUser() {
+export type SessionUser = { id: string; email: string | null };
+
+/**
+ * The current auth user, or null.
+ *
+ * Uses `getClaims()`, not `getUser()`: the project signs sessions with an
+ * asymmetric (ES256) key, so the JWT is verified locally against the cached
+ * JWKS instead of a round trip to the Auth server on every call. `getUser()`
+ * cost one full network hop per call, and the proxy, the layout and the page
+ * each made one on every click.
+ *
+ * Wrapped in React `cache()` so the layout and the page share one result per
+ * request instead of each verifying again.
+ */
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user ?? null;
-}
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) return null;
+  return { id: claims.sub, email: typeof claims.email === "string" ? claims.email : null };
+});
 
 export type ViewerProfile = {
   id: string;
@@ -46,15 +60,13 @@ export type ViewerProfile = {
   avatar_url: string | null;
 };
 
-/** Current user's profile row, or null if not logged in / no profile yet. */
-export async function getViewerProfile(): Promise<ViewerProfile | null> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+/** Current user's profile row, or null if not logged in / no profile yet.
+ * Cached per request: the layout and the page both ask for it. */
+export const getViewerProfile = cache(async (): Promise<ViewerProfile | null> => {
+  const user = await getSessionUser();
   if (!user) return null;
 
+  const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from("profiles")
     .select("id, email, name, role, avatar_url")
@@ -62,4 +74,4 @@ export async function getViewerProfile(): Promise<ViewerProfile | null> {
     .maybeSingle();
 
   return (data as ViewerProfile | null) ?? null;
-}
+});

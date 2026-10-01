@@ -14,7 +14,7 @@ import { RATING_MAX, RATING_PARAMETERS, type RatingParameterKey } from "@/lib/ra
 import { loadRatingAggregate } from "@/lib/ratingsAggregate";
 import { formatSlotDate, type TalkStatus } from "@/lib/talks";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -151,9 +151,7 @@ export default async function MemberProfilePage({
   }
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser();
 
   if (!user) {
     return (

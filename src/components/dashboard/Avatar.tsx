@@ -48,6 +48,8 @@ export function Avatar({
       <img
         src={src}
         alt={name}
+        loading="lazy"
+        decoding="async"
         className={cn("shrink-0 rounded-full object-cover", SIZES[size], className)}
       />
     );

@@ -10,9 +10,19 @@ import { Badge } from "@/components/ui/badge";
 import type { RatingParameterKey } from "@/lib/ratings";
 import type { TalkStatus } from "@/lib/talks";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getSessionUser, getViewerProfile } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+type SlotRow = {
+  label: string;
+  slot_date: string;
+  starts_at: string | null;
+  ends_at: string | null;
+  season_id: string;
+  season: { starts_on: string } | null;
+  talks: { id: string; status: TalkStatus; submitted_at: string }[];
+};
 
 type TalkRow = {
   id: string;
@@ -24,9 +34,18 @@ type TalkRow = {
   slot_id: string;
   submitted_at: string;
   ratings_open: boolean;
+  slot: SlotRow | null;
+  presenter: {
+    id: string;
+    name: string;
+    headline: string | null;
+    bio: string | null;
+    avatar_url: string | null;
+    linkedin_url: string | null;
+    twitter_url: string | null;
+    github_url: string | null;
+  } | null;
 };
-
-type SlotRow = { label: string; slot_date: string; starts_at: string | null; ends_at: string | null; season_id: string };
 type RatingRow = Record<RatingParameterKey, number> & { comment: string | null };
 
 function Notice({ children }: { children: React.ReactNode }) {
@@ -43,79 +62,61 @@ export default async function TalkPage({ params }: { params: Promise<{ talkId: s
     return <p className="text-sm text-muted">This app isn&rsquo;t connected to its database yet.</p>;
   }
 
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [supabase, user, viewer] = await Promise.all([
+    createSupabaseServerClient(),
+    getSessionUser(),
+    getViewerProfile(),
+  ]);
+  const isAdmin = viewer?.role === "admin";
 
-  // RLS does the gatekeeping: approved talks, plus your own, plus everything if you're an admin.
-  const { data: talk } = await supabase
-    .from("talks")
-    .select("id, title, description, status, presenter_id, deck_path, slot_id, submitted_at, ratings_open")
-    .eq("id", talkId)
-    .maybeSingle<TalkRow>();
+  // The talk, its slot, the slot's season start and sibling talks, and the
+  // presenter, in one request; your own rating alongside it. This used to be
+  // six queries in a row.
+  // RLS does the gatekeeping: approved talks, plus your own, plus everything
+  // if you're an admin. The embedded siblings get the same RLS.
+  const [{ data: talk }, { data: existingRating }] = await Promise.all([
+    supabase
+      .from("talks")
+      .select(
+        `id, title, description, status, presenter_id, deck_path, slot_id, submitted_at, ratings_open,
+        slot:session_slots (label, slot_date, starts_at, ends_at, season_id,
+          season:seasons (starts_on),
+          talks (id, status, submitted_at)
+        ),
+        presenter:profiles!presenter_id (id, name, headline, bio, avatar_url, linkedin_url, twitter_url, github_url)`,
+      )
+      .eq("id", talkId)
+      .maybeSingle<TalkRow>(),
+    user
+      ? supabase
+          .from("ratings")
+          .select("understanding, content, research_depth, delivery, usefulness, comment")
+          .eq("talk_id", talkId)
+          .eq("rater_id", user.id)
+          .maybeSingle<RatingRow>()
+      : Promise.resolve({ data: null }),
+  ]);
 
   if (!talk) notFound();
 
   const isPresenter = talk.presenter_id === user?.id;
-
-  const { data: viewer } = user
-    ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle<{ role: "member" | "admin" }>()
-    : { data: null };
-  const isAdmin = viewer?.role === "admin";
-
-  const [{ data: slot }, { data: presenter }] = await Promise.all([
-    supabase.from("session_slots").select("label, slot_date, starts_at, ends_at, season_id").eq("id", talk.slot_id).maybeSingle<SlotRow>(),
-    supabase
-      .from("profiles")
-      .select("id, name, headline, bio, avatar_url, linkedin_url, twitter_url, github_url")
-      .eq("id", talk.presenter_id)
-      .maybeSingle<{
-        id: string;
-        name: string;
-        headline: string | null;
-        bio: string | null;
-        avatar_url: string | null;
-        linkedin_url: string | null;
-        twitter_url: string | null;
-        github_url: string | null;
-      }>(),
-  ]);
-
-  const { data: season } = slot
-    ? await supabase.from("seasons").select("starts_on").eq("id", slot.season_id).maybeSingle<{ starts_on: string }>()
-    : { data: null };
+  const slot = talk.slot;
+  const presenter = talk.presenter;
+  const season = slot?.season ?? null;
 
   const weekIndex = slot && season
     ? Math.floor((Date.parse(`${slot.slot_date}T00:00:00Z`) - Date.parse(`${season.starts_on}T00:00:00Z`)) / (7 * 86400000)) + 1
     : null;
 
-  // Siblings sharing the same slot, for "talk N of M" and prev/next — same
-  // visibility RLS grants for the current talk covers each of these.
-  const { data: siblingRows } = await supabase
-    .from("talks")
-    .select("id")
-    .eq("slot_id", talk.slot_id)
-    .neq("status", "rejected")
-    .order("submitted_at", { ascending: true })
-    .returns<{ id: string }[]>();
-
-  const siblings = siblingRows ?? [];
+  // Siblings sharing the same slot, for "talk N of M" and prev/next.
+  const siblings = (slot?.talks ?? [])
+    .filter((s) => s.status !== "rejected")
+    .sort((a, b) => a.submitted_at.localeCompare(b.submitted_at));
   const position = siblings.findIndex((s) => s.id === talk.id);
   const prevId = position > 0 ? siblings[position - 1].id : null;
   const nextId = position >= 0 && position < siblings.length - 1 ? siblings[position + 1].id : null;
 
-  const existing =
-    !isPresenter && talk.status === "approved" && user
-      ? (
-          await supabase
-            .from("ratings")
-            .select("understanding, content, research_depth, delivery, usefulness, comment")
-            .eq("talk_id", talk.id)
-            .eq("rater_id", user.id)
-            .maybeSingle<RatingRow>()
-        ).data
-      : null;
+  const existing = !isPresenter && talk.status === "approved" ? existingRating : null;
 
   const when = slot
     ? [

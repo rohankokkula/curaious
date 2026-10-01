@@ -43,8 +43,13 @@ export async function GET(
     return new NextResponse("couldn't open the deck.", { status: 502 });
   }
 
+  // The browser may reuse this redirect (and so the same signed URL, whose
+  // PDF bytes it then also has cached) for five minutes, well inside the
+  // signed URL's hour. Before, every thumbnail and every deck view re-ran
+  // the access check, minted a new URL and re-downloaded the whole file.
+  // `private` keeps it out of any shared/CDN cache, since it's per-viewer.
   return NextResponse.redirect(data.signedUrl, {
     status: 302,
-    headers: { "Cache-Control": "no-store" },
+    headers: { "Cache-Control": "private, max-age=300" },
   });
 }

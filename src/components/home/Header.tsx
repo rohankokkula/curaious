@@ -35,7 +35,7 @@ export function Header() {
           : "border-b border-transparent bg-transparent",
       )}
     >
-      <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-4 md:flex-nowrap md:px-8 md:py-5">
+      <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-4 sm:px-5 md:flex-nowrap md:px-8 md:py-5">
         <Link href="/" className="focus-ring flex items-center gap-3">
           <CuraiousLogo
             className={cn("text-lg", scrolled ? "text-foreground opacity-90" : "text-white opacity-95")}
@@ -43,10 +43,10 @@ export function Header() {
           <span className="sr-only">curaious home</span>
         </Link>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <GoogleSignInButton
             className={cn(
-              "focus-ring flex items-center gap-2 border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.2em] transition disabled:opacity-60 sm:px-4",
+              "focus-ring flex items-center gap-2 border px-2.5 py-2 font-mono text-[11px] uppercase tracking-[0.12em] whitespace-nowrap transition disabled:opacity-60 sm:px-4 sm:tracking-[0.2em]",
               scrolled
                 ? "border-border text-foreground hover:border-accent hover:text-accent"
                 : "border-white/25 text-white hover:border-white",
@@ -61,7 +61,7 @@ export function Header() {
             target="_blank"
             rel="noreferrer"
             className={cn(
-              "focus-ring px-3 py-2 font-mono text-[11px] uppercase tracking-[0.2em] transition sm:px-4",
+              "focus-ring px-2.5 py-2 font-mono text-[11px] uppercase tracking-[0.12em] whitespace-nowrap transition sm:px-4 sm:tracking-[0.2em]",
               scrolled
                 ? "bg-foreground text-background hover:bg-accent"
                 : "bg-white text-black hover:bg-white/90",

@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const COHORT_COOKIE = "curaious_cohort";
@@ -15,8 +16,9 @@ export type Cohort = {
 
 const COLUMNS = "id, name, slug, status, capacity, starts_on, ends_on";
 
-/** Cohort selected via cookie (admin switcher), else the active one, else the newest. */
-export async function getActiveCohort(): Promise<Cohort | null> {
+/** Cohort selected via cookie (admin switcher), else the active one, else the newest.
+ * Cached per request: the layout and nearly every page ask for it. */
+export const getActiveCohort = cache(async (): Promise<Cohort | null> => {
   const supabase = await createSupabaseServerClient();
   const selected = (await cookies()).get(COHORT_COOKIE)?.value;
 
@@ -24,22 +26,17 @@ export async function getActiveCohort(): Promise<Cohort | null> {
     const { data } = await supabase.from("seasons").select(COLUMNS).eq("id", selected).maybeSingle();
     if (data) return data as Cohort;
   }
-  const { data: active } = await supabase
+  // "the active one, else the newest" as one query rather than two in a row:
+  // active rows sort first, then newest start date.
+  const { data } = await supabase
     .from("seasons")
     .select(COLUMNS)
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
-  if (active) return active as Cohort;
-
-  const { data: latest } = await supabase
-    .from("seasons")
-    .select(COLUMNS)
+    .order("is_active", { ascending: false })
     .order("starts_on", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (latest as Cohort | null) ?? null;
-}
+  return (data as Cohort | null) ?? null;
+});
 
 export async function listCohorts(): Promise<Cohort[]> {
   const supabase = await createSupabaseServerClient();

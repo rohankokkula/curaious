@@ -3,7 +3,7 @@ import { ChevronRight, MapPin, Mic } from "lucide-react";
 import { Avatar } from "@/components/dashboard/Avatar";
 import { getActiveCohort } from "@/lib/cohort";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getSessionUser, getViewerProfile } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -26,33 +26,36 @@ export default async function MembersPage() {
     );
   }
 
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: viewer } = user
-    ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle<{ role: "member" | "admin" }>()
-    : { data: null };
+  // Viewer and cohort are cached per request (the layout already asked for
+  // both), so these resolve without another round trip.
+  const [supabase, user, viewer, cohort] = await Promise.all([
+    createSupabaseServerClient(),
+    getSessionUser(),
+    getViewerProfile(),
+    getActiveCohort(),
+  ]);
   const viewerIsAdmin = viewer?.role === "admin";
 
-  const cohort = await getActiveCohort();
-  const { data: memberships } = cohort
-    ? await supabase.from("cohort_members").select("profile_id").eq("cohort_id", cohort.id).eq("status", "active")
-    : { data: [] };
-  const { data: members } = await supabase
-    .from("profiles")
-    .select("id, name, role, avatar_url, headline, location, tags")
-    .in("id", (memberships ?? []).map((m) => m.profile_id))
-    .order("name", { ascending: true })
-    .returns<ProfileRow[]>();
+  // One embedded query for the roster instead of memberships-then-profiles,
+  // run alongside the talks lookup rather than after it.
+  const [{ data: memberships }, { data: talks }] = await Promise.all([
+    cohort
+      ? supabase
+          .from("cohort_members")
+          .select("profiles!inner(id, name, role, avatar_url, headline, location, tags)")
+          .eq("cohort_id", cohort.id)
+          .eq("status", "active")
+          .returns<{ profiles: ProfileRow }[]>()
+      : Promise.resolve({ data: [] as { profiles: ProfileRow }[] }),
+    supabase.from("talks").select("presenter_id").eq("status", "approved"),
+  ]);
+  const members = (memberships ?? [])
+    .map((m) => m.profiles)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // Members don't see who's an admin — only admins see the full roster.
-  const roster = (members ?? []).filter((m) => viewerIsAdmin || m.role !== "admin");
+  const roster = members.filter((m) => viewerIsAdmin || m.role !== "admin");
 
-  const { data: talks } = roster.length
-    ? await supabase.from("talks").select("presenter_id").in("presenter_id", roster.map((m) => m.id)).eq("status", "approved")
-    : { data: [] };
   const presented = new Set((talks ?? []).map((t) => t.presenter_id));
 
   return (

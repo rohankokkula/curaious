@@ -110,7 +110,8 @@ export function Hero() {
             <li>together</li>
           </ul>
 
-          <div className="flex flex-col items-center gap-2 text-white/45">
+          {/* hidden on phones: three labels in one row collide at ~360px */}
+          <div className="hidden flex-col items-center gap-2 text-white/45 sm:flex">
             <span aria-hidden className="h-8 w-px bg-white/20 md:h-12" />
             <span>scroll to explore</span>
             <span aria-hidden>↓</span>
