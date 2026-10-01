@@ -116,7 +116,13 @@ export function BadgeArt({
 
   return (
     <div
-      className={cn("relative aspect-[100/112] shrink-0", locked && "opacity-40 grayscale", className)}
+      className={cn(
+        "relative aspect-[100/112] shrink-0 transition duration-300",
+        // Not earned yet: gray and dimmed, but it comes to life in full color
+        // on hover (of itself, or of a `group` card around it).
+        locked && "opacity-40 grayscale hover:opacity-100 hover:grayscale-0 group-hover:opacity-100 group-hover:grayscale-0",
+        className,
+      )}
       aria-hidden
     >
       <svg viewBox="0 0 100 112" className="absolute inset-0 size-full overflow-visible">

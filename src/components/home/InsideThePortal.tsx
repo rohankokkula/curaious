@@ -180,7 +180,7 @@ export function InsideThePortal() {
   return (
     <Section id="inside">
       <div ref={headerRef} className="max-w-2xl">
-        <SectionKicker data-reveal index="02" label="inside the portal" />
+        <SectionKicker data-reveal index="01" label="inside the portal" />
         <SectionTitle data-reveal className="mt-6">
           everything the season leaves behind.
         </SectionTitle>

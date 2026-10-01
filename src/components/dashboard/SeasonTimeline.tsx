@@ -102,14 +102,23 @@ function timeRange(startsAt: string | null, endsAt: string | null) {
 type TimelineMode = "member" | "admin";
 
 /** Faint season-wide talk number in a tile's top-left corner. */
+/** The season-wide talk number, big and centered in the tile. Over a deck's
+ * first slide it shrinks to a small corner tag so the slide stays readable. */
 function TalkNumber({ n, onImage = false, tone }: { n: number; onImage?: boolean; tone?: string }) {
+  if (onImage) {
+    return (
+      <span
+        aria-label={`Talk ${n}`}
+        className="absolute top-1.5 left-1.5 rounded bg-black/55 px-1 py-0.5 font-mono text-[10px] leading-none font-semibold text-white/85 tabular-nums"
+      >
+        {String(n).padStart(2, "0")}
+      </span>
+    );
+  }
   return (
     <span
       aria-label={`Talk ${n}`}
-      className={cn(
-        "absolute top-1.5 left-2 font-mono text-[10px] leading-none font-semibold tabular-nums",
-        onImage ? "rounded bg-black/45 px-1 py-0.5 text-white/80" : cn("opacity-70", tone ?? "text-muted"),
-      )}
+      className={cn("font-mono text-2xl leading-none font-bold tabular-nums sm:text-3xl", tone ?? "text-muted")}
     >
       {String(n).padStart(2, "0")}
     </span>
@@ -134,7 +143,7 @@ function OpenTile({
     <div className={cn("rounded-lg border p-2 backdrop-blur-sm transition-colors", palette.tile)}>
       <div className={cn("relative flex aspect-video items-center justify-center rounded-md border border-dashed", palette.well)}>
         <TalkNumber n={number} tone={palette.label} />
-        <Plus className={cn("size-4", palette.label)} />
+        <Plus className={cn("absolute right-1.5 bottom-1.5 size-3 opacity-70", palette.label)} />
       </div>
       <p className="mt-1.5 truncate text-xs font-semibold">{inert ? "Open" : "Choose this slot"}</p>
       <p className="mt-0.5 truncate text-[11px] leading-tight text-muted">
@@ -169,9 +178,12 @@ function TalkTile({
         {showDeckPage ? (
           <DeckPageThumbnail talkId={talk.talkId} className="absolute inset-0" />
         ) : (
-          <FileText className={cn("size-5 opacity-70", palette.label)} />
+          <>
+            <TalkNumber n={number} tone={palette.label} />
+            <FileText className={cn("absolute right-1.5 bottom-1.5 size-3 opacity-70", palette.label)} />
+          </>
         )}
-        <TalkNumber n={number} onImage={showDeckPage} tone={palette.label} />
+        {showDeckPage ? <TalkNumber n={number} onImage /> : null}
       </div>
       <p className="mt-1.5 truncate text-xs font-semibold">
         {canSeeDetail ? talk.title : "Pending review"}

@@ -44,7 +44,7 @@ export function WhosInTheRoom() {
   return (
     <Section id="whos-in-the-room">
       <div ref={headerRef} className="max-w-2xl">
-        <SectionKicker data-reveal index="01" label="who's in the room" />
+        <SectionKicker data-reveal index="02" label="who's in the room" />
         <SectionTitle data-reveal className="mt-6">
           you don&apos;t have to be an ai expert.
         </SectionTitle>

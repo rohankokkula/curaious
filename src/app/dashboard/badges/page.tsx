@@ -88,7 +88,7 @@ export default async function BadgesPage() {
             <article
               key={badge.key}
               className={cn(
-                "flex flex-col rounded-2xl border bg-card p-5 sm:p-6",
+                "group flex flex-col rounded-2xl border bg-card p-5 sm:p-6",
                 earned ? "border-foreground/30" : "border-border",
               )}
             >
