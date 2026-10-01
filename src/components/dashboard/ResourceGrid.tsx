@@ -34,10 +34,9 @@ export function ResourceGrid({ resources, metrics }: { resources: ResourceListIt
 
   return (
     <div className="space-y-6">
-      <div className="scroll-row -mx-4 flex gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
+      <div className="scroll-row -mx-4 flex gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0">
         <Stat label="Resources" value={metrics.total} />
         <Stat label="Contributors" value={metrics.contributors} />
-        <Stat label="Total saves" value={metrics.saves} />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

@@ -64,11 +64,11 @@ const GUIDES: GuideItem[] = [
         <h4>Title</h4>
         <p>4–140 characters. Say what the talk is about, not just the topic: &ldquo;Building AI Agents for Real-World Use Cases&rdquo; beats &ldquo;AI Agents&rdquo;.</p>
         <h4>Description</h4>
-        <p>40–2000 characters. Cover what you&rsquo;ll walk through and what people should take away. This is what an admin reviews before approving your slot.</p>
+        <p>40–2000 characters. Cover what you&rsquo;ll walk through and what people should take away. This is what the curator reviews before approving your slot.</p>
         <h4>Deck</h4>
         <p>PDF only, up to 25MB, ideally 16:9. No confidential information.</p>
         <h4>Review</h4>
-        <p>An admin approves or sends back your submission with a reason. Your name stays off the public schedule until it&rsquo;s approved.</p>
+        <p>The curator approves or sends back your submission with a reason. Your name stays off the public schedule until it&rsquo;s approved.</p>
       </>
     ),
   },
@@ -83,7 +83,7 @@ const GUIDES: GuideItem[] = [
         <li>Critique the work, not the person. Feedback is attributed, and it&rsquo;s read by a real person.</li>
         <li>No recording or sharing a deck outside the cohort without the presenter&rsquo;s OK.</li>
         <li>Disagree openly, but keep it about the ideas.</li>
-        <li>If something feels off, tell an admin.</li>
+        <li>If something feels off, tell the curator.</li>
       </ul>
     ),
   },

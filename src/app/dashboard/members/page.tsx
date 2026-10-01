@@ -1,6 +1,4 @@
-import Link from "next/link";
-import { ChevronRight, MapPin, Mic } from "lucide-react";
-import { Avatar } from "@/components/dashboard/Avatar";
+import { MembersDirectory, type DirectoryMember } from "@/components/dashboard/MembersDirectory";
 import { getActiveCohort } from "@/lib/cohort";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient, getSessionUser, getViewerProfile } from "@/lib/supabase/server";
@@ -47,77 +45,71 @@ export default async function MembersPage() {
           .eq("status", "active")
           .returns<{ profiles: ProfileRow }[]>()
       : Promise.resolve({ data: [] as { profiles: ProfileRow }[] }),
-    supabase.from("talks").select("presenter_id").eq("status", "approved"),
+    // Approved talks only, with their date, so a talk that's merely booked
+    // reads "Speaking Oct 24" rather than "Presented".
+    cohort
+      ? supabase
+          .from("talks")
+          .select("presenter_id, title, slot:session_slots!inner(slot_date, season_id)")
+          .eq("status", "approved")
+          .eq("slot.season_id", cohort.id)
+          .returns<{ presenter_id: string; title: string; slot: { slot_date: string } }[]>()
+      : Promise.resolve({ data: [] as { presenter_id: string; title: string; slot: { slot_date: string } }[] }),
   ]);
-  const members = (memberships ?? [])
-    .map((m) => m.profiles)
-    .sort((a, b) => a.name.localeCompare(b.name));
 
   // Members don't see who's an admin — only admins see the full roster.
-  const roster = members.filter((m) => viewerIsAdmin || m.role !== "admin");
+  const roster = (memberships ?? [])
+    .map((m) => m.profiles)
+    .filter((m) => viewerIsAdmin || m.role !== "admin");
 
-  const presented = new Set((talks ?? []).map((t) => t.presenter_id));
+  const today = new Date().toISOString().slice(0, 10);
+  const talkBy = new Map((talks ?? []).map((t) => [t.presenter_id, t]));
+
+  // You first, then alphabetical.
+  const members: DirectoryMember[] = roster
+    .map((m) => {
+      const talk = talkBy.get(m.id);
+      return {
+        id: m.id,
+        name: m.name,
+        avatarUrl: m.avatar_url,
+        headline: m.headline,
+        location: m.location,
+        tags: m.tags ?? [],
+        isYou: m.id === user?.id,
+        talk: talk ? { title: talk.title, date: talk.slot.slot_date, done: talk.slot.slot_date < today } : null,
+      };
+    })
+    .sort((a, b) => Number(b.isYou) - Number(a.isYou) || a.name.localeCompare(b.name));
+
+  const presentedCount = members.filter((m) => m.talk?.done).length;
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">{cohort?.name}</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">Members</h1>
-        <p className="mt-1 text-muted">Everyone in the Curaious {cohort?.name} cohort.</p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">{cohort?.name}</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight">Members</h1>
+          <p className="mt-1 text-muted">Everyone in the Curaious {cohort?.name} cohort.</p>
+        </div>
+        {members.length > 0 ? (
+          <div className="flex gap-2 text-xs">
+            <span className="rounded-full border border-border px-3 py-1.5 text-muted">
+              <strong className="font-semibold text-foreground">{members.length}</strong> members
+            </span>
+            <span className="rounded-full border border-border px-3 py-1.5 text-muted">
+              <strong className="font-semibold text-foreground">{presentedCount}</strong> presented
+            </span>
+          </div>
+        ) : null}
       </header>
 
-      {roster.length === 0 ? (
+      {members.length === 0 ? (
         <div className="rounded-xl border border-border bg-card p-8">
           <p className="text-sm text-muted">Nobody has signed in yet. Members appear here after their first login.</p>
         </div>
       ) : (
-        <div className="divide-y divide-border rounded-xl border border-border bg-card sm:grid sm:grid-cols-2 sm:gap-4 sm:divide-y-0 sm:rounded-none sm:border-none sm:bg-transparent lg:grid-cols-3">
-          {roster.map((member) => (
-            <Link
-              key={member.id}
-              href={`/dashboard/members/${member.id}`}
-              className="flex items-center gap-3 p-3 transition-all duration-150 active:bg-surface sm:block sm:rounded-xl sm:border sm:border-border sm:bg-card sm:p-4 sm:hover:-translate-y-0.5 sm:hover:border-foreground/30 sm:hover:shadow-md"
-            >
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                <Avatar name={member.name} src={member.avatar_url} size="lg" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold">
-                    {member.name}
-                    {member.id === user?.id ? <span className="ml-1 text-sm font-normal text-muted">(you)</span> : null}
-                  </p>
-                  {member.headline ? <p className="truncate text-sm text-muted">{member.headline}</p> : null}
-                  {member.location ? (
-                    <p className="mt-0.5 hidden items-center gap-1 truncate text-xs text-muted sm:flex">
-                      <MapPin className="size-3 shrink-0" /> {member.location}
-                    </p>
-                  ) : null}
-                  {presented.has(member.id) ? (
-                    <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-primary sm:hidden">
-                      <Mic className="size-3 shrink-0" /> Presented
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-
-              {member.tags && member.tags.length > 0 ? (
-                <div className="mt-3 hidden flex-wrap gap-1.5 sm:flex">
-                  {member.tags.slice(0, 3).map((tag) => (
-                    <span key={tag} className="rounded-full bg-surface px-2.5 py-0.5 text-xs text-muted">{tag}</span>
-                  ))}
-                  {member.tags.length > 3 ? <span className="rounded-full bg-surface px-2.5 py-0.5 text-xs text-muted">+{member.tags.length - 3}</span> : null}
-                </div>
-              ) : null}
-
-              {presented.has(member.id) ? (
-                <p className="mt-3 hidden items-center gap-1.5 text-xs font-medium text-primary sm:flex">
-                  <Mic className="size-3.5" /> Presented this season
-                </p>
-              ) : null}
-
-              <ChevronRight className="size-4 shrink-0 text-muted sm:hidden" />
-            </Link>
-          ))}
-        </div>
+        <MembersDirectory members={members} />
       )}
     </div>
   );

@@ -73,7 +73,7 @@ export function RecordingCard({
 
         {isSample ? (
           <p className="mt-3 text-xs text-muted">
-            Placeholder while recordings are being set up. Only admins can see this card.
+            Placeholder while recordings are being set up. Only the curator can see this card.
           </p>
         ) : null}
       </div>

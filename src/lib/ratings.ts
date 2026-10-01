@@ -37,7 +37,12 @@ export const RATING_PARAMETERS = [
 export type RatingParameterKey = (typeof RATING_PARAMETERS)[number]["key"];
 
 export const RATING_MIN = 1;
-export const RATING_MAX = 5;
+export const RATING_MAX = 10;
+
+/** Written feedback is required with every rating: scores say how it went,
+ * the words are what the speaker can actually act on. */
+export const FEEDBACK_MIN = 20;
+export const FEEDBACK_MAX = 1500;
 
 const score = z.coerce
   .number()
@@ -54,9 +59,8 @@ export const ratingScoresSchema = z.object({
   comment: z
     .string()
     .trim()
-    .max(1500, "keep it under 1500 characters")
-    .optional()
-    .or(z.literal("")),
+    .min(FEEDBACK_MIN, `write at least ${FEEDBACK_MIN} characters of feedback for the speaker.`)
+    .max(FEEDBACK_MAX, `keep feedback under ${FEEDBACK_MAX} characters.`),
 });
 
 export const ratingSubmissionSchema = ratingScoresSchema.extend({

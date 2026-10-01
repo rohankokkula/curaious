@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, Star } from "lucide-react";
+import { Mic } from "lucide-react";
 import { Section } from "@/components/home/Section";
 import { useScrollReveal } from "@/lib/useScrollReveal";
 
@@ -22,18 +22,20 @@ const ROTATION = [
 ];
 
 const RATINGS = [
-  { label: "Content Quality", score: 4 },
-  { label: "Technical Depth", score: 5 },
-  { label: "Delivery & Clarity", score: 4 },
-  { label: "Practical Takeaways", score: 4 },
+  { label: "Content Quality", score: 8 },
+  { label: "Technical Depth", score: 9 },
+  { label: "Delivery & Clarity", score: 8 },
+  { label: "Practical Takeaways", score: 7 },
 ];
 
-function Stars({ score, size = "size-3.5" }: { score: number; size?: string }) {
+/** Out of 10: a short bar plus the number. */
+function Score({ score }: { score: number }) {
   return (
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <Star key={n} className={size} fill={n <= score ? "currentColor" : "none"} strokeWidth={1.5} />
-      ))}
+    <div className="flex items-center gap-2.5">
+      <span className="h-1.5 w-16 overflow-hidden rounded-full bg-surface">
+        <span className="block h-full rounded-full bg-accent" style={{ width: `${score * 10}%` }} />
+      </span>
+      <span className="w-9 text-right text-[12px] font-semibold tabular-nums text-foreground">{score}/10</span>
     </div>
   );
 }
@@ -102,9 +104,7 @@ export function ProductPreview() {
               {RATINGS.map((r) => (
                 <div key={r.label} className="flex items-center justify-between gap-3">
                   <span className="text-[13px]">{r.label}</span>
-                  <span className="text-accent">
-                    <Stars score={r.score} />
-                  </span>
+                  <Score score={r.score} />
                 </div>
               ))}
             </div>
@@ -131,11 +131,11 @@ export function ProductPreview() {
             <div className="mt-3 rounded-lg bg-surface p-3">
               <p className="text-[11px] text-muted">average score</p>
               <p className="mt-0.5 text-2xl font-bold">
-                4.6<span className="text-sm font-medium text-muted"> / 5</span>
+                8.6<span className="text-sm font-medium text-muted"> / 10</span>
               </p>
-              <div className="mt-1 text-amber-400">
-                <Stars score={5} size="size-4" />
-              </div>
+              <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-background">
+                <span className="block h-full w-[86%] rounded-full bg-accent" />
+              </span>
               <p className="mt-1 text-[11px] text-muted">8 responses</p>
             </div>
           </AppWindow>

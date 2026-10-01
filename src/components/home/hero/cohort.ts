@@ -152,10 +152,10 @@ export function initialsFor(name: string): string {
 /**
  * The score a given rater hands the current speaker. Deterministic on the
  * pair so the room's numbers stay put across re-renders instead of
- * flickering — and spread across 3.8-5.0, since the real form is a 1-5
- * scale and a wall of straight 5s would read as fake.
+ * flickering — whole numbers spread across 7-10, since the real form is a
+ * 1-10 scale and a wall of straight 10s would read as fake.
  */
 export function scoreFor(speakerIndex: number, raterIndex: number): string {
   const step = (speakerIndex * 7 + raterIndex * 13) % 13;
-  return (3.8 + step * 0.1).toFixed(1);
+  return String(7 + (step % 4));
 }

@@ -49,12 +49,8 @@ function Seated({ presents, toneClass }: { presents: "f" | "m"; toneClass: strin
   );
 }
 
-function StarGlyph({ className }: { className?: string }) {
-  return (
-    <svg aria-hidden viewBox="0 0 24 24" className={cn("size-2.5", className)} fill="currentColor">
-      <path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3-5.8 3 1.1-6.5L2.6 9.3l6.5-.9z" />
-    </svg>
-  );
+function ScoreDot({ className }: { className?: string }) {
+  return <span aria-hidden className={cn("size-1.5 rounded-full bg-current", className)} />;
 }
 
 function StageFloor() {
@@ -276,7 +272,7 @@ export function Room({ activeIndex, className }: { activeIndex: number; classNam
                 className="mb-1 flex items-center gap-1 rounded-full border border-white/12 bg-white/[0.07] px-1.5 py-[3px] backdrop-blur-sm md:mb-1.5 md:px-2"
                 title={`${member.name} scored this talk`}
               >
-                <StarGlyph className={tone.chip} />
+                <ScoreDot className={tone.chip} />
                 <span className="font-mono text-[8px] leading-none text-white/75 md:text-[9px]">
                   {scoreFor(activeIndex, i)}
                 </span>

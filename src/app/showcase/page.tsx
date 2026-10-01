@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { MapPin, Star } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { GithubIcon, LinkedinIcon, XIcon } from "@/components/icons/SocialIcons";
 import { CuraiousLogo } from "@/components/home/CuraiousLogo";
 import { Section, SectionKicker } from "@/components/home/Section";
@@ -30,16 +30,6 @@ function initialsFor(name: string) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
-}
-
-function Stars({ value }: { value: number }) {
-  return (
-    <div className="flex gap-0.5 text-accent">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <Star key={n} className="size-4" fill={value >= n - 0.25 ? "currentColor" : "none"} strokeWidth={1.5} />
-      ))}
-    </div>
-  );
 }
 
 function Recording({ url, title }: { url: string; title: string }) {
@@ -192,8 +182,7 @@ function Speaker({ speaker, index }: { speaker: ShowcaseSpeaker; index: number }
                       </p>
                     </div>
                     <div className="text-right">
-                      <Stars value={talk.scores.overall ?? 0} />
-                      <p className="mt-1.5 text-xs text-muted">
+                      <p className="text-xs text-muted">
                         {talk.scores.count} {talk.scores.count === 1 ? "response" : "responses"}
                       </p>
                     </div>

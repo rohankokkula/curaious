@@ -4,10 +4,10 @@ import { BookOpen, Lightbulb, MonitorPlay, Sparkles, Users } from "lucide-react"
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { StarRating } from "@/components/dashboard/StarRating";
+import { ScoreInput } from "@/components/dashboard/ScoreInput";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
-import { RATING_PARAMETERS, type RatingParameterKey } from "@/lib/ratings";
+import { FEEDBACK_MAX, FEEDBACK_MIN, RATING_MAX, RATING_PARAMETERS, type RatingParameterKey } from "@/lib/ratings";
 
 type Scores = Record<RatingParameterKey, number>;
 
@@ -49,7 +49,9 @@ export function RatingForm({
   );
   const [comment, setComment] = useState(initial?.comment ?? "");
   const [sending, setSending] = useState(false);
-  const complete = RATING_PARAMETERS.every((p) => scores[p.key] > 0);
+  const feedbackLength = comment.trim().length;
+  const feedbackOk = feedbackLength >= FEEDBACK_MIN;
+  const complete = RATING_PARAMETERS.every((p) => scores[p.key] > 0) && feedbackOk;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,7 +83,7 @@ export function RatingForm({
   return (
     <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-card p-5">
       <h2 className="text-base font-bold">Your feedback</h2>
-      <p className="mt-1 text-sm text-muted">Rate this talk across {RATING_PARAMETERS.length} parameters</p>
+      <p className="mt-1 text-sm text-muted">Score this talk from 1 to {RATING_MAX} on {RATING_PARAMETERS.length} parameters</p>
 
       <div className="mt-5 space-y-4">
         {RATING_PARAMETERS.map((parameter) => {
@@ -92,10 +94,15 @@ export function RatingForm({
                 <Icon className="size-4" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">{parameter.label}</p>
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="text-sm font-semibold">{parameter.label}</p>
+                  <span className="text-xs font-semibold text-muted tabular-nums">
+                    {scores[parameter.key] > 0 ? `${scores[parameter.key]}/${RATING_MAX}` : ""}
+                  </span>
+                </div>
                 <p className="mt-0.5 text-xs text-muted">{parameter.hint}</p>
-                <div className="mt-1.5">
-                  <StarRating
+                <div className="mt-2">
+                  <ScoreInput
                     label={parameter.label}
                     value={scores[parameter.key]}
                     onChange={(v) => setScores((prev) => ({ ...prev, [parameter.key]: v }))}
@@ -109,18 +116,26 @@ export function RatingForm({
 
       <div className="mt-6 border-t border-border pt-5">
         <label htmlFor="comment" className="text-sm font-semibold">
-          Additional comments (optional)
+          Feedback for the speaker <span className="text-destructive">*</span>
         </label>
+        <p className="mt-0.5 text-xs text-muted">What landed for you, and one thing they could do better next time.</p>
         <Textarea
           id="comment"
+          required
+          minLength={FEEDBACK_MIN}
           value={comment}
           onChange={(event) => setComment(event.target.value)}
-          placeholder="Share your thoughts, suggestions or feedback..."
-          maxLength={1500}
-          rows={3}
+          placeholder="The demo made the tradeoff click. Next time, I'd spend less time on setup and more on the results."
+          maxLength={FEEDBACK_MAX}
+          rows={4}
           className="mt-2 resize-none"
         />
-        <p className="mt-1 text-right text-xs text-muted">{comment.length}/1500</p>
+        <p className="mt-1 flex justify-between gap-3 text-xs text-muted">
+          <span>{feedbackOk ? "" : `At least ${FEEDBACK_MIN} characters (${FEEDBACK_MIN - feedbackLength} to go)`}</span>
+          <span className="tabular-nums">
+            {comment.length}/{FEEDBACK_MAX}
+          </span>
+        </p>
       </div>
 
       <Button type="submit" disabled={sending || !complete} className="mt-4 w-full">

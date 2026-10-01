@@ -171,7 +171,7 @@ export function ArticleEditor({ existing }: { existing?: ExistingArticle }) {
 
       <div className="flex items-center justify-between gap-3 border-t border-border pt-5">
         <p className="text-xs text-muted">
-          An admin reviews this before it&rsquo;s public. Pasting text into these fields is off, on purpose.
+          The curator reviews this before it&rsquo;s public. Pasting text into these fields is off, on purpose.
         </p>
         <Button type="submit" disabled={saving}>
           {saving ? "Submitting…" : isEditing ? "Resubmit for review" : "Submit for review"}

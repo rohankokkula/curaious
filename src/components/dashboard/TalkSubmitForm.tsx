@@ -133,7 +133,7 @@ export function TalkSubmitForm({
         <p className="mt-1 max-w-xl text-muted">
           {step === "submitted"
             ? "Your talk is on its way to review."
-            : "Share what you'll be talking about. An admin will review your submission before it appears on the schedule."}
+            : "Share what you'll be talking about. The curator will review your submission before it appears on the schedule."}
         </p>
       </div>
 

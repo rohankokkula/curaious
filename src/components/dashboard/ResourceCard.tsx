@@ -1,15 +1,12 @@
 "use client";
 
-import { Bookmark, ExternalLink, FileText, Newspaper, PlayCircle, Sparkles, SquarePen, Trash2, Wrench } from "lucide-react";
+import { FileText, Newspaper, PlayCircle, Sparkles, SquarePen, Trash2, Wrench } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { toast } from "sonner";
 import { Avatar } from "@/components/dashboard/Avatar";
-import { LinkPreviewModal } from "@/components/dashboard/LinkPreviewModal";
 import { Badge } from "@/components/ui/badge";
 import { RESOURCE_CATEGORY_LABELS, hostOf, type ResourceCategory } from "@/lib/resources";
-import { cn } from "@/lib/utils";
 
 export type ResourceListItem = {
   id: string;
@@ -44,37 +41,9 @@ const CATEGORY_ICON: Record<ResourceCategory, typeof FileText> = {
   other: FileText,
 };
 
-function StarIcon({ filled, className }: { filled: boolean; className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.6} className={className}>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M11.48 3.5a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.563.563 0 0 0-.586 0L6.98 20.54a.562.562 0 0 1-.84-.61l1.285-5.385a.563.563 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"
-      />
-    </svg>
-  );
-}
-
 export function ResourceCard({ resource }: { resource: ResourceListItem }) {
   const router = useRouter();
-  const [liked, setLiked] = useState(resource.liked);
-  const [likeCount, setLikeCount] = useState(resource.likeCount);
-  const [saved, setSaved] = useState(resource.saved);
-  const [previewOpen, setPreviewOpen] = useState(false);
   const Icon = CATEGORY_ICON[resource.category];
-
-  async function toggle(kind: "like" | "save") {
-    const res = await fetch(`/api/resources/links/${resource.id}/${kind}`, { method: "POST" });
-    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; liked?: boolean; saved?: boolean; count?: number };
-    if (!res.ok || !json.ok) return toast.error("couldn't update that.");
-    if (kind === "like") {
-      setLiked(Boolean(json.liked));
-      setLikeCount(json.count ?? 0);
-    } else {
-      setSaved(Boolean(json.saved));
-    }
-  }
 
   async function remove() {
     const res = await fetch(`/api/resources/links/${resource.id}`, { method: "DELETE" });
@@ -96,10 +65,11 @@ export function ResourceCard({ resource }: { resource: ResourceListItem }) {
       : resource.url;
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card transition hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md">
-      <button
-        type="button"
-        onClick={() => (isArticle ? router.push(href) : setPreviewOpen(true))}
+    <div className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md">
+      {/* A link opens the source in a new tab; an article is our own page. */}
+      <Link
+        href={href}
+        {...(isArticle ? {} : { target: "_blank", rel: "noopener noreferrer" })}
         className="block text-left"
       >
         <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-surface">
@@ -108,7 +78,9 @@ export function ResourceCard({ resource }: { resource: ResourceListItem }) {
             <img
               src={resource.thumbnailUrl}
               alt=""
-              className="size-full object-cover"
+              // Grayscale at rest so a wall of mismatched thumbnails reads as one
+              // calm grid; the card you're on (hover or keyboard focus) gets its color.
+              className="size-full object-cover grayscale transition duration-300 group-focus-within:grayscale-0 group-hover:grayscale-0"
               onError={(e) => {
                 e.currentTarget.style.display = "none";
               }}
@@ -148,7 +120,7 @@ export function ResourceCard({ resource }: { resource: ResourceListItem }) {
             </span>
           </div>
         </div>
-      </button>
+      </Link>
 
       <div className="mt-auto flex items-center justify-between gap-1.5 border-t border-border px-2.5 py-2">
         <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted">
@@ -176,34 +148,6 @@ export function ResourceCard({ resource }: { resource: ResourceListItem }) {
               <SquarePen className="size-3" />
             </Link>
           ) : null}
-          <button
-            type="button"
-            aria-label={liked ? "Unlike" : "Like"}
-            onClick={() => void toggle("like")}
-            className={cn("flex items-center gap-0.5 rounded-md px-1 py-1 text-[11px] transition hover:bg-surface", liked ? "text-amber-500" : "text-muted")}
-          >
-            <StarIcon filled={liked} className="size-3" />
-            {likeCount > 0 ? likeCount : null}
-          </button>
-          <button
-            type="button"
-            aria-label={saved ? "Remove bookmark" : "Bookmark"}
-            onClick={() => void toggle("save")}
-            className={cn("rounded-md p-1 transition hover:bg-surface", saved ? "text-primary" : "text-muted")}
-          >
-            <Bookmark className="size-3" fill={saved ? "currentColor" : "none"} />
-          </button>
-          {!isArticle ? (
-            <a
-              href={resource.url}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Open in new tab"
-              className="rounded-md p-1 text-muted transition hover:bg-surface hover:text-foreground"
-            >
-              <ExternalLink className="size-3" />
-            </a>
-          ) : null}
           {resource.canDelete ? (
             <button
               type="button"
@@ -216,15 +160,6 @@ export function ResourceCard({ resource }: { resource: ResourceListItem }) {
           ) : null}
         </div>
       </div>
-
-      {!isArticle ? (
-        <LinkPreviewModal
-          open={previewOpen}
-          onOpenChange={setPreviewOpen}
-          url={resource.url}
-          title={resource.title}
-        />
-      ) : null}
     </div>
   );
 }

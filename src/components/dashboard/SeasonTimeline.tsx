@@ -1,21 +1,78 @@
 import Link from "next/link";
-import { FileText, Plus, Users } from "lucide-react";
+import { FileText, Plus, Rocket, Trophy, Users } from "lucide-react";
 import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
 import type { SlotView } from "@/lib/talks";
 import { cn } from "@/lib/utils";
 
-/** Same six-color story as the avatar palette elsewhere, as a faint wash
- * rather than a solid fill — a day card should still read as "card", just
- * not every one the same neutral gray. Paired light/dark per color since
- * this page follows the theme toggle, unlike the pinned-dark landing page. */
+/** One color per day card: a tint, a matching border and the date label
+ * in the same hue. Dark mode uses each
+ * hue's deepest shade rather than a faint wash of the bright one — a 16%
+ * wash over pure black came out muddy (amber read as brown). Amber and
+ * orange are left out for the same reason. Paired light/dark per color
+ * since this page follows the theme toggle. */
 const DAY_PALETTE = [
-  "bg-emerald-100/90 dark:bg-emerald-500/[0.16]",
-  "bg-sky-100/90 dark:bg-sky-500/[0.16]",
-  "bg-amber-100/90 dark:bg-amber-500/[0.16]",
-  "bg-violet-100/90 dark:bg-violet-500/[0.16]",
-  "bg-rose-100/90 dark:bg-rose-500/[0.16]",
-  "bg-teal-100/90 dark:bg-teal-500/[0.16]",
+  {
+    card: "border-violet-300/70 bg-violet-100/90 dark:border-violet-400/30 dark:bg-violet-950/70",
+    label: "text-violet-700 dark:text-violet-300",
+    tile: "border-violet-300/60 bg-white/70 hover:border-violet-400 dark:border-violet-400/20 dark:bg-violet-900/30 dark:hover:border-violet-400/50",
+    well: "border-violet-400/50 bg-violet-50 dark:border-violet-400/30 dark:bg-violet-950/60",
+  },
+  {
+    card: "border-cyan-300/70 bg-cyan-100/90 dark:border-cyan-400/30 dark:bg-cyan-950/70",
+    label: "text-cyan-700 dark:text-cyan-300",
+    tile: "border-cyan-300/60 bg-white/70 hover:border-cyan-400 dark:border-cyan-400/20 dark:bg-cyan-900/30 dark:hover:border-cyan-400/50",
+    well: "border-cyan-400/50 bg-cyan-50 dark:border-cyan-400/30 dark:bg-cyan-950/60",
+  },
+  {
+    card: "border-rose-300/70 bg-rose-100/90 dark:border-rose-400/30 dark:bg-rose-950/70",
+    label: "text-rose-700 dark:text-rose-300",
+    tile: "border-rose-300/60 bg-white/70 hover:border-rose-400 dark:border-rose-400/20 dark:bg-rose-900/30 dark:hover:border-rose-400/50",
+    well: "border-rose-400/50 bg-rose-50 dark:border-rose-400/30 dark:bg-rose-950/60",
+  },
+  {
+    card: "border-emerald-300/70 bg-emerald-100/90 dark:border-emerald-400/30 dark:bg-emerald-950/70",
+    label: "text-emerald-700 dark:text-emerald-300",
+    tile: "border-emerald-300/60 bg-white/70 hover:border-emerald-400 dark:border-emerald-400/20 dark:bg-emerald-900/30 dark:hover:border-emerald-400/50",
+    well: "border-emerald-400/50 bg-emerald-50 dark:border-emerald-400/30 dark:bg-emerald-950/60",
+  },
+  {
+    card: "border-indigo-300/70 bg-indigo-100/90 dark:border-indigo-400/30 dark:bg-indigo-950/70",
+    label: "text-indigo-700 dark:text-indigo-300",
+    tile: "border-indigo-300/60 bg-white/70 hover:border-indigo-400 dark:border-indigo-400/20 dark:bg-indigo-900/30 dark:hover:border-indigo-400/50",
+    well: "border-indigo-400/50 bg-indigo-50 dark:border-indigo-400/30 dark:bg-indigo-950/60",
+  },
+  {
+    card: "border-fuchsia-300/70 bg-fuchsia-100/90 dark:border-fuchsia-400/30 dark:bg-fuchsia-950/70",
+    label: "text-fuchsia-700 dark:text-fuchsia-300",
+    tile: "border-fuchsia-300/60 bg-white/70 hover:border-fuchsia-400 dark:border-fuchsia-400/20 dark:bg-fuchsia-900/30 dark:hover:border-fuchsia-400/50",
+    well: "border-fuchsia-400/50 bg-fuchsia-50 dark:border-fuchsia-400/30 dark:bg-fuchsia-950/60",
+  },
 ];
+
+type DayPalette = (typeof DAY_PALETTE)[number];
+
+/** Yellow sits outside the rotation and is handed out on purpose, to the
+ * dates pinned below.
+ * Its dark tint is kept low and the border and label carry the color; a
+ * stronger yellow wash over black turns olive. */
+const YELLOW: DayPalette = {
+  card: "border-yellow-300/80 bg-yellow-100/90 dark:border-yellow-400/40 dark:bg-yellow-400/[0.10]",
+  label: "text-yellow-700 dark:text-yellow-300",
+  tile: "border-yellow-300/70 bg-white/70 hover:border-yellow-400 dark:border-yellow-400/25 dark:bg-yellow-400/[0.06] dark:hover:border-yellow-400/50",
+  well: "border-yellow-400/60 bg-yellow-50 dark:border-yellow-400/35 dark:bg-yellow-400/[0.07]",
+};
+
+/** Neutral gray for the cohort-wide sessions (kickoff, recognitions), so the
+ * colored cards stay about talks. */
+const GRAY: DayPalette = {
+  card: "border-neutral-300/80 bg-neutral-100/90 dark:border-neutral-500/30 dark:bg-neutral-800/50",
+  label: "text-neutral-600 dark:text-neutral-300",
+  tile: "border-neutral-300/70 bg-white/70 hover:border-neutral-400 dark:border-neutral-500/25 dark:bg-neutral-800/40 dark:hover:border-neutral-400/50",
+  well: "border-neutral-400/50 bg-neutral-50 dark:border-neutral-500/30 dark:bg-neutral-900/60",
+};
+
+/** Days that always get yellow, regardless of the rotation. */
+const YELLOW_DATES = new Set(["2026-10-24"]);
 
 /** Monday-anchored ISO week key, used to group slots into one "Week N" row. */
 function weekKey(date: string) {
@@ -44,20 +101,40 @@ function timeRange(startsAt: string | null, endsAt: string | null) {
  * the season, so the same tile is inert for them. */
 type TimelineMode = "member" | "admin";
 
+/** Faint season-wide talk number in a tile's top-left corner. */
+function TalkNumber({ n, onImage = false, tone }: { n: number; onImage?: boolean; tone?: string }) {
+  return (
+    <span
+      aria-label={`Talk ${n}`}
+      className={cn(
+        "absolute top-1.5 left-2 font-mono text-[10px] leading-none font-semibold tabular-nums",
+        onImage ? "rounded bg-black/45 px-1 py-0.5 text-white/80" : cn("opacity-70", tone ?? "text-muted"),
+      )}
+    >
+      {String(n).padStart(2, "0")}
+    </span>
+  );
+}
+
 function OpenTile({
   slotId,
   disabled,
   mode,
+  number,
+  palette,
 }: {
   slotId: string;
   disabled: boolean;
   mode: TimelineMode;
+  number: number;
+  palette: DayPalette;
 }) {
   const inert = disabled || mode === "admin";
   const body = (
-    <div className="rounded-lg border border-border/60 bg-card/70 p-2 backdrop-blur-sm">
-      <div className="flex aspect-video items-center justify-center rounded-md border border-dashed border-border bg-surface/60">
-        <Plus className="size-4 text-muted" />
+    <div className={cn("rounded-lg border p-2 backdrop-blur-sm transition-colors", palette.tile)}>
+      <div className={cn("relative flex aspect-video items-center justify-center rounded-md border border-dashed", palette.well)}>
+        <TalkNumber n={number} tone={palette.label} />
+        <Plus className={cn("size-4", palette.label)} />
       </div>
       <p className="mt-1.5 truncate text-xs font-semibold">{inert ? "Open" : "Choose this slot"}</p>
       <p className="mt-0.5 truncate text-[11px] leading-tight text-muted">
@@ -71,9 +148,13 @@ function OpenTile({
 function TalkTile({
   talk,
   mode,
+  number,
+  palette,
 }: {
   talk: SlotView["talks"][number];
   mode: TimelineMode;
+  number: number;
+  palette: DayPalette;
 }) {
   // Your own talk stays readable (and openable) while it's still in review —
   // it's only hidden from everyone *else* until approved.
@@ -84,12 +165,13 @@ function TalkTile({
   const showDeckPage = canSeeDetail && talk.status === "approved" && talk.hasDeck;
   const body = (
     <>
-      <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-md bg-surface">
+      <div className={cn("relative flex aspect-video items-center justify-center overflow-hidden rounded-md border", palette.well)}>
         {showDeckPage ? (
           <DeckPageThumbnail talkId={talk.talkId} className="absolute inset-0" />
         ) : (
-          <FileText className="size-5 text-muted/60" />
+          <FileText className={cn("size-5 opacity-70", palette.label)} />
         )}
+        <TalkNumber n={number} onImage={showDeckPage} tone={palette.label} />
       </div>
       <p className="mt-1.5 truncate text-xs font-semibold">
         {canSeeDetail ? talk.title : "Pending review"}
@@ -107,12 +189,42 @@ function TalkTile({
 
   if (canSeeDetail) {
     return (
-      <Link href={`/dashboard/talks/${talk.talkId}/present`} className="block rounded-lg border border-border/60 bg-card/70 p-2 backdrop-blur-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-sm">
+      <Link href={`/dashboard/talks/${talk.talkId}/present`} className={cn("block rounded-lg border p-2 backdrop-blur-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-sm", palette.tile)}>
         {body}
       </Link>
     );
   }
-  return <div className="rounded-lg border border-border/60 bg-card/70 p-2 backdrop-blur-sm">{body}</div>;
+  return <div className={cn("rounded-lg border p-2 backdrop-blur-sm", palette.tile)}>{body}</div>;
+}
+
+/** What the non-talk sessions are, in a line, so they don't read as empty. */
+const SESSION_INFO = {
+  kickoff: {
+    icon: Rocket,
+    title: "Season kickoff",
+    blurb: "Meet the cohort, walk through how the season runs, and pick your slots.",
+  },
+  recognition: {
+    icon: Trophy,
+    title: "Recognitions",
+    blurb: "The closing session: celebrating the season's standout talks and speakers.",
+  },
+} as const;
+
+function SessionTile({ type, palette }: { type: SlotView["type"]; palette: DayPalette }) {
+  const info = type === "kickoff" || type === "recognition" ? SESSION_INFO[type] : null;
+  const Icon = info?.icon ?? Users;
+  return (
+    <div className={cn("mt-2 flex items-start gap-3 rounded-lg border p-3 backdrop-blur-sm", palette.tile)}>
+      <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-md border", palette.well)}>
+        <Icon className={cn("size-5", palette.label)} />
+      </span>
+      <div className="min-w-0">
+        {info ? <p className="text-xs font-semibold">{info.title}</p> : null}
+        {info ? <p className="mt-0.5 text-[11px] leading-snug text-muted">{info.blurb}</p> : null}
+      </div>
+    </div>
+  );
 }
 
 /** One calendar day within a week row: its date header, plus its slot(s). */
@@ -121,22 +233,31 @@ function DayColumn({
   viewerHasActiveTalk,
   mode,
   colorIndex,
+  firstNumber,
 }: {
   slots: SlotView[];
   viewerHasActiveTalk: boolean;
   mode: TimelineMode;
   colorIndex: number;
+  /** Season-wide number of each talk slot's first seat, keyed by slot id. */
+  firstNumber: Map<string, number>;
 }) {
   const { weekday, day, month } = dateParts(slots[0].date);
+  const isSessionDay = slots.some((slot) => slot.type === "kickoff" || slot.type === "recognition");
+  const palette = isSessionDay
+    ? GRAY
+    : YELLOW_DATES.has(slots[0].date)
+      ? YELLOW
+      : DAY_PALETTE[colorIndex % DAY_PALETTE.length];
 
   return (
     <div
       className={cn(
-        "min-w-0 flex-1 rounded-2xl border border-border/60 p-4 shadow-sm backdrop-blur-md sm:rounded-xl",
-        DAY_PALETTE[colorIndex % DAY_PALETTE.length],
+        "relative min-w-0 flex-1 overflow-hidden rounded-2xl border p-4 shadow-sm backdrop-blur-md sm:rounded-xl",
+        palette.card,
       )}
     >
-      <p className="text-[11px] font-semibold text-muted">
+      <p className={cn("text-[11px] font-semibold tracking-wide", palette.label)}>
         {weekday} {day} {month}
       </p>
 
@@ -154,16 +275,21 @@ function DayColumn({
               </div>
 
               {isSession ? (
-                <p className="mt-1 flex items-center gap-1.5 text-xs text-muted">
-                  <Users className="size-3.5" /> Whole cohort attends
-                </p>
+                <SessionTile type={slot.type} palette={palette} />
               ) : (
                 <div className="mt-2 grid grid-cols-2 gap-2">
-                  {slot.talks.map((talk) => (
-                    <TalkTile key={talk.talkId} talk={talk} mode={mode} />
+                  {slot.talks.map((talk, ti) => (
+                    <TalkTile key={talk.talkId} talk={talk} mode={mode} palette={palette} number={(firstNumber.get(slot.id) ?? 1) + ti} />
                   ))}
                   {Array.from({ length: openCount }).map((_, oi) => (
-                    <OpenTile key={oi} slotId={slot.id} disabled={viewerHasActiveTalk} mode={mode} />
+                    <OpenTile
+                      key={oi}
+                      slotId={slot.id}
+                      disabled={viewerHasActiveTalk}
+                      mode={mode}
+                      palette={palette}
+                      number={(firstNumber.get(slot.id) ?? 1) + slot.talks.length + oi}
+                    />
                   ))}
                 </div>
               )}
@@ -194,6 +320,21 @@ export function SeasonTimeline({
     const days = dates.map((date) => weekSlots.filter((s) => s.date === date));
     return { key: wk, days };
   });
+
+  // Number every talk seat across the season in the order it's shown
+  // (talk 1, 2, 3...), so a tile can say which talk of the season it is.
+  // Sessions (kickoff, recognitions) take no numbers.
+  const firstNumber = new Map<string, number>();
+  let next = 1;
+  for (const week of weeks) {
+    for (const day of week.days) {
+      for (const slot of day) {
+        if (slot.type !== "talk") continue;
+        firstNumber.set(slot.id, next);
+        next += Math.max(slot.capacity, slot.talks.length);
+      }
+    }
+  }
 
   return (
     <div className="space-y-7 sm:space-y-6">
@@ -226,6 +367,7 @@ export function SeasonTimeline({
                 viewerHasActiveTalk={viewerHasActiveTalk}
                 mode={mode}
                 colorIndex={wi * 2 + di}
+                firstNumber={firstNumber}
               />
             ))}
           </div>

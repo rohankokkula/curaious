@@ -38,7 +38,7 @@ async function save(request: Request, mode: "create" | "update") {
         ok: false,
         error: "validation_failed",
         details: parsed.error.flatten().fieldErrors,
-        message: "every parameter needs a score from 1 to 10.",
+        message: parsed.error.flatten().fieldErrors.comment?.[0] ?? "every parameter needs a score from 1 to 10.",
       },
       { status: 400 },
     );
@@ -94,7 +94,7 @@ async function save(request: Request, mode: "create" | "update") {
 
   const payload = {
     ...scores,
-    comment: comment && comment.length > 0 ? comment : null,
+    comment,
   };
   const { error } =
     mode === "create"
