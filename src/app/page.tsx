@@ -3,11 +3,9 @@ import { Curator } from "@/components/home/Curator";
 import { Footer } from "@/components/home/Footer";
 import { Header } from "@/components/home/Header";
 import { Hero } from "@/components/home/Hero";
-import { HowItWorks } from "@/components/home/HowItWorks";
+import { InsideThePortal } from "@/components/home/InsideThePortal";
 import { ProductPreview } from "@/components/home/ProductPreview";
-import { WhatItIs } from "@/components/home/WhatItIs";
 import { WhosInTheRoom } from "@/components/home/WhosInTheRoom";
-import { WhyItsNotJustSessions } from "@/components/home/WhyItsNotJustSessions";
 
 export default function Home() {
   // `landing-dark` pins the whole public site to the stage palette (see
@@ -19,10 +17,9 @@ export default function Home() {
       <main>
         <Hero />
         <ProductPreview />
-        <WhatItIs />
+        <InsideThePortal />
         <WhosInTheRoom />
-        <HowItWorks />
-        <WhyItsNotJustSessions />
+        
         <Curator />
         <ClosingCta />
       </main>

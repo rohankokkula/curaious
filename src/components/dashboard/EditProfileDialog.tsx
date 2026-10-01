@@ -166,8 +166,18 @@ export function EditProfileDialog({ profile }: { profile: Profile }) {
         title="Edit profile"
         description="Your details, and who gets to see them."
         className="max-w-lg"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form="edit-profile-form" disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </>
+        }
       >
-        <form onSubmit={save} className="space-y-4">
+        <form id="edit-profile-form" onSubmit={save} className="space-y-4">
           <div className="flex items-center gap-4">
             <Avatar name={form.name || profile.name} src={photo} size="lg" />
             <div className="flex flex-wrap gap-2">
@@ -262,17 +272,6 @@ export function EditProfileDialog({ profile }: { profile: Profile }) {
                 Untick the last option to keep yourself off it.
               </p>
             ) : null}
-          </div>
-
-          {/* Sticks to the bottom of the panel: the form is long enough that
-              a footer in normal flow would sit below the fold. */}
-          <div className="sticky bottom-0 -mx-6 -mb-5 flex justify-end gap-2 border-t border-border bg-card px-6 py-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
-            </Button>
           </div>
         </form>
       </SheetContent>

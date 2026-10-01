@@ -3,6 +3,9 @@ import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { INVITE_FORM_URL } from "@/lib/content";
+import { pageMetadata } from "@/lib/og/metadata";
+
+export const metadata = pageMetadata("login", { title: "Member login" });
 
 export default function LoginPage() {
   return (

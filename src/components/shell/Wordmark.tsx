@@ -7,7 +7,7 @@ export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn(className)}>
       cur
-      <span className="underline decoration-2 underline-offset-[3px]">ai</span>
+      <span className="underline decoration-[#e08a5a] decoration-2 underline-offset-[0.06em]">ai</span>
       ous
     </span>
   );

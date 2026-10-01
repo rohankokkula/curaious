@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Check, EyeOff, FileText, Mail, MapPin, Plus } from "lucide-react";
+import { BadgeArt } from "@/components/dashboard/BadgeArt";
 import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
 import { DeleteTalkButton } from "@/components/dashboard/DeleteTalkButton";
 import { Avatar } from "@/components/dashboard/Avatar";
 import { EditProfileDialog } from "@/components/dashboard/EditProfileDialog";
 import { ProfileTabs } from "@/components/dashboard/ProfileTabs";
 import { RecordingCard } from "@/components/dashboard/RecordingCard";
+import { RemoveMemberButton } from "@/components/dashboard/RemoveMemberButton";
 import { ShareProfileButton } from "@/components/dashboard/ShareProfileButton";
 import { GithubIcon, LinkedinIcon, XIcon } from "@/components/icons/SocialIcons";
+import { BADGES, isBadgeKey } from "@/lib/badges";
+import { getActiveCohort } from "@/lib/cohort";
 import { canSee, resolveVisibility } from "@/lib/profile";
 import { RECORDINGS_VISIBLE_TO, SAMPLE_RECORDING_URL } from "@/lib/recording";
 import { RATING_MAX, RATING_PARAMETERS, type RatingParameterKey } from "@/lib/ratings";
@@ -129,10 +133,11 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
     );
   }
 
-  const [supabase, user, viewer] = await Promise.all([
+  const [supabase, user, viewer, cohort] = await Promise.all([
     createSupabaseServerClient(),
     getSessionUser(),
     getViewerProfile(),
+    getActiveCohort(),
   ]);
 
   if (!user) {
@@ -146,7 +151,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   // Everything about this member in one parallel round instead of ten queries
   // in a row. The sent-back talk and ratings given are fetched regardless and
   // gated below; RLS already limits both to the member themselves and admins.
-  const [{ data: member }, { data: talk }, { data: sentBackRow }, { data: givenRows }] = await Promise.all([
+  const [{ data: member }, { data: talk }, { data: sentBackRow }, { data: givenRows }, { data: badgeRows }] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, name, email, role, avatar_url, headline, location, bio, tags, linkedin_url, twitter_url, github_url, visibility")
@@ -176,12 +181,21 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
       .eq("rater_id", id)
       .order("created_at", { ascending: false })
       .returns<GivenRatingRow[]>(),
+    supabase
+      .from("member_badges")
+      .select("badge_key")
+      .eq("profile_id", id)
+      .order("awarded_at", { ascending: true })
+      .returns<{ badge_key: string }[]>(),
   ]);
 
   if (!member) notFound();
 
   const isSelf = user.id === member.id;
   const isAdmin = viewer?.role === "admin";
+  // The curator can take anyone else out of the cohort from here.
+  const canRemove = isAdmin && !isSelf;
+  const badges = (badgeRows ?? []).map((row) => row.badge_key).filter(isBadgeKey).map((key) => BADGES[key]);
 
   // Members don't see who's an admin — mirrors the filter on the roster page.
   if (member.role === "admin" && !isSelf && !isAdmin) notFound();
@@ -342,7 +356,32 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
         </div>
       ) : null}
 
-      <div className={cn("mt-4 grid gap-2 [&_button]:h-9 [&_button]:w-full", isSelf ? "grid-cols-2 md:max-w-sm" : "grid-cols-1 md:max-w-[12rem]")}>
+      {badges.length > 0 ? (
+        <div className="mt-4 border-t border-border pt-4">
+          <SectionLabel>Badges</SectionLabel>
+          <ul className="mt-2.5 flex flex-wrap gap-2">
+            {badges.map((badge) => (
+              <li key={badge.key}>
+                <Link
+                  href="/dashboard/badges"
+                  title={`${badge.name}: ${badge.awardedFor}`}
+                  className="flex items-center gap-2 rounded-full border border-border bg-surface py-1 pr-3 pl-1.5 transition hover:border-foreground/30"
+                >
+                  <BadgeArt badge={badge.key} className="w-6" />
+                  <span className="text-xs font-semibold">{badge.name}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <div
+        className={cn(
+          "mt-4 grid gap-2 [&_button]:h-9 [&_button]:w-full",
+          isSelf || canRemove ? "grid-cols-2 md:max-w-sm" : "grid-cols-1 md:max-w-[12rem]",
+        )}
+      >
         {isSelf ? (
           <EditProfileDialog
             profile={{
@@ -360,6 +399,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
           />
         ) : null}
         <ShareProfileButton />
+        {canRemove && cohort ? <RemoveMemberButton cohortId={cohort.id} profileId={member.id} name={member.name} /> : null}
       </div>
     </Card>
   );

@@ -23,11 +23,19 @@ export async function generateMetadata({
   return {
     title: article.title,
     description: article.excerpt ?? undefined,
+    // The image comes from ./opengraph-image.tsx (the article's own card).
     openGraph: {
+      siteName: "curaious",
       title: article.title,
       description: article.excerpt ?? undefined,
       type: "article",
+      publishedTime: article.publishedAt,
+      authors: article.author ? [article.author.name] : undefined,
+      tags: article.tags,
     },
+    // Replaces the root's twitter block, which points at the home card;
+    // with no twitter:image, X falls back to this page's og:image.
+    twitter: { card: "summary_large_image", title: article.title, description: article.excerpt ?? undefined },
   };
 }
 
@@ -52,7 +60,7 @@ export default async function ArticlePage({
       </header>
 
       <main>
-        <Section seam={false} className="pt-4 md:pt-8">
+        <Section className="pt-4 md:pt-8">
           <div className="mx-auto max-w-3xl">
             {article.author ? (
               <div className="flex items-center gap-3">

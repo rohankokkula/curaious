@@ -2,18 +2,15 @@ import { cn } from "@/lib/utils";
 
 interface SectionProps extends React.ComponentProps<"section"> {
   children: React.ReactNode;
-  /** Set false for a section that should flow straight on from the one
-   * above it with no seam between them. */
-  seam?: boolean;
 }
 
-/** Shared vertical rhythm + measure for every homepage section. */
-export function Section({ className, children, seam = true, ...rest }: SectionProps) {
+/** Shared vertical rhythm + measure for every homepage section. No divider
+ * lines between sections: the page reads as one continuous dark room. */
+export function Section({ className, children, ...rest }: SectionProps) {
   return (
     <section
       className={cn(
         "relative px-5 py-20 md:px-8 md:py-32",
-        seam && "section-seam",
         className,
       )}
       {...rest}

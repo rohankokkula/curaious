@@ -6,8 +6,11 @@ import { loadSeasonSlots } from "@/lib/slots";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient, getViewerProfile } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
+import { pageMetadata } from "@/lib/og/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = pageMetadata("dashboard", { title: "Home" });
 
 function EmptyState({ children }: { children: React.ReactNode }) {
   return (

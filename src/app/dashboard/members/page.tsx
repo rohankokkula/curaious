@@ -2,8 +2,11 @@ import { MembersDirectory, type DirectoryMember } from "@/components/dashboard/M
 import { getActiveCohort } from "@/lib/cohort";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient, getSessionUser, getViewerProfile } from "@/lib/supabase/server";
+import { pageMetadata } from "@/lib/og/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = pageMetadata("members", { title: "Members" });
 
 type ProfileRow = {
   id: string;

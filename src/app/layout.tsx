@@ -3,6 +3,7 @@ import { IBM_Plex_Mono, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
+import { OG_PAGES, ogImagePath } from "@/lib/og/pages";
 import "./globals.css";
 
 const display = Inter({
@@ -39,17 +40,39 @@ export const viewport: Viewport = {
   ],
 };
 
+/** Absolute base for share-card URLs: scrapers can't resolve a relative
+ * og:image. The configured site URL when it's a real one, else Vercel's
+ * production domain, else local dev. */
+function siteUrl() {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL;
+  if (configured && !configured.includes("localhost")) return configured;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  return configured || "http://localhost:3000";
+}
+
+const DESCRIPTION = OG_PAGES.home.description;
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl()),
+  applicationName: "curaious",
   appleWebApp: { capable: true, title: "curaious", statusBarStyle: "black-translucent" },
   title: {
-    default: "curaious",
+    default: "curaious · 10 curious minds around ai",
     template: "%s · curaious",
   },
-  description: "a private circle of ten, meeting for four weekends to build in public and give each other real feedback.",
+  description: DESCRIPTION,
   openGraph: {
-    title: "curaious",
-    description: "a private circle of ten, meeting for four weekends to build in public and give each other real feedback.",
+    siteName: "curaious",
+    title: "curaious · 10 curious minds around ai",
+    description: DESCRIPTION,
     type: "website",
+    images: [{ url: ogImagePath("home"), width: 1200, height: 630, alt: "curaious: 10 curious minds around ai" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "curaious · 10 curious minds around ai",
+    description: DESCRIPTION,
+    images: [ogImagePath("home")],
   },
 };
 

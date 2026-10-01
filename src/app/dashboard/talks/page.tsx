@@ -5,8 +5,11 @@ import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
 import { getActiveCohort } from "@/lib/cohort";
 import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
+import { pageMetadata } from "@/lib/og/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = pageMetadata("talks", { title: "Talks" });
 
 type TalkRow = {
   id: string;

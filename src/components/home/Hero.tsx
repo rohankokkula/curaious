@@ -53,14 +53,16 @@ export function Hero() {
     >
       {/* Ambient floating light. Hardcoded, theme-independent — the stage
           is deliberately always dark regardless of the site's light/dark
-          toggle. */}
+          toggle. Radial gradients that fade to nothing at their own edge,
+          placed fully inside the section: a blurred disc hanging off the
+          bottom got sliced flat by the section's overflow clip. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -bottom-24 -left-24 size-72 rounded-full bg-teal-500/20 blur-3xl md:size-96"
+        className="pointer-events-none absolute bottom-0 -left-40 size-[26rem] rounded-full bg-[radial-gradient(circle,rgba(20,184,166,0.2)_0%,rgba(20,184,166,0.08)_40%,transparent_70%)] md:-left-48 md:size-[36rem]"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -bottom-32 -right-24 size-72 rounded-full bg-emerald-600/20 blur-3xl md:size-96"
+        className="pointer-events-none absolute bottom-0 -right-40 size-[26rem] rounded-full bg-[radial-gradient(circle,rgba(5,150,105,0.2)_0%,rgba(5,150,105,0.08)_40%,transparent_70%)] md:-right-48 md:size-[36rem]"
       />
 
       <div className="relative mx-auto w-full max-w-5xl">

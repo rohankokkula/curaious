@@ -1,73 +1,73 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
 import { Section, SectionKicker, SectionTitle } from "@/components/home/Section";
-import { PERSONAS } from "@/lib/content";
 import { useScrollReveal } from "@/lib/useScrollReveal";
 
-/** Same six-color avatar story as the real Avatar component, in the tones
- * that hold up on the landing page's dark palette (this page doesn't
- * follow the theme toggle, so these are stated outright rather than as
- * `dark:` variants). */
-const PALETTE = [
-  "bg-emerald-500/15 text-emerald-300",
-  "bg-sky-500/15 text-sky-300",
-  "bg-amber-500/15 text-amber-300",
-  "bg-violet-500/15 text-violet-300",
-  "bg-rose-500/15 text-rose-300",
-  "bg-teal-500/15 text-teal-300",
+/**
+ * Who sits at the table, and what each of them walks out with: one card per
+ * kind of person, "arrives" → "leaves with". (This used to be two sections,
+ * a persona list here and a payoffs list further down, that said the same
+ * thing twice.)
+ */
+const PEOPLE = [
+  {
+    who: "founder",
+    tone: "text-emerald-300",
+    arrives: "just shipped their first product",
+    leaves: "their first handful of real users",
+  },
+  {
+    who: "student",
+    tone: "text-sky-300",
+    arrives: "sanity-checking a side project",
+    leaves: "honest feedback, not polite encouragement",
+  },
+  {
+    who: "developer",
+    tone: "text-amber-300",
+    arrives: "automating half their week with scripts",
+    leaves: "the collaborator they'd been looking for",
+  },
+  {
+    who: "researcher",
+    tone: "text-violet-300",
+    arrives: "reads eval papers for fun",
+    leaves: "nine people who care what the work is about",
+  },
 ];
 
-function initialsFor(line: string) {
-  const word = line.replace(/^(someone|a)\s+/, "").split(/\s+/)[0];
-  return word.slice(0, 2).toUpperCase();
-}
-
 export function WhosInTheRoom() {
-  const headerRef = useScrollReveal<HTMLDivElement>({
-    selector: "[data-reveal]",
-    stagger: 0.1,
-  });
-  const listRef = useScrollReveal<HTMLUListElement>({
-    selector: "li",
-    stagger: 0.06,
-    y: 20,
-  });
+  const headerRef = useScrollReveal<HTMLDivElement>({ selector: "[data-reveal]", stagger: 0.1 });
+  const listRef = useScrollReveal<HTMLUListElement>({ selector: "li", stagger: 0.07, y: 20 });
 
   return (
     <Section id="whos-in-the-room">
       <div ref={headerRef} className="max-w-2xl">
-        <SectionKicker data-reveal index="02" label="who's in the room" />
+        <SectionKicker data-reveal index="01" label="who's in the room" />
         <SectionTitle data-reveal className="mt-6">
           you don&apos;t have to be an ai expert.
         </SectionTitle>
-        <p data-reveal className="prose-quiet mt-6">
-          you just have to be building something, or curious enough to keep
-          up. this is the roster on any given weekend:
+        <p data-reveal className="prose-quiet mt-5">
+          just building something, or curious enough to keep up.
         </p>
       </div>
 
-      <ul ref={listRef} className="mt-14 grid gap-3 md:mt-20 md:grid-cols-2">
-        {PERSONAS.map((persona, index) => (
-          <li
-            key={persona.line}
-            className="flex items-start gap-3 rounded-xl border border-border/60 bg-card p-4"
-          >
-            <span
-              aria-hidden
-              className={`flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${PALETTE[index % PALETTE.length]}`}
-            >
-              {initialsFor(persona.line)}
-            </span>
-            <span className="pt-1.5 text-[15px] leading-snug text-foreground/85 md:text-base">
-              {persona.line}
-            </span>
+      <ul ref={listRef} className="mt-12 grid gap-3 sm:grid-cols-2 md:mt-16 lg:grid-cols-4">
+        {PEOPLE.map((person) => (
+          <li key={person.who} className="flex flex-col rounded-2xl border border-border/60 bg-card p-5">
+            <p className={`font-mono text-[11px] uppercase tracking-[0.2em] ${person.tone}`}>a {person.who}</p>
+
+            <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.18em] text-muted">arrives</p>
+            <p className="mt-1 text-[15px] leading-snug text-foreground/80 lg:min-h-[2.6rem]">{person.arrives}</p>
+
+            <ArrowRight aria-hidden className="my-3 size-4 text-muted/60" />
+
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">leaves with</p>
+            <p className="heading-display mt-1 text-lg leading-snug text-foreground">{person.leaves}</p>
           </li>
         ))}
       </ul>
-
-      <p className="mt-10 max-w-xl font-mono text-[11px] uppercase leading-relaxed tracking-[0.16em] text-muted">
-        ten different starting points. one shared curiosity.
-      </p>
     </Section>
   );
 }

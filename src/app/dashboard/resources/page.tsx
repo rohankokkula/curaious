@@ -1,8 +1,11 @@
 import { FileText, MessageCircleQuestion, PenLine, ShieldCheck } from "lucide-react";
 import { GuidesTabs, type GuideItem } from "@/components/dashboard/GuidesTabs";
 import { RATING_PARAMETERS } from "@/lib/ratings";
+import { pageMetadata } from "@/lib/og/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = pageMetadata("resources", { title: "Resources" });
 
 const GUIDES: GuideItem[] = [
   {

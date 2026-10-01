@@ -3,8 +3,11 @@ import type { ResourceListItem } from "@/components/dashboard/ResourceCard";
 import { getActiveCohort } from "@/lib/cohort";
 import type { ResourceCategory } from "@/lib/resources";
 import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
+import { pageMetadata } from "@/lib/og/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = pageMetadata("bookmarks", { title: "Bookmarks" });
 
 type ResourceRow = {
   id: string;

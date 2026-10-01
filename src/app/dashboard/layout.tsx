@@ -13,6 +13,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/schedule", label: "Schedule", icon: "calendar", tab: true },
     { href: "/dashboard/talks", label: "Talks", icon: "talks", tab: true },
     { href: "/dashboard/members", label: "Members", icon: "users", tab: true },
+    { href: "/dashboard/badges", label: "Badges", icon: "award" },
     ...(viewer?.role === "admin" ? [{ href: "/admin", label: "Admin", icon: "shield" as const }] : []),
   ];
 

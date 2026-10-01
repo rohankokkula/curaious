@@ -156,6 +156,14 @@ export function initialsFor(name: string): string {
  * 1-10 scale and a wall of straight 10s would read as fake.
  */
 export function scoreFor(speakerIndex: number, raterIndex: number): string {
-  const step = (speakerIndex * 7 + raterIndex * 13) % 13;
-  return String(7 + (step % 4));
+  // Small integer hash of the pair. (The old `(s * 7 + r * 13) % 13` dropped
+  // the rater entirely, since r * 13 is always 0 mod 13, so the whole room
+  // gave each speaker the identical score.)
+  let h = (speakerIndex + 1) * 374761393 + (raterIndex + 1) * 668265263;
+  h = Math.imul(h ^ (h >>> 15), 2246822519);
+  h = Math.imul(h ^ (h >>> 13), 3266489917);
+  h ^= h >>> 16;
+  // Weighted toward 8 and 9, with the odd 6 and 10: a believable room.
+  const SCORES = [6, 7, 7, 8, 8, 8, 9, 9, 9, 10];
+  return String(SCORES[(h >>> 0) % SCORES.length]);
 }

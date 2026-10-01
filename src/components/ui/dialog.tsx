@@ -67,8 +67,16 @@ function SheetContent({
   children,
   title,
   description,
+  footer,
   ...props
-}: React.ComponentProps<typeof D.Content> & { title: string; description?: string }) {
+}: React.ComponentProps<typeof D.Content> & {
+  title: string;
+  description?: string;
+  /** Pinned below the scrolling body (e.g. Cancel / Save), never over it.
+   * A `sticky` footer inside the body floated with content showing behind
+   * and beneath it, because the body's own padding sits under it. */
+  footer?: React.ReactNode;
+}) {
   return (
     <D.Portal>
       <D.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-overlay-hide data-[state=open]:animate-overlay-show" />
@@ -104,9 +112,20 @@ function SheetContent({
           </D.Close>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5 max-md:pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+        <div
+          className={cn(
+            "min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5 max-md:px-5",
+            !footer && "max-md:pb-[calc(env(safe-area-inset-bottom)+1.25rem)]",
+          )}
+        >
           {children}
         </div>
+
+        {footer ? (
+          <div className="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-6 py-4 max-md:px-5 max-md:pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+            {footer}
+          </div>
+        ) : null}
       </D.Content>
     </D.Portal>
   );

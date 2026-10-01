@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { updateSession } from "@/lib/supabase/middleware";
+import { isPreviewBot, linkPreviewHtml } from "@/lib/og/pages";
 
 function redirectTo(request: NextRequest, pathname: string) {
   const url = request.nextUrl.clone();
@@ -32,6 +33,15 @@ export async function proxy(request: NextRequest) {
   const { supabase, response, user } = session;
 
   if ((needsMember || needsAdmin) && !user) {
+    // A link someone shared into WhatsApp/Slack/iMessage: the preview
+    // fetcher isn't signed in, so it would follow the redirect and every
+    // dashboard link would preview as "Member login". Hand it the section's
+    // own title and share card instead. No page content, no member data.
+    if (isPreviewBot(request.headers.get("user-agent"))) {
+      return new NextResponse(linkPreviewHtml(request.nextUrl.origin, pathname), {
+        headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=3600" },
+      });
+    }
     return redirectTo(request, "/login");
   }
 
@@ -56,6 +66,6 @@ export const config = {
      * Run on everything except Next internals and static assets, so the
      * session is refreshed on normal navigations.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf|otf|pdf)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icon|apple-icon|og/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf|otf|pdf)$).*)",
   ],
 };

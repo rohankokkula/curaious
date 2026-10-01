@@ -16,7 +16,7 @@ export function CuraiousLogo({ className }: CuraiousLogoProps) {
       style={{ fontFamily: "Georgia, 'Times New Roman', serif", letterSpacing: "0.02em" }}
     >
       cur
-      <span className="underline decoration-2 underline-offset-[3px]">ai</span>
+      <span className="underline decoration-[#e08a5a] decoration-2 underline-offset-[0.06em]">ai</span>
       ous
     </span>
   );

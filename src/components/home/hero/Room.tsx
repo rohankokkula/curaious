@@ -103,6 +103,7 @@ export function Room({ activeIndex, className }: { activeIndex: number; classNam
   const seatRefs = useRef<(HTMLDivElement | null)[]>([]);
   const figureRefs = useRef<(HTMLDivElement | null)[]>([]);
   const chipRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const averageRef = useRef<HTMLDivElement>(null);
   const walkInRef = useRef<HTMLDivElement>(null);
   const walkOutRef = useRef<HTMLDivElement>(null);
 
@@ -118,6 +119,9 @@ export function Room({ activeIndex, className }: { activeIndex: number; classNam
   }
 
   const speaker = COHORT[activeIndex];
+  // The room's average for whoever is on stage: the nine other scores.
+  const roomScores = COHORT.map((_, i) => i).filter((i) => i !== activeIndex).map((i) => Number(scoreFor(activeIndex, i)));
+  const average = (roomScores.reduce((sum, n) => sum + n, 0) / roomScores.length).toFixed(1);
   const leaving = COHORT[previousIndex ?? activeIndex];
   const speakerTone = TONES[speaker.tone % TONES.length];
   const leavingTone = TONES[leaving.tone % TONES.length];
@@ -164,6 +168,7 @@ export function Room({ activeIndex, className }: { activeIndex: number; classNam
           if (el) gsap.set(el, { opacity: i === activeIndex ? 0 : 1 });
         });
         gsap.set(chips, { opacity: 1, y: 0, scale: 1 });
+        if (averageRef.current) gsap.set(averageRef.current, { opacity: 1, y: 0, scale: 1 });
         return;
       }
 
@@ -179,6 +184,7 @@ export function Room({ activeIndex, className }: { activeIndex: number; classNam
       gsap.set(figureRefs.current[from], { opacity: 0 });
       gsap.set(figureRefs.current[activeIndex], { opacity: 1 });
       gsap.set(chips, { opacity: 0 });
+      if (averageRef.current) gsap.set(averageRef.current, { opacity: 0 });
 
       const tl = gsap.timeline();
 
@@ -211,6 +217,16 @@ export function Room({ activeIndex, className }: { activeIndex: number; classNam
         },
         1.1,
       );
+
+      // and once the last score is in, the average lands on the stage
+      if (averageRef.current) {
+        tl.fromTo(
+          averageRef.current,
+          { opacity: 0, y: 8, scale: 0.85 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: "back.out(2)" },
+          1.75,
+        );
+      }
     },
     { scope: rootRef, dependencies: [activeIndex] },
   );
@@ -221,6 +237,18 @@ export function Room({ activeIndex, className }: { activeIndex: number; classNam
       <div className="relative z-20 -mt-4 flex justify-center md:-mt-6">
         <div className="relative h-28 w-[19rem] md:h-44 md:w-[32rem]">
           <StageFloor />
+
+          {/* the room's average for this talk, at the front of the stage */}
+          <div
+            ref={averageRef}
+            className="absolute bottom-[14%] left-1/2 z-10 flex -translate-x-1/2 items-baseline gap-1.5 rounded-full border border-white/15 bg-black/60 px-2.5 py-1 backdrop-blur-sm md:bottom-[16%] md:px-3.5 md:py-1.5"
+            style={{ opacity: 0 }}
+            aria-label={`Score ${average} out of 10`}
+          >
+            <span className="font-mono text-[7px] uppercase tracking-[0.18em] text-white/45 md:text-[9px]">score</span>
+            <span className="font-mono text-[11px] leading-none font-semibold text-white tabular-nums md:text-sm">{average}</span>
+            <span className="font-mono text-[8px] leading-none text-white/40 md:text-[10px]">/ 10</span>
+          </div>
 
           <Podium
             className="absolute bottom-[42%] left-[56%] h-9 w-6 md:h-14 md:w-9"

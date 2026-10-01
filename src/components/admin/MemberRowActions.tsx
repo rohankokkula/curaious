@@ -10,6 +10,7 @@ export function MemberRowActions({ cohortId, profileId, status, isSelf }: { coho
   const next = status === "removed" ? "active" : "removed";
 
   async function toggle() {
+    if (next === "removed" && !window.confirm("Remove this member from the cohort? You can restore them here later.")) return;
     const res = await fetch(`/api/admin/members/${profileId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/og/metadata";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { GithubIcon, LinkedinIcon, XIcon } from "@/components/icons/SocialIcons";
@@ -17,11 +18,10 @@ export const dynamic = "force-dynamic";
  * every field below comes from /api/showcase already filtered against each
  * member's own visibility settings.
  */
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata("showcase", {
   title: "cohort 01",
-  description: "talks and speakers from the first curaious cohort.",
   robots: { index: false, follow: false },
-};
+});
 
 function initialsFor(name: string) {
   return name
@@ -247,7 +247,7 @@ export default async function ShowcasePage() {
       </header>
 
       <main>
-        <Section seam={false} className="pt-8 md:pt-12">
+        <Section className="pt-8 md:pt-12">
           <SectionKicker
             index={cohort ? String(cohort.number).padStart(2, "0") : "01"}
             label="cohort"
@@ -262,7 +262,7 @@ export default async function ShowcasePage() {
           </p>
         </Section>
 
-        <Section seam={false} className="pt-0">
+        <Section className="pt-0">
           {speakers.length === 0 ? (
             <p className="text-sm text-muted">Nothing to show here yet.</p>
           ) : (

@@ -2,8 +2,11 @@ import { SeasonTimeline } from "@/components/dashboard/SeasonTimeline";
 import { cohortMonthLabel, getActiveCohort } from "@/lib/cohort";
 import { loadSeasonSlots } from "@/lib/slots";
 import { getViewerProfile } from "@/lib/supabase/server";
+import { pageMetadata } from "@/lib/og/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = pageMetadata("schedule", { title: "Schedule" });
 
 export default async function SchedulePage() {
   const [cohort, viewer] = await Promise.all([getActiveCohort(), getViewerProfile()]);

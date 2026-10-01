@@ -4,7 +4,7 @@ import { INVITE_FORM_URL } from "@/lib/content";
 
 export function Footer() {
   return (
-    <footer className="border-t border-border/40 px-5 py-10 md:px-8 md:py-12">
+    <footer className="px-5 py-10 md:px-8 md:py-12">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <Link href="/" className="focus-ring">
           <CuraiousLogo className="text-lg opacity-80" />

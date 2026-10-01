@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
 import { ArticleEditor, type ExistingArticle } from "@/components/dashboard/ArticleEditor";
 import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
+import { pageMetadata } from "@/lib/og/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = pageMetadata("thoughts", { title: "Your thoughts" });
 
 type ArticleRow = {
   id: string;
