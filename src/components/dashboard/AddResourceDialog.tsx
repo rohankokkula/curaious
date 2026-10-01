@@ -75,9 +75,19 @@ export function AddResourceDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button className="max-md:hidden">
           <Plus className="size-4" /> Add resource
         </Button>
+      </DialogTrigger>
+      {/* phone: a floating action button, app-style, parked above the tab bar */}
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          aria-label="Add resource"
+          className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-30 flex size-14 items-center justify-center rounded-full bg-foreground text-background shadow-lg active:scale-95 md:hidden"
+        >
+          <Plus className="size-6" />
+        </button>
       </DialogTrigger>
       <SheetContent title="Share a link" description="A paper, tool, or video worth the room's time.">
         <form onSubmit={submit} className="space-y-4">

@@ -523,17 +523,17 @@ export default async function MemberProfilePage({
 
   return (
     <div className="space-y-6">
-      <Card className="bg-surface/60 p-6 md:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-6">
-          <div className="flex min-w-0 flex-1 flex-wrap items-start gap-6">
-            <Avatar name={member.name} src={member.avatar_url} size="xl" />
+      <Card className="bg-surface/60 p-4 sm:p-6 md:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4 sm:gap-6">
+          <div className="flex min-w-0 flex-1 flex-wrap items-start gap-4 sm:gap-6">
+            <Avatar name={member.name} src={member.avatar_url} size="xl" className="size-16 sm:size-24" />
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
                 {cohort?.name ?? "Cohort"}
               </p>
-              <h1 className="mt-1 text-4xl font-bold tracking-tight">{member.name}</h1>
+              <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-4xl">{member.name}</h1>
               {member.headline && show("headline") ? (
-                <p className="mt-1 text-lg text-muted">
+                <p className="mt-1 text-base text-muted sm:text-lg">
                   {member.headline}
                   <OnlyYou when={hiddenFromOthers("headline")} />
                 </p>

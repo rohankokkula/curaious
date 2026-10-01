@@ -47,7 +47,7 @@ export function ProfileTabs({ tabs }: { tabs: ProfileTab[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-6 border-b border-border">
+      <div className="scroll-row -mx-4 flex gap-6 overflow-x-auto border-b border-border px-4 sm:mx-0 sm:overflow-visible sm:px-0">
         {tabs.map((tab) => {
           const isActive = tab.id === current?.id;
           return (
@@ -56,7 +56,7 @@ export function ProfileTabs({ tabs }: { tabs: ProfileTab[] }) {
               type="button"
               onClick={() => setActive(tab.id)}
               className={cn(
-                "-mb-px flex items-center gap-2 border-b-2 px-1 pb-3 text-sm transition-colors duration-150",
+                "-mb-px flex shrink-0 items-center gap-2 border-b-2 px-1 pb-3 text-sm whitespace-nowrap transition-colors duration-150",
                 isActive
                   ? "border-foreground font-semibold text-foreground"
                   : "border-transparent text-muted hover:text-foreground",

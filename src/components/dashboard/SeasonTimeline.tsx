@@ -121,14 +121,11 @@ function DayColumn({
   viewerHasActiveTalk,
   mode,
   colorIndex,
-  swipeable = false,
 }: {
   slots: SlotView[];
   viewerHasActiveTalk: boolean;
   mode: TimelineMode;
   colorIndex: number;
-  /** In a sideways-scrolling week on a phone: fixed card width + snap point. */
-  swipeable?: boolean;
 }) {
   const { weekday, day, month } = dateParts(slots[0].date);
 
@@ -136,7 +133,6 @@ function DayColumn({
     <div
       className={cn(
         "min-w-0 flex-1 rounded-2xl border border-border/60 p-4 shadow-sm backdrop-blur-md sm:rounded-xl",
-        swipeable && "w-[86%] shrink-0 snap-start sm:w-auto sm:shrink",
         DAY_PALETTE[colorIndex % DAY_PALETTE.length],
       )}
     >
@@ -219,19 +215,10 @@ export function SeasonTimeline({
               Week {wi + 1}
             </span>
             <span className="h-px flex-1 bg-border" />
-            {week.days.length > 1 ? (
-              <span className="text-[11px] text-muted">swipe for {week.days.length} days</span>
-            ) : null}
           </div>
 
-          {/* phone: days swipe sideways like cards in an app; wider screens lay them out side by side */}
-          <div
-            className={
-              week.days.length > 1
-                ? "scroll-row -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:mb-1 sm:min-w-0 sm:flex-1 sm:snap-none sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0"
-                : "sm:mb-1 sm:flex sm:min-w-0 sm:flex-1"
-            }
-          >
+          {/* phone: one day per row, full width — wider screens lay them out side by side */}
+          <div className="flex flex-col gap-4 sm:mb-1 sm:min-w-0 sm:flex-1 sm:flex-row">
             {week.days.map((daySlots, di) => (
               <DayColumn
                 key={daySlots[0].date}
@@ -239,7 +226,6 @@ export function SeasonTimeline({
                 viewerHasActiveTalk={viewerHasActiveTalk}
                 mode={mode}
                 colorIndex={wi * 2 + di}
-                swipeable={week.days.length > 1}
               />
             ))}
           </div>

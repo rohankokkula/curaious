@@ -11,13 +11,32 @@ const GUIDES: GuideItem[] = [
     title: "Deck template",
     description: "A starting outline for your talk slides, as a real 16:9 slide deck you can open and edit.",
     downloads: [
-      { label: "Download slide template (.pptx)", href: "/resources/curaious-deck-template.pptx" },
       { label: "Plain-text outline (.md)", href: "/resources/deck-template.md" },
     ],
     body: (
       <>
+        <div className="not-prose -mx-5 -mt-5 overflow-hidden rounded-t-xl border-b border-border sm:mx-0 sm:mt-0 sm:rounded-xl sm:border">
+          <div className="relative aspect-video w-full bg-surface">
+            <iframe
+              src="https://docs.google.com/presentation/d/e/2PACX-1vQMVjfDlMMy52ovcyWmf0IHQ2KuzlBdwPEbhM6mQTWW0J_fD08ybZiXmu9ajBYErqQyUBidDEtspp__/pubembed?start=false&loop=false&delayms=3000"
+              className="absolute inset-0 size-full"
+              allowFullScreen
+            />
+          </div>
+        </div>
         <p>
-          The slide template already has 12 slides laid out: title, agenda, the problem, context, four
+          <a
+            href="https://docs.google.com/presentation/d/e/2PACX-1vQMVjfDlMMy52ovcyWmf0IHQ2KuzlBdwPEbhM6mQTWW0J_fD08ybZiXmu9ajBYErqQyUBidDEtspp__/pub?start=false&loop=false&delayms=3000"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-foreground underline underline-offset-2"
+          >
+            Open in Google Slides
+          </a>{" "}
+          to make your own copy (File → Make a copy), then edit it there.
+        </p>
+        <p>
+          The template has 12 slides laid out: title, agenda, the problem, context, four
           slides for the core of your talk, the honest &ldquo;what went wrong&rdquo; slide, key takeaways,
           resources, and a closing slide. Replace the placeholder text on each one.
         </p>

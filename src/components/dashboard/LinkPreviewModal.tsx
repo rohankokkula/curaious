@@ -29,11 +29,11 @@ export function LinkPreviewModal({
         <D.Content
           onClick={(e) => e.stopPropagation()}
           className={cn(
-            "fixed inset-4 z-50 flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl outline-none md:inset-10",
+            "pt-safe fixed inset-0 z-50 flex flex-col overflow-hidden border-border bg-card shadow-xl outline-none sm:inset-4 sm:rounded-xl sm:border md:inset-10",
             "data-[state=closed]:animate-content-hide data-[state=open]:animate-content-show",
           )}
         >
-          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 sm:py-3">
             <D.Title className="min-w-0 truncate text-sm font-semibold">{title}</D.Title>
             <div className="flex shrink-0 items-center gap-2">
               <a

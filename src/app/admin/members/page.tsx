@@ -39,7 +39,32 @@ export default async function AdminMembersPage() {
         <Button asChild><Link href="/admin/invites">Invite people</Link></Button>
       </header>
 
-      <Card className="overflow-x-auto">
+      {/* phone: a card per member — a table this narrow just wraps into mush */}
+      <div className="space-y-3 md:hidden">
+        {(profiles ?? []).map((p) => (
+          <Card key={p.id} className="p-4">
+            <div className="flex items-start gap-3">
+              <Avatar name={p.name} src={p.avatar_url} size="sm" />
+              <div className="min-w-0 flex-1">
+                <Link href={`/dashboard/members/${p.id}`} className="block truncate font-medium hover:underline">
+                  {p.name}
+                </Link>
+                <p className="truncate text-sm text-muted">{p.email}</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <Badge variant={status.get(p.id) === "removed" ? "danger" : "success"}>{status.get(p.id) ?? "active"}</Badge>
+                  <span className="text-xs text-muted">{talkCount.get(p.id) ?? 0} talks</span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 border-t border-border pt-3">
+              <MemberRowActions cohortId={cohort.id} profileId={p.id} status={status.get(p.id) ?? "active"} isSelf={p.id === viewer?.id} />
+            </div>
+          </Card>
+        ))}
+        {ids.length === 0 ? <p className="p-6 text-center text-sm text-muted">Nobody has joined this cohort yet.</p> : null}
+      </div>
+
+      <Card className="hidden overflow-x-auto md:block">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-border text-xs uppercase tracking-wide text-muted">
             <tr><th className="p-4">Name</th><th className="p-4">Email</th><th className="p-4">Status</th><th className="p-4">Talks</th><th className="p-4" /></tr>

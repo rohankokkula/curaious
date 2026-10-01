@@ -53,20 +53,24 @@ export default async function TalksPage() {
       {talks.length === 0 ? (
         <p className="rounded-xl border border-border bg-card p-8 text-sm text-muted">No approved talks yet.</p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="divide-y divide-border rounded-xl border border-border bg-card sm:grid sm:grid-cols-2 sm:gap-4 sm:divide-y-0 sm:rounded-none sm:border-none sm:bg-transparent lg:grid-cols-3">
           {talks.map((talk) => {
             const speaker = person.get(talk.presenter_id);
             const slot = slotById.get(talk.slot_id);
             return (
-              <Link key={talk.id} href={`/dashboard/talks/${talk.id}/present`} className="block overflow-hidden rounded-xl border border-border bg-card transition-all duration-150 hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-md">
-                <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-surface">
+              <Link
+                key={talk.id}
+                href={`/dashboard/talks/${talk.id}/present`}
+                className="flex items-center gap-3 p-3 transition-all duration-150 active:bg-surface sm:block sm:overflow-hidden sm:rounded-xl sm:border sm:border-border sm:bg-card sm:p-0 sm:hover:-translate-y-0.5 sm:hover:border-foreground/30 sm:hover:shadow-md"
+              >
+                <div className="relative flex aspect-video w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface sm:w-auto sm:rounded-none">
                   {talk.status === "approved" && talk.deck_path ? (
                     <DeckPageThumbnail talkId={talk.id} className="absolute inset-0" />
                   ) : (
                     <FileText className="size-5 text-muted/60" />
                   )}
                 </div>
-                <div className="p-4">
+                <div className="min-w-0 flex-1 sm:p-4">
                   <div className="flex items-start gap-2">
                     <p className="min-w-0 flex-1 truncate font-semibold">{talk.title}</p>
                     {talk.status !== "approved" ? (
@@ -75,8 +79,8 @@ export default async function TalksPage() {
                       </span>
                     ) : null}
                   </div>
-                  <p className="mt-1 line-clamp-2 text-sm text-muted">{talk.description}</p>
-                  <div className="mt-3 flex items-center gap-2">
+                  <p className="mt-1 line-clamp-2 hidden text-sm text-muted sm:block">{talk.description}</p>
+                  <div className="mt-1 flex items-center gap-2 sm:mt-3">
                     <Avatar name={speaker?.name ?? "?"} src={speaker?.avatar_url} size="sm" />
                     <div className="min-w-0">
                       <p className="truncate text-xs font-medium">{speaker?.name ?? "Unknown"}</p>

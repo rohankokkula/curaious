@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Mic } from "lucide-react";
+import { ChevronRight, MapPin, Mic } from "lucide-react";
 import { Avatar } from "@/components/dashboard/Avatar";
 import { getActiveCohort } from "@/lib/cohort";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -68,31 +68,36 @@ export default async function MembersPage() {
           <p className="text-sm text-muted">Nobody has signed in yet. Members appear here after their first login.</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="divide-y divide-border rounded-xl border border-border bg-card sm:grid sm:grid-cols-2 sm:gap-4 sm:divide-y-0 sm:rounded-none sm:border-none sm:bg-transparent lg:grid-cols-3">
           {roster.map((member) => (
             <Link
               key={member.id}
               href={`/dashboard/members/${member.id}`}
-              className="rounded-xl border border-border bg-card p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-md"
+              className="flex items-center gap-3 p-3 transition-all duration-150 active:bg-surface sm:block sm:rounded-xl sm:border sm:border-border sm:bg-card sm:p-4 sm:hover:-translate-y-0.5 sm:hover:border-foreground/30 sm:hover:shadow-md"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
                 <Avatar name={member.name} src={member.avatar_url} size="lg" />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold">
                     {member.name}
                     {member.id === user?.id ? <span className="ml-1 text-sm font-normal text-muted">(you)</span> : null}
                   </p>
                   {member.headline ? <p className="truncate text-sm text-muted">{member.headline}</p> : null}
                   {member.location ? (
-                    <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-muted">
+                    <p className="mt-0.5 hidden items-center gap-1 truncate text-xs text-muted sm:flex">
                       <MapPin className="size-3 shrink-0" /> {member.location}
+                    </p>
+                  ) : null}
+                  {presented.has(member.id) ? (
+                    <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-primary sm:hidden">
+                      <Mic className="size-3 shrink-0" /> Presented
                     </p>
                   ) : null}
                 </div>
               </div>
 
               {member.tags && member.tags.length > 0 ? (
-                <div className="mt-3 flex flex-wrap gap-1.5">
+                <div className="mt-3 hidden flex-wrap gap-1.5 sm:flex">
                   {member.tags.slice(0, 3).map((tag) => (
                     <span key={tag} className="rounded-full bg-surface px-2.5 py-0.5 text-xs text-muted">{tag}</span>
                   ))}
@@ -101,10 +106,12 @@ export default async function MembersPage() {
               ) : null}
 
               {presented.has(member.id) ? (
-                <p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-primary">
+                <p className="mt-3 hidden items-center gap-1.5 text-xs font-medium text-primary sm:flex">
                   <Mic className="size-3.5" /> Presented this season
                 </p>
               ) : null}
+
+              <ChevronRight className="size-4 shrink-0 text-muted sm:hidden" />
             </Link>
           ))}
         </div>

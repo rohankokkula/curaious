@@ -27,7 +27,7 @@ export function GuidesTabs({ items }: { items: GuideItem[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-6 border-b border-border">
+      <div className="scroll-row -mx-4 flex gap-6 overflow-x-auto border-b border-border px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         {items.map((item) => {
           const isActive = item.id === active?.id;
           return (
@@ -36,7 +36,7 @@ export function GuidesTabs({ items }: { items: GuideItem[] }) {
               type="button"
               onClick={() => setActiveId(item.id)}
               className={cn(
-                "-mb-px flex items-center gap-2 border-b-2 px-1 pb-3 text-sm transition-colors duration-150",
+                "-mb-px flex shrink-0 items-center gap-2 border-b-2 px-1 pb-3 text-sm whitespace-nowrap transition-colors duration-150",
                 isActive
                   ? "border-foreground font-semibold text-foreground"
                   : "border-transparent text-muted hover:text-foreground",

@@ -17,9 +17,9 @@ function filterLabel(filter: "all" | ResourceCategory) {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <Card className="p-5">
-      <p className="text-3xl font-bold">{value}</p>
-      <p className="mt-1 text-sm text-muted">{label}</p>
+    <Card className="shrink-0 p-4 max-sm:w-32 sm:p-5">
+      <p className="text-2xl font-bold sm:text-3xl">{value}</p>
+      <p className="mt-1 text-xs text-muted sm:text-sm">{label}</p>
     </Card>
   );
 }
@@ -34,14 +34,14 @@ export function ResourceGrid({ resources, metrics }: { resources: ResourceListIt
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="scroll-row -mx-4 flex gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
         <Stat label="Resources" value={metrics.total} />
         <Stat label="Contributors" value={metrics.contributors} />
         <Stat label="Total saves" value={metrics.saves} />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
+        <div className="scroll-row -mx-4 flex flex-nowrap gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           {FILTERS.map((f) => (
             <Button
               key={f}
@@ -49,6 +49,7 @@ export function ResourceGrid({ resources, metrics }: { resources: ResourceListIt
               size="sm"
               variant={filter === f ? "default" : "outline"}
               onClick={() => setFilter(f)}
+              className="shrink-0"
             >
               {filterLabel(f)}
             </Button>
