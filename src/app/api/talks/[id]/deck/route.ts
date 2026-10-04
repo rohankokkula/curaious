@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { storeDeck, validateDeck } from "@/lib/deckUpload";
 import { loadTalkAccess } from "@/lib/talkAccess";
 import { DECKS_BUCKET, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -24,7 +25,7 @@ export async function GET(
   }
 
   const { id } = await params;
-  const { admin, talk, canView, userId } = await loadTalkAccess(id);
+  const { admin, talk, canViewDeck, userId } = await loadTalkAccess(id);
 
   if (!userId) {
     return NextResponse.json(
@@ -35,7 +36,7 @@ export async function GET(
 
   // The bucket is private: a member can only reach a deck once the talk is
   // approved, and the presenter/admins can always reach their own.
-  if (!talk || !canView) {
+  if (!talk || !canViewDeck) {
     return NextResponse.json(
       { ok: false, error: "not_found", message: "no deck here." },
       { status: 404 },
@@ -72,4 +73,34 @@ export async function GET(
   }
 
   return NextResponse.json({ ok: true, title: talk.title });
+}
+
+/**
+ * The presenter adds (or replaces) their deck after the slot was requested.
+ * Any upload goes back to the curator for review: `deck_status = submitted`.
+ */
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!isSupabaseConfigured || !hasServiceRoleKey) {
+    return NextResponse.json({ ok: false, message: "uploads aren't switched on yet." }, { status: 503 });
+  }
+
+  const { id } = await params;
+  const { admin, talk, userId, isPresenter } = await loadTalkAccess(id);
+  if (!userId) return NextResponse.json({ ok: false, message: "sign in first." }, { status: 401 });
+  if (!talk || !isPresenter) return NextResponse.json({ ok: false, message: "that isn't your talk." }, { status: 403 });
+  if (talk.status === "rejected") {
+    return NextResponse.json({ ok: false, message: "this request was declined. request another slot first." }, { status: 409 });
+  }
+
+  const deck = (await request.formData().catch(() => null))?.get("deck");
+  if (!(deck instanceof File) || deck.size === 0) {
+    return NextResponse.json({ ok: false, message: "attach your deck as a pdf." }, { status: 400 });
+  }
+  const invalid = validateDeck(deck);
+  if (invalid) return invalid;
+
+  const stored = await storeDeck(admin, talk.id, deck);
+  if (!stored) return NextResponse.json({ ok: false, message: "the deck didn't upload. try again in a moment." }, { status: 502 });
+
+  return NextResponse.json({ ok: true });
 }

@@ -1,15 +1,7 @@
 import { NextResponse } from "next/server";
-import {
-  MAX_DECK_BYTES,
-  MAX_DECK_MB,
-  sanitizeDeckFilename,
-  talkSubmissionSchema,
-} from "@/lib/talks";
-import {
-  createSupabaseAdminClient,
-  DECKS_BUCKET,
-  hasServiceRoleKey,
-} from "@/lib/supabase/admin";
+import { storeDeck, validateDeck } from "@/lib/deckUpload";
+import { talkSubmissionSchema } from "@/lib/talks";
+import { createSupabaseAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getSessionUser } from "@/lib/supabase/server";
 
@@ -75,41 +67,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const deck = form.get("deck");
-  if (!(deck instanceof File) || deck.size === 0) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "deck_required",
-        message: "attach your deck as a pdf.",
-      },
-      { status: 400 },
-    );
-  }
+  // The deck is optional: a member can request a slot with just a title and
+  // description, and upload the PDF later (PUT /api/talks/[id]/deck).
+  const deckEntry = form.get("deck");
+  const deck = deckEntry instanceof File && deckEntry.size > 0 ? deckEntry : null;
 
-  const looksLikePdf =
-    deck.type === "application/pdf" || /\.pdf$/i.test(deck.name);
-
-  if (!looksLikePdf) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "deck_not_pdf",
-        message: "pdf only, please, it's what the fullscreen viewer expects.",
-      },
-      { status: 400 },
-    );
-  }
-
-  if (deck.size > MAX_DECK_BYTES) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "deck_too_large",
-        message: `that deck is over ${MAX_DECK_MB}mb. trim it and try again.`,
-      },
-      { status: 400 },
-    );
+  if (deck) {
+    const deckError = validateDeck(deck);
+    if (deckError) return deckError;
   }
 
   const admin = createSupabaseAdminClient();
@@ -165,11 +130,16 @@ export async function POST(request: Request) {
       title: parsed.data.title,
       description: parsed.data.description,
       status: "pending",
+      deck_status: "none",
     })
     .select("id")
     .single<{ id: string }>();
 
   if (insertError || !inserted) {
+    // the talks_capacity_guard trigger: someone took the last seat first
+    if (insertError?.message.includes("slot full")) {
+      return conflict("that slot just got taken. pick another one.");
+    }
     if (insertError?.code === UNIQUE_VIOLATION) {
       const onPresenter = insertError.message.includes("presenter");
       return conflict(
@@ -190,37 +160,16 @@ export async function POST(request: Request) {
     );
   }
 
-  const deckPath = `${inserted.id}/${sanitizeDeckFilename(deck.name)}`;
-  const bytes = await deck.arrayBuffer();
-
-  const { error: uploadError } = await admin.storage
-    .from(DECKS_BUCKET)
-    .upload(deckPath, bytes, {
-      contentType: "application/pdf",
-      upsert: true,
-    });
-
-  if (uploadError) {
-    // Don't leave a claimed slot behind a failed upload.
-    await admin.from("talks").delete().eq("id", inserted.id);
-    console.error("api/talks: deck upload failed", uploadError.message);
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "upload_failed",
-        message: "the deck didn't upload. try again in a moment.",
-      },
-      { status: 502 },
-    );
-  }
-
-  const { error: updateError } = await admin
-    .from("talks")
-    .update({ deck_path: deckPath })
-    .eq("id", inserted.id);
-
-  if (updateError) {
-    console.error("api/talks: deck_path update failed", updateError.message);
+  if (deck) {
+    const uploaded = await storeDeck(admin, inserted.id, deck);
+    if (!uploaded) {
+      // Keep the request: the slot is theirs to keep; the deck can be retried.
+      return NextResponse.json({
+        ok: true,
+        talkId: inserted.id,
+        warning: "your slot request is in, but the deck didn't upload. add it again from your talk.",
+      });
+    }
   }
 
   return NextResponse.json({ ok: true, talkId: inserted.id });

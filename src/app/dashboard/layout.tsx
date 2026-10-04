@@ -1,12 +1,25 @@
 import { AppShell } from "@/components/shell/AppShell";
 import type { NavItem } from "@/components/shell/SidebarNav";
 import { getActiveCohort } from "@/lib/cohort";
-import { getViewerProfile } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { createSupabaseServerClient, getViewerProfile } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [viewer, cohort] = await Promise.all([getViewerProfile(), getActiveCohort()]);
+
+  // Removed by the curator: out, even with a session that's still valid.
+  if (viewer && viewer.role !== "admin" && cohort) {
+    const supabase = await createSupabaseServerClient();
+    const { data: membership } = await supabase
+      .from("cohort_members")
+      .select("status")
+      .eq("cohort_id", cohort.id)
+      .eq("profile_id", viewer.id)
+      .maybeSingle<{ status: string }>();
+    if (membership?.status === "removed") redirect("/auth/removed");
+  }
 
   const items: NavItem[] = [
     { href: "/dashboard", label: "Home", icon: "home", exact: true, tab: true },

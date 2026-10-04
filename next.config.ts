@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async redirects() {
+    // The season page moved; old links keep working.
+    return [{ source: "/showcase", destination: "/cohort1", permanent: true }];
+  },
 };
 
 export default nextConfig;

@@ -42,11 +42,11 @@ export const OG_PAGES = {
   },
   showcase: {
     key: "showcase",
-    kicker: "cohort showcase",
-    title: "Talks from the cohort",
-    description: "The talks, the speakers and what the room thought of them.",
+    kicker: "cohort 01",
+    title: "Ten curious minds, one season",
+    description: "The people, the talks and the season so far, week by week.",
     accent: "#f472b6",
-    motif: "slides",
+    motif: "seats",
   },
   dashboard: {
     key: "dashboard",

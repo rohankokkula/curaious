@@ -13,7 +13,7 @@ export function RemoveMemberButton({ cohortId, profileId, name }: { cohortId: st
   const [busy, setBusy] = useState(false);
 
   async function remove() {
-    if (!window.confirm(`Remove ${name} from this cohort? You can restore them from Admin → Members.`)) return;
+    if (!window.confirm(`Remove ${name}? They disappear from the cohort and lose access. Re-inviting their email brings them back.`)) return;
     setBusy(true);
     const res = await fetch(`/api/admin/members/${profileId}`, {
       method: "PATCH",

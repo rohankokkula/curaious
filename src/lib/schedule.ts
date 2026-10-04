@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { recordingUrlSchema } from "@/lib/recording";
 import { SLOT_TYPES } from "@/lib/talks";
 
 const time = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).nullable().optional().or(z.literal("").transform(() => null));
@@ -10,6 +11,8 @@ export const slotInputSchema = z.object({
   capacity: z.number().int().min(1).max(10).default(2),
   startsAt: time,
   endsAt: time,
+  /** Session recording (YouTube/Vimeo/Loom); "" clears it. */
+  recordingUrl: recordingUrlSchema.optional(),
 });
 
 export const slotCreateSchema = slotInputSchema.extend({ cohortId: z.uuid() });
@@ -38,5 +41,6 @@ export type EditorSlot = {
   endsAt: string | null;
   sortOrder: number;
   capacity: number;
+  recordingUrl: string | null;
   talks: { id: string; title: string; presenter: string; status: "pending" | "approved" }[];
 };

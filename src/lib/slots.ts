@@ -12,7 +12,7 @@
  */
 import { cache } from "react";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import type { SlotType, SlotView } from "@/lib/talks";
+import { deckIsPublic, type SlotType, type SlotView } from "@/lib/talks";
 
 type TalkRow = {
   id: string;
@@ -20,6 +20,7 @@ type TalkRow = {
   title: string;
   status: "pending" | "approved";
   deck_path: string | null;
+  deck_status: string;
   presenter: { name: string } | null;
 };
 
@@ -32,6 +33,7 @@ type SlotRow = {
   capacity: number;
   starts_at: string | null;
   ends_at: string | null;
+  recording_url: string | null;
   talks: TalkRow[];
 };
 
@@ -56,8 +58,8 @@ export type SeasonSlots = {
 // `profiles!presenter_id` picks the presenter FK, since talks.reviewed_by
 // points at profiles too.
 const SEASON_SELECT = `id, name, number, starts_on, ends_on,
-  session_slots (id, slot_date, slot_type, label, sort_order, capacity, starts_at, ends_at,
-    talks (id, presenter_id, title, status, deck_path, presenter:profiles!presenter_id (name))
+  session_slots (id, slot_date, slot_type, label, sort_order, capacity, starts_at, ends_at, recording_url,
+    talks (id, presenter_id, title, status, deck_path, deck_status, presenter:profiles!presenter_id (name))
   )`;
 
 /** Cached per request: the dashboard home and the schedule both call it. */
@@ -94,6 +96,7 @@ export const loadSeasonSlots = cache(async (viewerId: string): Promise<SeasonSlo
       capacity: slot.capacity,
       startsAt: slot.starts_at,
       endsAt: slot.ends_at,
+      recordingUrl: slot.recording_url,
       isFull: slotTalks.length >= slot.capacity,
       talks: slotTalks.map((talk) => {
         const isMine = talk.presenter_id === viewerId;
@@ -105,7 +108,9 @@ export const loadSeasonSlots = cache(async (viewerId: string): Promise<SeasonSlo
           presenterName: approved || isMine ? (names.get(talk.presenter_id) ?? null) : null,
           status: talk.status,
           isMine,
-          hasDeck: (approved || isMine) && Boolean(talk.deck_path),
+          // Others see the deck once it's been reviewed; you always see your own.
+          hasDeck: isMine ? Boolean(talk.deck_path) : deckIsPublic(talk),
+          deckPending: approved && !deckIsPublic(talk),
         };
       }),
     };

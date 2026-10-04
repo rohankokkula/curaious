@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { CalendarDays, CheckCircle2, MessageSquare, Mic } from "lucide-react";
+import { DeckUploadPanel } from "@/components/dashboard/DeckUploadPanel";
 import { SlideDeck } from "@/components/dashboard/SlideDeck";
+import type { DeckStatus } from "@/lib/talks";
 import { cohortMonthLabel, getActiveCohort } from "@/lib/cohort";
 import { loadSeasonSlots } from "@/lib/slots";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -75,9 +77,9 @@ export default async function DashboardPage() {
   const { data: myTalkDetail } = myTalk
     ? await supabase
         .from("talks")
-        .select("description, deck_path")
+        .select("description, deck_path, deck_status, deck_feedback")
         .eq("id", myTalk.talkId)
-        .maybeSingle<{ description: string; deck_path: string | null }>()
+        .maybeSingle<{ description: string; deck_path: string | null; deck_status: DeckStatus; deck_feedback: string | null }>()
     : { data: null };
 
   // "Feedback you owe" — every approved talk that isn't mine and I haven't rated yet.
@@ -126,7 +128,7 @@ export default async function DashboardPage() {
                     : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
                 )}
               >
-                {myTalk.status === "approved" ? "Approved" : "In review"}
+                {myTalk.status === "approved" ? "Booked" : "Requested"}
               </span>
             ) : null}
           </div>
@@ -146,14 +148,14 @@ export default async function DashboardPage() {
                 </p>
               ) : null}
 
-              <div className="mt-5">
-                {myTalkDetail?.deck_path ? (
-                  <SlideDeck talkId={myTalk.talkId} />
-                ) : (
-                  <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted">
-                    No deck attached to this talk.
-                  </p>
-                )}
+              <div className="mt-5 space-y-4">
+                <DeckUploadPanel
+                  talkId={myTalk.talkId}
+                  booked={myTalk.status === "approved"}
+                  deckStatus={myTalkDetail?.deck_status ?? "none"}
+                  feedback={myTalkDetail?.deck_feedback ?? null}
+                />
+                {myTalkDetail?.deck_path ? <SlideDeck talkId={myTalk.talkId} /> : null}
               </div>
 
               <Link

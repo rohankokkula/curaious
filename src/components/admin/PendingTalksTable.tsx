@@ -21,7 +21,31 @@ export type PendingTalk = {
   hasDeck: boolean;
 };
 
-export function PendingTalksTable({ talks }: { talks: PendingTalk[] }) {
+/** "booking" = slot requests (approve the booking / decline);
+ * "deck" = uploaded PDFs on booked talks (approve the deck / request changes). */
+type ReviewKind = "booking" | "deck";
+
+const COPY: Record<ReviewKind, { approve: string; sendBack: string; confirm: string; why: string; hint: string; empty: string }> = {
+  booking: {
+    approve: "Approve booking",
+    sendBack: "Decline",
+    confirm: "Confirm decline",
+    why: "Why (optional, shown to them)",
+    hint: "Declining frees the slot up for someone else.",
+    empty: "No slot requests waiting.",
+  },
+  deck: {
+    approve: "Approve deck",
+    sendBack: "Request changes",
+    confirm: "Send back with notes",
+    why: "What to change (shown to them)",
+    hint: "Their slot stays booked; they upload a new version.",
+    empty: "No decks waiting on review.",
+  },
+};
+
+export function PendingTalksTable({ talks, kind = "booking" }: { talks: PendingTalk[]; kind?: ReviewKind }) {
+  const copy = COPY[kind];
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -30,7 +54,7 @@ export function PendingTalksTable({ talks }: { talks: PendingTalk[] }) {
 
   async function review(
     talkId: string,
-    action: "approve" | "reject",
+    action: "approve" | "reject" | "approve_deck" | "request_deck_changes",
     rejectionReason?: string,
   ) {
     setBusyId(talkId);
@@ -66,7 +90,7 @@ export function PendingTalksTable({ talks }: { talks: PendingTalk[] }) {
   if (talks.length === 0) {
     return (
       <Card className="p-8">
-        <p className="text-sm text-muted">Nothing waiting on review.</p>
+        <p className="text-sm text-muted">{copy.empty}</p>
       </Card>
     );
   }
@@ -114,9 +138,9 @@ export function PendingTalksTable({ talks }: { talks: PendingTalk[] }) {
               type="button"
               size="sm"
               disabled={busyId === talk.id}
-              onClick={() => review(talk.id, "approve")}
+              onClick={() => review(talk.id, kind === "deck" ? "approve_deck" : "approve")}
             >
-              Approve
+              {copy.approve}
             </Button>
 
             <Button
@@ -126,14 +150,14 @@ export function PendingTalksTable({ talks }: { talks: PendingTalk[] }) {
               disabled={busyId === talk.id}
               onClick={() => setRejectingId(rejectingId === talk.id ? null : talk.id)}
             >
-              {rejectingId === talk.id ? "Never mind" : "Send back"}
+              {rejectingId === talk.id ? "Never mind" : copy.sendBack}
             </Button>
           </div>
 
           {rejectingId === talk.id ? (
             <div className="mt-4 space-y-3 border-t border-border pt-4">
               <label htmlFor={`reason-${talk.id}`} className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Why (optional, shown to them)
+                {copy.why}
               </label>
               <Textarea
                 id={`reason-${talk.id}`}
@@ -147,11 +171,11 @@ export function PendingTalksTable({ talks }: { talks: PendingTalk[] }) {
                   variant="destructive"
                   size="sm"
                   disabled={busyId === talk.id}
-                  onClick={() => review(talk.id, "reject", reason.trim() || undefined)}
+                  onClick={() => review(talk.id, kind === "deck" ? "request_deck_changes" : "reject", reason.trim() || undefined)}
                 >
-                  Confirm send back
+                  {copy.confirm}
                 </Button>
-                <p className="text-xs text-muted">Sending it back frees the slot up for someone else.</p>
+                <p className="text-xs text-muted">{copy.hint}</p>
               </div>
             </div>
           ) : null}

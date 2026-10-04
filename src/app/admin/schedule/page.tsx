@@ -3,7 +3,7 @@ import { ScheduleEditor } from "@/components/admin/ScheduleEditor";
 import { SeasonTimeline } from "@/components/dashboard/SeasonTimeline";
 import { getActiveCohort } from "@/lib/cohort";
 import type { EditorSlot } from "@/lib/schedule";
-import type { SlotView } from "@/lib/talks";
+import { deckIsPublic, type SlotView } from "@/lib/talks";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export default async function AdminSchedulePage() {
   const supabase = await createSupabaseServerClient();
   const { data: rows } = await supabase
     .from("session_slots")
-    .select("id, slot_date, slot_type, label, sort_order, starts_at, ends_at, capacity")
+    .select("id, slot_date, slot_type, label, sort_order, starts_at, ends_at, capacity, recording_url")
     .eq("season_id", cohort.id)
     .order("slot_date")
     .order("sort_order");
@@ -30,7 +30,7 @@ export default async function AdminSchedulePage() {
   const { data: talks } = ids.length
     ? await supabase
         .from("talks")
-        .select("id, slot_id, title, status, presenter_id, deck_path")
+        .select("id, slot_id, title, status, presenter_id, deck_path, deck_status")
         .in("slot_id", ids)
         .neq("status", "rejected")
     : { data: [] };
@@ -51,6 +51,7 @@ export default async function AdminSchedulePage() {
     endsAt: r.ends_at,
     sortOrder: r.sort_order,
     capacity: r.capacity,
+    recordingUrl: r.recording_url,
     talks: (talksBySlot.get(r.id) ?? []).map((t) => ({
       id: t.id,
       title: t.title,
@@ -71,6 +72,7 @@ export default async function AdminSchedulePage() {
       capacity: slot.capacity,
       startsAt: slot.startsAt,
       endsAt: slot.endsAt,
+      recordingUrl: slot.recordingUrl,
       isFull: slot.talks.length >= slot.capacity,
       // Built from the raw `talks` rows (via talksBySlot), not slot.talks —
       // EditorSlot's shape doesn't carry deck_path, and the drag/drop editor
@@ -82,18 +84,34 @@ export default async function AdminSchedulePage() {
         status: talk.status as "pending" | "approved",
         isMine: false,
         hasDeck: Boolean(talk.deck_path),
+        deckPending: talk.status === "approved" && !deckIsPublic(talk),
       })),
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
+
+  // Who can be booked into an open seat: active members (not you) who don't
+  // already hold a talk this season.
+  const { data: roster } = await supabase
+    .from("cohort_members")
+    .select("profile:profiles!inner (id, name, role)")
+    .eq("cohort_id", cohort.id)
+    .eq("status", "active")
+    .returns<{ profile: { id: string; name: string; role: string } }[]>();
+  const holding = new Set((talks ?? []).map((t) => t.presenter_id));
+  const bookable = (roster ?? [])
+    .map((r) => r.profile)
+    .filter((p) => p.role !== "admin" && !holding.has(p.id))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((p) => ({ id: p.id, name: p.name }));
 
   return (
     <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-bold tracking-tight">Schedule</h1>
-        <p className="mt-1 text-muted">{cohort.name}: edit sessions, slots and talk assignments.</p>
+        <p className="mt-1 text-muted">{cohort.name}: tap an open seat to book it for a member, or edit sessions, slots and talk assignments below.</p>
       </header>
 
-      <SeasonTimeline slots={timeline} viewerHasActiveTalk={false} mode="admin" />
+      <SeasonTimeline slots={timeline} viewerHasActiveTalk={false} mode="admin" bookable={bookable} />
 
       <section className="space-y-4 border-t border-border pt-6">
         <div>

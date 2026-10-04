@@ -21,9 +21,9 @@ export interface ParsedRecording {
   watchUrl: string;
 }
 
-/** Until recordings are opened up to the whole cohort, only admins see them.
- * Widening this is a one-word change here. */
-export const RECORDINGS_VISIBLE_TO: "admin" | "cohort" = "admin";
+/** Who can watch recordings: the whole signed-in cohort (each speaker's own
+ * "recording" visibility toggle still applies to their talk). Never public. */
+export const RECORDINGS_VISIBLE_TO: "admin" | "cohort" = "cohort";
 
 /** Stand-in used to check the card renders before any real recording exists. */
 export const SAMPLE_RECORDING_URL = "https://youtu.be/_aw32rFL680";

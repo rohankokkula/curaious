@@ -4,6 +4,7 @@ import { Avatar } from "@/components/dashboard/Avatar";
 import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
 import { getActiveCohort } from "@/lib/cohort";
 import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
+import { deckIsPublic } from "@/lib/talks";
 import { cn } from "@/lib/utils";
 import { pageMetadata } from "@/lib/og/metadata";
 
@@ -18,6 +19,7 @@ type TalkRow = {
   presenter_id: string;
   status: string;
   deck_path: string | null;
+  deck_status: string;
   slot: { label: string; slot_date: string; season_id: string } | null;
   presenter: { name: string; avatar_url: string | null } | null;
 };
@@ -47,7 +49,7 @@ function Thumb({ talk, className }: { talk: TalkView; className?: string }) {
       </span>
       {talk.inReview ? (
         <span className="absolute top-2 right-2 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-semibold text-black">
-          In review
+          Requested
         </span>
       ) : null}
     </div>
@@ -141,7 +143,7 @@ export default async function TalksPage() {
     ? await supabase
         .from("talks")
         .select(
-          "id, title, description, presenter_id, status, deck_path, slot:session_slots!inner(label, slot_date, season_id), presenter:profiles!presenter_id(name, avatar_url)",
+          "id, title, description, presenter_id, status, deck_path, deck_status, slot:session_slots!inner(label, slot_date, season_id), presenter:profiles!presenter_id(name, avatar_url)",
         )
         .eq("slot.season_id", cohort.id)
         .neq("status", "rejected")
@@ -161,7 +163,8 @@ export default async function TalksPage() {
         week: seasonStart === null ? null : Math.floor((Date.parse(`${date}T00:00:00Z`) - seasonStart) / (7 * 86400000)) + 1,
         isMine: talk.presenter_id === user?.id,
         inReview: talk.status !== "approved",
-        hasThumb: talk.status === "approved" && Boolean(talk.deck_path),
+        // your own deck always; anyone else's once the curator has reviewed it
+        hasThumb: talk.presenter_id === user?.id ? Boolean(talk.deck_path) : deckIsPublic(talk),
       };
     })
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -178,7 +181,7 @@ export default async function TalksPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Talks</h1>
           <p className="mt-1 text-muted">
-            Every approved talk in {cohort?.name ?? "the cohort"}, plus your own while it&rsquo;s in review.
+            Every booked talk in {cohort?.name ?? "the cohort"}, plus your own request while it&rsquo;s with the curator.
           </p>
         </div>
         {talks.length > 0 ? (

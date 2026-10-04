@@ -84,9 +84,43 @@ export async function POST(request: Request) {
 
   const { data: existing } = await guard.admin
     .from("invites")
-    .select("id")
+    .select("id, name, email, role, accepted_at, created_at")
     .ilike("email", escapeLike(email))
-    .maybeSingle();
+    .maybeSingle<InviteRow>();
+
+  // Re-inviting someone the curator removed brings them back: their invite
+  // was only hidden, and their membership flips back to active.
+  if (existing) {
+    const cohort = await getActiveCohort();
+    const { data: profile } = await guard.admin
+      .from("profiles")
+      .select("id")
+      .ilike("email", escapeLike(email))
+      .maybeSingle<{ id: string }>();
+    if (cohort && profile) {
+      const { data: restored } = await guard.admin
+        .from("cohort_members")
+        .update({ status: "active" })
+        .eq("cohort_id", cohort.id)
+        .eq("profile_id", profile.id)
+        .eq("status", "removed")
+        .select("profile_id");
+      if (restored && restored.length > 0) {
+        return NextResponse.json({
+          ok: true,
+          restored: true,
+          invite: {
+            id: existing.id,
+            name: existing.name,
+            email: existing.email,
+            role: existing.role,
+            acceptedAt: existing.accepted_at,
+            createdAt: existing.created_at,
+          },
+        });
+      }
+    }
+  }
 
   if (existing) {
     return NextResponse.json(

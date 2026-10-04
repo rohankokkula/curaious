@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { FileText, Plus, Rocket, Trophy, Users } from "lucide-react";
+import { BookSeatDialog, type BookableMember } from "@/components/admin/BookSeatDialog";
 import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
+import { WatchRecordingButton } from "@/components/dashboard/WatchRecordingButton";
 import type { SlotView } from "@/lib/talks";
 import { cn } from "@/lib/utils";
 
@@ -127,30 +129,45 @@ function TalkNumber({ n, onImage = false, tone }: { n: number; onImage?: boolean
 
 function OpenTile({
   slotId,
+  slotLabel,
   disabled,
   mode,
   number,
   palette,
+  bookable,
 }: {
   slotId: string;
+  slotLabel: string;
   disabled: boolean;
   mode: TimelineMode;
   number: number;
   palette: DayPalette;
+  /** Admin only: members who can still be booked into a seat. */
+  bookable?: BookableMember[];
 }) {
-  const inert = disabled || mode === "admin";
+  const adminBooks = mode === "admin" && bookable !== undefined;
+  const inert = (disabled || mode === "admin") && !adminBooks;
   const body = (
     <div className={cn("rounded-lg border p-2 backdrop-blur-sm transition-colors", palette.tile)}>
       <div className={cn("relative flex aspect-video items-center justify-center rounded-md border border-dashed", palette.well)}>
         <TalkNumber n={number} tone={palette.label} />
         <Plus className={cn("absolute right-1.5 bottom-1.5 size-3 opacity-70", palette.label)} />
       </div>
-      <p className="mt-1.5 truncate text-xs font-semibold">{inert ? "Open" : "Choose this slot"}</p>
+      <p className="mt-1.5 truncate text-xs font-semibold">{adminBooks ? "Book for a member" : inert ? "Open" : "Request this slot"}</p>
       <p className="mt-0.5 truncate text-[11px] leading-tight text-muted">
-        {mode === "admin" ? "Unclaimed" : disabled ? "Not open to you" : "Pick this slot to present"}
+        {adminBooks ? "Booked straight away" : mode === "admin" ? "Unclaimed" : disabled ? "You already have a slot" : "Title + description, deck later"}
       </p>
     </div>
   );
+  if (adminBooks) {
+    return (
+      <BookSeatDialog slotId={slotId} slotLabel={slotLabel} members={bookable}>
+        <button type="button" className="block w-full text-left">
+          {body}
+        </button>
+      </BookSeatDialog>
+    );
+  }
   return inert ? body : <Link href={`/dashboard/slots/${slotId}/submit`}>{body}</Link>;
 }
 
@@ -165,13 +182,13 @@ function TalkTile({
   number: number;
   palette: DayPalette;
 }) {
-  // Your own talk stays readable (and openable) while it's still in review —
-  // it's only hidden from everyone *else* until approved.
+  // A booked talk (approved request) shows its title and speaker to everyone;
+  // a request still waiting on the curator is only readable by its author.
   const canSeeDetail = talk.status === "approved" || talk.isMine || mode === "admin";
-  // The deck's first slide once it's actually a real, visible talk —
-  // otherwise a plain neutral tile stands in (and stays the fallback if the
-  // deck fails to render, e.g. a corrupt PDF).
-  const showDeckPage = canSeeDetail && talk.status === "approved" && talk.hasDeck;
+  // The deck's first slide once it's been reviewed (hasDeck already folds in
+  // who may see it) — otherwise the numbered tile stands in, and stays the
+  // fallback if the deck fails to render, e.g. a corrupt PDF.
+  const showDeckPage = canSeeDetail && talk.hasDeck && (talk.status === "approved" || talk.isMine);
   const body = (
     <>
       <div className={cn("relative flex aspect-video items-center justify-center overflow-hidden rounded-md border", palette.well)}>
@@ -186,14 +203,16 @@ function TalkTile({
         {showDeckPage ? <TalkNumber n={number} onImage /> : null}
       </div>
       <p className="mt-1.5 truncate text-xs font-semibold">
-        {canSeeDetail ? talk.title : "Pending review"}
+        {canSeeDetail ? talk.title : "Requested"}
       </p>
       <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-muted">
-        {canSeeDetail ? (talk.presenterName ?? "") : "Awaiting approval"}
+        {canSeeDetail ? (talk.presenterName ?? "") : "Awaiting the curator"}
         {canSeeDetail && talk.status !== "approved" ? (
           <span className="shrink-0 rounded-full bg-amber-500/15 px-1.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
-            In review
+            Requested
           </span>
+        ) : canSeeDetail && talk.deckPending ? (
+          <span className="shrink-0 rounded-full bg-foreground/10 px-1.5 text-[10px] font-semibold">Deck soon</span>
         ) : null}
       </p>
     </>
@@ -223,7 +242,17 @@ const SESSION_INFO = {
   },
 } as const;
 
-function SessionTile({ type, palette }: { type: SlotView["type"]; palette: DayPalette }) {
+function SessionTile({
+  type,
+  palette,
+  recordingUrl,
+  label,
+}: {
+  type: SlotView["type"];
+  palette: DayPalette;
+  recordingUrl: string | null;
+  label: string;
+}) {
   const info = type === "kickoff" || type === "recognition" ? SESSION_INFO[type] : null;
   const Icon = info?.icon ?? Users;
   return (
@@ -234,6 +263,9 @@ function SessionTile({ type, palette }: { type: SlotView["type"]; palette: DayPa
       <div className="min-w-0">
         {info ? <p className="text-xs font-semibold">{info.title}</p> : null}
         {info ? <p className="mt-0.5 text-[11px] leading-snug text-muted">{info.blurb}</p> : null}
+        {recordingUrl ? (
+          <WatchRecordingButton url={recordingUrl} title={info?.title ?? label} className="mt-2.5" />
+        ) : null}
       </div>
     </div>
   );
@@ -246,6 +278,7 @@ function DayColumn({
   mode,
   colorIndex,
   firstNumber,
+  bookable,
 }: {
   slots: SlotView[];
   viewerHasActiveTalk: boolean;
@@ -253,6 +286,7 @@ function DayColumn({
   colorIndex: number;
   /** Season-wide number of each talk slot's first seat, keyed by slot id. */
   firstNumber: Map<string, number>;
+  bookable?: BookableMember[];
 }) {
   const { weekday, day, month } = dateParts(slots[0].date);
   const isSessionDay = slots.some((slot) => slot.type === "kickoff" || slot.type === "recognition");
@@ -287,23 +321,31 @@ function DayColumn({
               </div>
 
               {isSession ? (
-                <SessionTile type={slot.type} palette={palette} />
+                <SessionTile type={slot.type} palette={palette} recordingUrl={slot.recordingUrl} label={slot.label} />
               ) : (
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  {slot.talks.map((talk, ti) => (
-                    <TalkTile key={talk.talkId} talk={talk} mode={mode} palette={palette} number={(firstNumber.get(slot.id) ?? 1) + ti} />
-                  ))}
-                  {Array.from({ length: openCount }).map((_, oi) => (
-                    <OpenTile
-                      key={oi}
-                      slotId={slot.id}
-                      disabled={viewerHasActiveTalk}
-                      mode={mode}
-                      palette={palette}
-                      number={(firstNumber.get(slot.id) ?? 1) + slot.talks.length + oi}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    {slot.talks.map((talk, ti) => (
+                      <TalkTile key={talk.talkId} talk={talk} mode={mode} palette={palette} number={(firstNumber.get(slot.id) ?? 1) + ti} />
+                    ))}
+                    {Array.from({ length: openCount }).map((_, oi) => (
+                      <OpenTile
+                        key={oi}
+                        slotId={slot.id}
+                        slotLabel={slot.label}
+                        bookable={bookable}
+                        disabled={viewerHasActiveTalk}
+                        mode={mode}
+                        palette={palette}
+                        number={(firstNumber.get(slot.id) ?? 1) + slot.talks.length + oi}
+                      />
+                    ))}
+                  </div>
+                  {/* talk days get their recording too, same side panel as the kickoff */}
+                  {slot.recordingUrl ? (
+                    <WatchRecordingButton url={slot.recordingUrl} title={slot.label} className="mt-2.5" />
+                  ) : null}
+                </>
               )}
             </div>
           );
@@ -317,11 +359,13 @@ export function SeasonTimeline({
   slots,
   viewerHasActiveTalk,
   mode = "member",
+  bookable,
 }: {
   slots: SlotView[];
   viewerHasActiveTalk: boolean;
-  /** "admin" renders the identical layout without the claim-a-slot affordance. */
+  /** "admin" renders the identical layout; open seats book for a member when `bookable` is given. */
   mode?: TimelineMode;
+  bookable?: BookableMember[];
 }) {
   const weekKeys = [...new Set(slots.map((s) => weekKey(s.date)))].sort();
 
@@ -380,6 +424,7 @@ export function SeasonTimeline({
                 mode={mode}
                 colorIndex={wi * 2 + di}
                 firstNumber={firstNumber}
+                bookable={bookable}
               />
             ))}
           </div>

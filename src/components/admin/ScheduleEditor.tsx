@@ -128,7 +128,7 @@ function DayColumn({ date, children, onAdd }: { date: string; children: React.Re
   );
 }
 
-type Draft = { id: string | null; date: string; type: EditorSlot["type"]; label: string; capacity: number; startsAt: string; endsAt: string };
+type Draft = { id: string | null; date: string; type: EditorSlot["type"]; label: string; capacity: number; startsAt: string; endsAt: string; recordingUrl: string };
 
 export function ScheduleEditor({ cohortId, initial }: { cohortId: string; initial: EditorSlot[] }) {
   const router = useRouter();
@@ -202,7 +202,7 @@ export function ScheduleEditor({ cohortId, initial }: { cohortId: string; initia
 
   async function saveDraft() {
     if (!draft) return;
-    const body = { date: draft.date, type: draft.type, label: draft.label, capacity: draft.capacity, startsAt: draft.startsAt || null, endsAt: draft.endsAt || null };
+    const body = { date: draft.date, type: draft.type, label: draft.label, capacity: draft.capacity, startsAt: draft.startsAt || null, endsAt: draft.endsAt || null, recordingUrl: draft.recordingUrl.trim() };
     try {
       if (draft.id) await call(`/api/admin/slots/${draft.id}`, "PATCH", body);
       else await call("/api/admin/slots", "POST", { ...body, cohortId });
@@ -225,7 +225,7 @@ export function ScheduleEditor({ cohortId, initial }: { cohortId: string; initia
     : active?.startsWith("talk:")
       ? slots.flatMap((s) => s.talks).find((t) => t.id === active.slice(5))?.title
       : null;
-  const blank = (date: string): Draft => ({ id: null, date, type: "talk", label: "", capacity: 2, startsAt: "", endsAt: "" });
+  const blank = (date: string): Draft => ({ id: null, date, type: "talk", label: "", capacity: 2, startsAt: "", endsAt: "", recordingUrl: "" });
 
   return (
     <>
@@ -246,7 +246,7 @@ export function ScheduleEditor({ cohortId, initial }: { cohortId: string; initia
                 <SlotCard
                   key={slot.id}
                   slot={slot}
-                  onEdit={() => setDraft({ id: slot.id, date: slot.date, type: slot.type, label: slot.label, capacity: slot.capacity, startsAt: slot.startsAt?.slice(0, 5) ?? "", endsAt: slot.endsAt?.slice(0, 5) ?? "" })}
+                  onEdit={() => setDraft({ id: slot.id, date: slot.date, type: slot.type, label: slot.label, capacity: slot.capacity, startsAt: slot.startsAt?.slice(0, 5) ?? "", endsAt: slot.endsAt?.slice(0, 5) ?? "", recordingUrl: slot.recordingUrl ?? "" })}
                   onDelete={() => remove(slot)}
                 />
               ))}
@@ -287,6 +287,16 @@ export function ScheduleEditor({ cohortId, initial }: { cohortId: string; initia
                   <Input className="mt-1.5" type="time" value={draft.endsAt} onChange={(e) => setDraft({ ...draft, endsAt: e.target.value })} />
                 </label>
               </div>
+              <label className="block text-sm font-medium">Recording link
+                <Input
+                  className="mt-1.5"
+                  type="url"
+                  value={draft.recordingUrl}
+                  onChange={(e) => setDraft({ ...draft, recordingUrl: e.target.value })}
+                  placeholder="https://youtu.be/… (optional)"
+                />
+                <span className="mt-1 block text-xs font-normal text-muted">YouTube (unlisted is fine), Vimeo or Loom. Signed-in members can watch it from the schedule.</span>
+              </label>
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" onClick={() => setDraft(null)}>Cancel</Button>
                 <Button onClick={saveDraft} disabled={!draft.label.trim() || !draft.date}>Save</Button>

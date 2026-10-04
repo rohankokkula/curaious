@@ -22,7 +22,7 @@ export async function GET(
   }
 
   const { id } = await params;
-  const { admin, talk, canView, userId } = await loadTalkAccess(id);
+  const { admin, talk, canViewDeck, userId } = await loadTalkAccess(id);
 
   if (!userId) {
     return new NextResponse("sign in first.", { status: 401 });
@@ -30,7 +30,7 @@ export async function GET(
 
   // Private bucket: approved talks are open to the cohort, unapproved ones
   // only to their presenter and to admins.
-  if (!talk || !canView || !talk.deck_path) {
+  if (!talk || !canViewDeck || !talk.deck_path) {
     return new NextResponse("no deck here.", { status: 404 });
   }
 

@@ -15,7 +15,7 @@ type Step = "details" | "submitted";
 
 const STEPS: { id: Step; label: string }[] = [
   { id: "details", label: "Details" },
-  { id: "submitted", label: "Submitted" },
+  { id: "submitted", label: "Requested" },
 ];
 
 function StepIndicator({ step }: { step: Step }) {
@@ -43,7 +43,7 @@ function StepIndicator({ step }: { step: Step }) {
 }
 
 function validateDeck(file: File | null): string | undefined {
-  if (!file) return "attach your deck as a pdf";
+  if (!file) return undefined; // optional: the deck can be added later
   if (file.size > MAX_DECK_BYTES) return `that's over ${MAX_DECK_MB}mb, trim the deck and try again`;
   if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) return "pdf only, please";
   return undefined;
@@ -129,11 +129,11 @@ export function TalkSubmitForm({
       </div>
 
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Submit your talk</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Request this slot</h1>
         <p className="mt-1 max-w-xl text-muted">
           {step === "submitted"
-            ? "Your talk is on its way to review."
-            : "Share what you'll be talking about. The curator will review your submission before it appears on the schedule."}
+            ? "Your request is with the curator."
+            : "Tell the room what you'll talk about. The curator confirms the booking; your deck can come later."}
         </p>
       </div>
 
@@ -142,10 +142,11 @@ export function TalkSubmitForm({
           <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary-soft text-primary">
             <Check className="size-6" />
           </span>
-          <h2 className="mt-4 text-lg font-semibold">Submitted for review</h2>
+          <h2 className="mt-4 text-lg font-semibold">Slot requested</h2>
           <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
-            Until it&rsquo;s approved, the slot shows as claimed without your name. You can
-            follow it under talks.
+            The seat is held for you while the curator confirms it. Once it&rsquo;s booked, upload
+            your deck from your talk whenever it&rsquo;s ready; it gets a quick review before the
+            cohort can open it.
           </p>
           <Button asChild className="mt-5">
             <Link href="/dashboard/talks">Go to talks</Link>
@@ -197,9 +198,9 @@ export function TalkSubmitForm({
 
             <div>
               <label className="text-sm font-semibold">
-                Presentation deck <span className="text-destructive">*</span>
+                Presentation deck <span className="font-normal text-muted">(optional)</span>
               </label>
-              <p className="mt-0.5 text-xs text-muted">PDF only, up to {MAX_DECK_MB}MB.</p>
+              <p className="mt-0.5 text-xs text-muted">Not ready yet? Skip it and add it later. PDF only, up to {MAX_DECK_MB}MB.</p>
 
               <button
                 type="button"
@@ -266,7 +267,7 @@ export function TalkSubmitForm({
               <Link href="/dashboard/schedule">Cancel</Link>
             </Button>
             <Button type="submit" disabled={sending}>
-              {sending ? "Submitting…" : "Submit for review →"}
+              {sending ? "Requesting…" : "Request slot →"}
             </Button>
           </div>
         </form>

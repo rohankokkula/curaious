@@ -17,7 +17,10 @@ export default async function AdminMembersPage() {
   const { data: memberships } = await supabase
     .from("cohort_members")
     .select("profile_id, status, role")
-    .eq("cohort_id", cohort.id);
+    .eq("cohort_id", cohort.id)
+    // removed people are gone from this view entirely (and lose access);
+    // re-inviting their email brings them back
+    .eq("status", "active");
   const ids = (memberships ?? []).map((m) => m.profile_id);
   const { data: profiles } = ids.length
     ? await supabase.from("profiles").select("id, name, email, avatar_url").in("id", ids)

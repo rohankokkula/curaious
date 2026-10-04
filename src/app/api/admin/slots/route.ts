@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ ok: false, message: parsed.error.issues[0]?.message ?? "invalid slot." }, { status: 400 });
   }
-  const { cohortId, date, type, label, capacity, startsAt, endsAt } = parsed.data;
+  const { cohortId, date, type, label, capacity, startsAt, endsAt, recordingUrl } = parsed.data;
 
   // Same label on the same date is almost always a mis-click, not a second
   // intentional session — catch it here rather than let the schedule end up
@@ -49,6 +49,7 @@ export async function POST(request: Request) {
       capacity,
       starts_at: startsAt || null,
       ends_at: endsAt || null,
+      recording_url: recordingUrl || null,
       sort_order: (last?.sort_order ?? 0) + 1,
     })
     .select("id")

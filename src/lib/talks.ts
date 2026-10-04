@@ -3,8 +3,19 @@ import { z } from "zod";
 export const MAX_DECK_MB = 25;
 export const MAX_DECK_BYTES = MAX_DECK_MB * 1024 * 1024;
 
+/** The *booking*: pending = requested, approved = booked, rejected = declined. */
 export const TALK_STATUSES = ["pending", "approved", "rejected"] as const;
 export type TalkStatus = (typeof TALK_STATUSES)[number];
+
+/** The deck's own review, separate from the booking: a slot can be booked
+ * before the PDF exists, and the deck is reviewed once it's uploaded. */
+export const DECK_STATUSES = ["none", "submitted", "approved", "changes_requested"] as const;
+export type DeckStatus = (typeof DECK_STATUSES)[number];
+
+/** Whether people other than the presenter (and the curator) may see the deck. */
+export function deckIsPublic(talk: { status: string; deck_status?: string | null; deck_path?: string | null }) {
+  return talk.status === "approved" && talk.deck_status === "approved" && Boolean(talk.deck_path);
+}
 
 export const SLOT_TYPES = ["kickoff", "talk", "recognition"] as const;
 export type SlotType = (typeof SLOT_TYPES)[number];
@@ -17,8 +28,10 @@ export type SlotTalk = {
   presenterName: string | null;
   status: "pending" | "approved";
   isMine: boolean;
-  /** Whether a deck is attached, so the tile can render its first slide. */
+  /** Whether the viewer may see the deck, so the tile can render its first slide. */
   hasDeck: boolean;
+  /** Booked, but the deck isn't uploaded/approved yet. */
+  deckPending: boolean;
 };
 
 /** A slot can hold more than one talk — e.g. two or three lightning talks in one session. */
@@ -30,6 +43,8 @@ export type SlotView = {
   capacity: number;
   startsAt: string | null;
   endsAt: string | null;
+  /** Session recording (kickoff, recognitions); members only. */
+  recordingUrl: string | null;
   talks: SlotTalk[];
   isFull: boolean;
 };
@@ -50,7 +65,8 @@ export const talkSubmissionSchema = z.object({
 export type TalkSubmission = z.infer<typeof talkSubmissionSchema>;
 
 export const talkReviewSchema = z.object({
-  action: z.enum(["approve", "reject"]),
+  /** approve/reject = the booking; approve_deck/request_deck_changes = the PDF. */
+  action: z.enum(["approve", "reject", "approve_deck", "request_deck_changes"]),
   rejectionReason: z
     .string()
     .trim()

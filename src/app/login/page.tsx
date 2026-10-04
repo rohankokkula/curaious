@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { LoginError } from "@/components/auth/LoginError";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -34,6 +36,10 @@ export default function LoginPage() {
           <h1 className="mt-2 text-3xl font-bold tracking-tight">Member login</h1>
           <p className="mt-2 text-sm text-muted">Curaious is invite-only.</p>
         </div>
+
+        <Suspense fallback={null}>
+          <LoginError />
+        </Suspense>
 
         <div className="rounded-xl border border-border bg-card p-6 shadow-lg shadow-black/[0.03] backdrop-blur-sm dark:shadow-black/20">
           <GoogleSignInButton

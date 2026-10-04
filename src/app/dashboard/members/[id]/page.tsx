@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Check, EyeOff, FileText, Mail, MapPin, Plus } from "lucide-react";
 import { BadgeArt } from "@/components/dashboard/BadgeArt";
 import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
+import { DeckUploadPanel } from "@/components/dashboard/DeckUploadPanel";
 import { DeleteTalkButton } from "@/components/dashboard/DeleteTalkButton";
 import { Avatar } from "@/components/dashboard/Avatar";
 import { EditProfileDialog } from "@/components/dashboard/EditProfileDialog";
@@ -17,7 +18,7 @@ import { canSee, resolveVisibility } from "@/lib/profile";
 import { RECORDINGS_VISIBLE_TO, SAMPLE_RECORDING_URL } from "@/lib/recording";
 import { RATING_MAX, RATING_PARAMETERS, type RatingParameterKey } from "@/lib/ratings";
 import { loadRatingAggregate } from "@/lib/ratingsAggregate";
-import { formatSlotDate, type TalkStatus } from "@/lib/talks";
+import { deckIsPublic, formatSlotDate, type DeckStatus, type TalkStatus } from "@/lib/talks";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient, getSessionUser, getViewerProfile } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,8 @@ type TalkRow = {
   description: string;
   status: TalkStatus;
   deck_path: string | null;
+  deck_status: DeckStatus;
+  deck_feedback: string | null;
   rejection_reason: string | null;
   recording_url: string | null;
   slot: { label: string; slot_date: string } | null;
@@ -70,10 +73,10 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function StatusBadge({ status }: { status: TalkStatus }) {
   return status === "approved" ? (
-    <span className="rounded-full bg-success-soft px-2.5 py-1 text-[11px] font-semibold text-success">Approved</span>
+    <span className="rounded-full bg-success-soft px-2.5 py-1 text-[11px] font-semibold text-success">Booked</span>
   ) : (
     <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
-      Pending review
+      Requested
     </span>
   );
 }
@@ -161,7 +164,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
     // presenter and admins.
     supabase
       .from("talks")
-      .select("id, title, description, status, deck_path, rejection_reason, recording_url, slot:session_slots (label, slot_date)")
+      .select("id, title, description, status, deck_path, deck_status, deck_feedback, rejection_reason, recording_url, slot:session_slots (label, slot_date)")
       .eq("presenter_id", id)
       .neq("status", "rejected")
       .maybeSingle<TalkRow>(),
@@ -481,7 +484,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
       ) : (
         <Card className="overflow-hidden p-0 sm:p-0">
           <div className="sm:flex">
-            {talk.status === "approved" && talk.deck_path ? (
+            {talk.deck_path && (isSelf || isAdmin || deckIsPublic(talk)) ? (
               <div className="relative aspect-video bg-surface sm:w-64 sm:shrink-0 md:w-72">
                 <DeckPageThumbnail talkId={talk.id} className="absolute inset-0" />
               </div>
@@ -501,7 +504,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
                   from their own profile — everyone else's route to it is the
                   actual review page (/present), where viewing the deck is part
                   of rating the talk, not a standalone download. */}
-              {talk.status === "approved" && talk.deck_path && (isSelf || isAdmin) ? (
+              {talk.deck_path && (isSelf || isAdmin) ? (
                 <div className="mt-5 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                   <Link
                     href={`/dashboard/talks/${talk.id}/present`}
@@ -520,10 +523,15 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
                 </div>
               ) : null}
 
-              {talk.status === "pending" && isSelf ? (
-                <p className="mt-5 rounded-lg bg-surface p-3 text-sm text-muted">
-                  Waiting on review. Nobody else sees your name on the schedule until it&rsquo;s approved.
-                </p>
+              {isSelf ? (
+                <div className="mt-5">
+                  <DeckUploadPanel
+                    talkId={talk.id}
+                    booked={talk.status === "approved"}
+                    deckStatus={talk.deck_status}
+                    feedback={talk.deck_feedback}
+                  />
+                </div>
               ) : null}
 
               {isSelf ? (
@@ -536,10 +544,10 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
         </Card>
       )}
 
-      {/* Recordings stay admin-only until RECORDINGS_VISIBLE_TO is widened.
-          With no recording saved yet, an admin still gets the card rendered
-          against a sample link so the layout can be checked. */}
-      {talk && talk.status === "approved" && canSeeRecording ? (
+      {/* Members see a recording once one exists (and the speaker shows it).
+          The curator alone still gets the card against a sample link before
+          then, so the layout can be checked. */}
+      {talk && talk.status === "approved" && canSeeRecording && (talk.recording_url || isAdmin) ? (
         <RecordingCard url={talk.recording_url ?? SAMPLE_RECORDING_URL} title={talk.title} isSample={!talk.recording_url} />
       ) : null}
 

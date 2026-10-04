@@ -9,14 +9,36 @@ export const dynamic = "force-dynamic";
 
 type TalkRow = {
   id: string;
-  slot_id: string;
   presenter_id: string;
   title: string;
   description: string;
+  status: "pending" | "approved";
   deck_path: string | null;
+  deck_status: string;
   submitted_at: string;
+  slot: { label: string; slot_date: string } | null;
+  presenter: { name: string } | null;
 };
 
+function toPending(talk: TalkRow): PendingTalk {
+  return {
+    id: talk.id,
+    title: talk.title,
+    description: talk.description,
+    presenterId: talk.presenter_id,
+    presenterName: talk.presenter?.name ?? "unknown member",
+    slotLabel: talk.slot?.label ?? "slot",
+    slotDate: talk.slot?.slot_date ?? "",
+    submittedAt: talk.submitted_at,
+    hasDeck: Boolean(talk.deck_path),
+  };
+}
+
+/**
+ * Two queues. A member first *requests* a slot (title + description); you
+ * approve the booking, which puts their name on the schedule. The deck comes
+ * later and is reviewed on its own before anyone else can open it.
+ */
 export default async function AdminTalksPage() {
   if (!isSupabaseConfigured) {
     return <p className="text-sm text-muted">Season 1 isn&rsquo;t connected to its database yet.</p>;
@@ -24,69 +46,45 @@ export default async function AdminTalksPage() {
 
   const supabase = await createSupabaseServerClient();
 
-  // `is_admin()` in the talks select policy is what makes pending submissions
-  // from other people visible here.
-  const { data: talkRows } = await supabase
+  // `is_admin()` in the talks select policy is what makes other people's
+  // requests visible here.
+  const { data } = await supabase
     .from("talks")
-    .select("id, slot_id, presenter_id, title, description, deck_path, submitted_at")
-    .eq("status", "pending")
+    .select(
+      "id, presenter_id, title, description, status, deck_path, deck_status, submitted_at, slot:session_slots (label, slot_date), presenter:profiles!presenter_id (name)",
+    )
+    .or("status.eq.pending,and(status.eq.approved,deck_status.eq.submitted)")
     .order("submitted_at", { ascending: true })
     .returns<TalkRow[]>();
 
-  const talks = talkRows ?? [];
-
-  const presenters = new Map<string, string>();
-  const slots = new Map<string, { label: string; slot_date: string }>();
-
-  if (talks.length > 0) {
-    const [{ data: profileRows }, { data: slotRows }] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id, name")
-        .in("id", [...new Set(talks.map((talk) => talk.presenter_id))])
-        .returns<{ id: string; name: string }[]>(),
-      supabase
-        .from("session_slots")
-        .select("id, label, slot_date")
-        .in("id", [...new Set(talks.map((talk) => talk.slot_id))])
-        .returns<{ id: string; label: string; slot_date: string }[]>(),
-    ]);
-
-    for (const profile of profileRows ?? []) {
-      presenters.set(profile.id, profile.name);
-    }
-    for (const slot of slotRows ?? []) {
-      slots.set(slot.id, { label: slot.label, slot_date: slot.slot_date });
-    }
-  }
-
-  const pending: PendingTalk[] = talks.map((talk) => {
-    const slot = slots.get(talk.slot_id);
-
-    return {
-      id: talk.id,
-      title: talk.title,
-      description: talk.description,
-      presenterId: talk.presenter_id,
-      presenterName: presenters.get(talk.presenter_id) ?? "unknown member",
-      slotLabel: slot?.label ?? "slot",
-      slotDate: slot?.slot_date ?? "",
-      submittedAt: talk.submitted_at,
-      hasDeck: Boolean(talk.deck_path),
-    };
-  });
+  const rows = data ?? [];
+  const requests = rows.filter((t) => t.status === "pending").map(toPending);
+  const decks = rows.filter((t) => t.status === "approved").map(toPending);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight">Talks awaiting review</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Talks to review</h1>
         <p className="mt-1 text-muted">
-          Nobody else sees who claimed a slot until you approve it. Approving puts their
-          name and title on the calendar; sending it back frees the slot.
+          Approve a slot request to book it. Decks come later and get their own review before the cohort can open them.
         </p>
       </header>
 
-      <PendingTalksTable talks={pending} />
+      <section className="space-y-4">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          Slot requests
+          <span className="rounded-full bg-surface px-2 py-0.5 text-xs font-semibold text-muted tabular-nums">{requests.length}</span>
+        </h2>
+        <PendingTalksTable talks={requests} kind="booking" />
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          Decks to review
+          <span className="rounded-full bg-surface px-2 py-0.5 text-xs font-semibold text-muted tabular-nums">{decks.length}</span>
+        </h2>
+        <PendingTalksTable talks={decks} kind="deck" />
+      </section>
     </div>
   );
 }

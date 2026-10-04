@@ -100,6 +100,20 @@ export async function GET(request: Request) {
     const { data: live } = await admin.from("seasons").select("id").eq("is_active", true).limit(1).maybeSingle<{ id: string }>();
     cohortId = live?.id ?? null;
   }
+  if (cohortId && !isAdmin) {
+    // Removed by the curator: no way back in until they're re-invited
+    // (adding the invite again reactivates the membership).
+    const { data: membership } = await admin
+      .from("cohort_members")
+      .select("status")
+      .eq("cohort_id", cohortId)
+      .eq("profile_id", user.id)
+      .maybeSingle<{ status: string }>();
+    if (membership?.status === "removed") {
+      await supabase.auth.signOut();
+      return NextResponse.redirect(new URL("/login?error=removed", origin));
+    }
+  }
   if (cohortId) {
     await admin
       .from("cohort_members")

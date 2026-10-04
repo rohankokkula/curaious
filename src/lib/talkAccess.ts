@@ -8,7 +8,7 @@
  */
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getSessionUser } from "@/lib/supabase/server";
-import type { TalkStatus } from "@/lib/talks";
+import { deckIsPublic, type DeckStatus, type TalkStatus } from "@/lib/talks";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -24,6 +24,8 @@ export type TalkRecord = {
   title: string;
   description: string;
   deck_path: string | null;
+  deck_status: DeckStatus;
+  deck_feedback: string | null;
   status: TalkStatus;
   submitted_at: string;
   reviewed_at: string | null;
@@ -39,11 +41,13 @@ export type TalkAccess = {
   isAdmin: boolean;
   isPresenter: boolean;
   canView: boolean;
+  /** The PDF: presenter and curator always; everyone else once it's reviewed. */
+  canViewDeck: boolean;
   talk: TalkRecord | null;
 };
 
 const TALK_COLUMNS =
-  "id, slot_id, presenter_id, title, description, deck_path, status, submitted_at, reviewed_at, rejection_reason, recording_url, ratings_open";
+  "id, slot_id, presenter_id, title, description, deck_path, deck_status, deck_feedback, status, submitted_at, reviewed_at, rejection_reason, recording_url, ratings_open";
 
 export async function loadTalkAccess(talkId: string): Promise<TalkAccess> {
   const admin = createSupabaseAdminClient();
@@ -56,6 +60,7 @@ export async function loadTalkAccess(talkId: string): Promise<TalkAccess> {
       isAdmin: false,
       isPresenter: false,
       canView: false,
+      canViewDeck: false,
       talk: null,
     };
   }
@@ -79,5 +84,7 @@ export async function loadTalkAccess(talkId: string): Promise<TalkAccess> {
     talk && (talk.status === "approved" || isPresenter || isAdmin),
   );
 
-  return { admin, userId: user.id, isAdmin, isPresenter, canView, talk };
+  const canViewDeck = Boolean(talk?.deck_path && (isPresenter || isAdmin || (talk && deckIsPublic(talk))));
+
+  return { admin, userId: user.id, isAdmin, isPresenter, canView, canViewDeck, talk };
 }

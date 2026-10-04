@@ -4,11 +4,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DeleteTalkButton } from "@/components/dashboard/DeleteTalkButton";
 import { RatingForm } from "@/components/dashboard/RatingForm";
 import { RatingWindowToggle } from "@/components/dashboard/RatingWindowToggle";
+import { DeckUploadPanel } from "@/components/dashboard/DeckUploadPanel";
 import { SlideDeck } from "@/components/dashboard/SlideDeck";
 import { SpeakerCard } from "@/components/dashboard/SpeakerCard";
 import { Badge } from "@/components/ui/badge";
 import type { RatingParameterKey } from "@/lib/ratings";
-import type { TalkStatus } from "@/lib/talks";
+import { deckIsPublic, type DeckStatus, type TalkStatus } from "@/lib/talks";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient, getSessionUser, getViewerProfile } from "@/lib/supabase/server";
 
@@ -31,6 +32,8 @@ type TalkRow = {
   status: TalkStatus;
   presenter_id: string;
   deck_path: string | null;
+  deck_status: DeckStatus;
+  deck_feedback: string | null;
   slot_id: string;
   submitted_at: string;
   ratings_open: boolean;
@@ -78,7 +81,7 @@ export default async function TalkPage({ params }: { params: Promise<{ talkId: s
     supabase
       .from("talks")
       .select(
-        `id, title, description, status, presenter_id, deck_path, slot_id, submitted_at, ratings_open,
+        `id, title, description, status, presenter_id, deck_path, deck_status, deck_feedback, slot_id, submitted_at, ratings_open,
         slot:session_slots (label, slot_date, starts_at, ends_at, season_id,
           season:seasons (starts_on),
           talks (id, status, submitted_at)
@@ -172,11 +175,23 @@ export default async function TalkPage({ params }: { params: Promise<{ talkId: s
               </div>
             ) : null}
 
-            {talk.deck_path ? (
+            {isPresenter ? (
+              <DeckUploadPanel
+                talkId={talk.id}
+                booked={talk.status === "approved"}
+                deckStatus={talk.deck_status}
+                feedback={talk.deck_feedback}
+              />
+            ) : null}
+
+            {/* Others see the deck once the curator has reviewed it. */}
+            {talk.deck_path && (isPresenter || isAdmin || deckIsPublic(talk)) ? (
               <SlideDeck talkId={talk.id} />
-            ) : (
-              <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted">No deck attached to this talk.</p>
-            )}
+            ) : !isPresenter ? (
+              <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted">
+                The deck isn&rsquo;t up yet.
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -191,7 +206,7 @@ export default async function TalkPage({ params }: { params: Promise<{ talkId: s
               rest of the cohort rates it then.
             </Notice>
           ) : talk.status !== "approved" ? (
-            <Notice>This talk hasn&rsquo;t been approved yet, so there&rsquo;s nothing to rate.</Notice>
+            <Notice>This slot request hasn&rsquo;t been confirmed yet, so there&rsquo;s nothing to rate.</Notice>
           ) : !user ? (
             <Notice>Sign in to leave feedback.</Notice>
           ) : !talk.ratings_open ? (

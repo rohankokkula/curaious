@@ -17,7 +17,7 @@ export async function generateMetadata({
   const article = await loadArticleBySlug(slug);
   if (!article) return { title: "Article not found" };
 
-  // Deliberately no `robots: noindex` — unlike /showcase, a published
+  // Deliberately no `robots: noindex` — unlike /cohort1, a published
   // article is meant to be found. The submit-for-review step was the
   // publish decision; there's no separate "make this public" toggle.
   return {

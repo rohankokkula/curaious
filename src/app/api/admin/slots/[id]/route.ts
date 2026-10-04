@@ -15,11 +15,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!parsed.success) {
     return NextResponse.json({ ok: false, message: parsed.error.issues[0]?.message ?? "invalid slot." }, { status: 400 });
   }
-  const { date, type, label, capacity, startsAt, endsAt } = parsed.data;
+  const { date, type, label, capacity, startsAt, endsAt, recordingUrl } = parsed.data;
 
   const { error } = await guard.admin
     .from("session_slots")
-    .update({ slot_date: date, slot_type: type, label, capacity, starts_at: startsAt || null, ends_at: endsAt || null })
+    .update({
+      slot_date: date,
+      slot_type: type,
+      label,
+      capacity,
+      starts_at: startsAt || null,
+      ends_at: endsAt || null,
+      // left untouched when the field isn't sent at all
+      ...(recordingUrl === undefined ? {} : { recording_url: recordingUrl || null }),
+    })
     .eq("id", id);
   if (error) return NextResponse.json({ ok: false, message: "couldn't save that slot." }, { status: 500 });
   return NextResponse.json({ ok: true });

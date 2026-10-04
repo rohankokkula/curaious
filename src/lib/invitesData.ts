@@ -34,18 +34,33 @@ type InviteRow = {
 export async function loadInvites(): Promise<InviteListItem[]> {
   const admin = createSupabaseAdminClient();
 
-  const { data, error } = await admin
-    .from("invites")
-    .select("id, name, email, role, accepted_at, created_at")
-    .order("created_at", { ascending: true })
-    .returns<InviteRow[]>();
+  const [{ data, error }, { data: memberships }] = await Promise.all([
+    admin
+      .from("invites")
+      .select("id, name, email, role, accepted_at, created_at")
+      .order("created_at", { ascending: true })
+      .returns<InviteRow[]>(),
+    admin
+      .from("cohort_members")
+      .select("status, profiles!inner(email)")
+      .returns<{ status: "active" | "removed"; profiles: { email: string } }[]>(),
+  ]);
 
   if (error) {
     console.error("loadInvites: query failed", error.message);
     return [];
   }
 
-  return (data ?? []).map((invite) => ({
+  // People the curator removed (and who aren't active in any cohort) don't
+  // show up as invites either.
+  const active = new Set<string>();
+  const removed = new Set<string>();
+  for (const m of memberships ?? []) {
+    (m.status === "active" ? active : removed).add(m.profiles.email.toLowerCase());
+  }
+  const hidden = (email: string) => removed.has(email.toLowerCase()) && !active.has(email.toLowerCase());
+
+  return (data ?? []).filter((invite) => !hidden(invite.email)).map((invite) => ({
     id: invite.id,
     name: invite.name,
     email: invite.email,
