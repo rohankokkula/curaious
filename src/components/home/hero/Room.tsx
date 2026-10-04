@@ -89,7 +89,7 @@ function Podium({ className, toneClass }: { className?: string; toneClass: strin
 const FIGURE_SIZE = "h-[4.75rem] w-[2.72rem] md:h-[7.5rem] md:w-[4.29rem]";
 
 /**
- * The room: the stage, and all ten seats in front of it.
+ * The room: the stage, and all twelve seats in front of it.
  *
  * Every rotation is a handover rather than a swap — whoever just finished
  * walks back down to their own seat while the next person gets up from
@@ -278,11 +278,12 @@ export function Room({ activeIndex, className }: { activeIndex: number; classNam
         </div>
       </div>
 
-      {/* all ten seats — the empty one belongs to whoever is on stage */}
-      <div className="relative z-30 -mt-2 flex items-end justify-center gap-1 md:-mt-4 md:gap-2.5">
+      {/* all twelve seats — the empty one belongs to whoever is on stage */}
+      <div className="relative z-30 -mt-2 flex items-end justify-center gap-0.5 sm:gap-1 md:-mt-4 md:gap-2">
         {COHORT.map((member, i) => {
           const tone = TONES[member.tone % TONES.length];
-          const curve = 1 - ((i - 4.5) / 4.5) ** 2;
+          const mid = (COHORT.length - 1) / 2;
+          const curve = 1 - ((i - mid) / mid) ** 2;
 
           return (
             <div
@@ -297,7 +298,7 @@ export function Room({ activeIndex, className }: { activeIndex: number; classNam
                 ref={(el) => {
                   chipRefs.current[i] = el;
                 }}
-                className="mb-1 flex items-center gap-1 rounded-full border border-white/12 bg-white/[0.07] px-1.5 py-[3px] backdrop-blur-sm md:mb-1.5 md:px-2"
+                className="mb-1 flex items-center gap-0.5 rounded-full border border-white/12 bg-white/[0.07] px-1 py-[3px] backdrop-blur-sm sm:gap-1 sm:px-1.5 md:mb-1.5 md:px-2"
                 title={`${member.name} scored this talk`}
               >
                 <ScoreDot className={tone.chip} />

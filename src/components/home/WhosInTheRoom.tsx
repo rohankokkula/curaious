@@ -33,7 +33,7 @@ const PEOPLE = [
     who: "researcher",
     tone: "text-violet-300",
     arrives: "reads eval papers for fun",
-    leaves: "nine people who care what the work is about",
+    leaves: "eleven people who care what the work is about",
   },
 ];
 

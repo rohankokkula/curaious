@@ -21,11 +21,11 @@ export function WhatItIs() {
 
         <div className="space-y-6">
           <p data-reveal className="prose-quiet">
-            it&apos;s a group where you spend enough time with the same nine
+            it&apos;s a group where you spend enough time with the same eleven
             people to actually know what they&apos;re working on.
           </p>
           <p data-reveal className="prose-quiet">
-            students, founders, researchers, designers. ten different
+            students, founders, researchers, designers. twelve different
             backgrounds, all curious about the same thing.
           </p>
           <p data-reveal className="text-base leading-relaxed text-foreground md:text-lg">

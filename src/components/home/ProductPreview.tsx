@@ -21,16 +21,16 @@ import { cn } from "@/lib/utils";
 
 const STEPS = [
   { key: "claim", icon: CalendarCheck, title: "Claim a slot", line: "Pick an open session on the season's schedule." },
-  { key: "present", icon: Mic, title: "Present", line: "Your deck, your topic, a room of nine curious people." },
+  { key: "present", icon: Mic, title: "Present", line: "Your deck, your topic, a room of eleven curious people." },
   { key: "score", icon: Star, title: "Nine people score it", line: "Five parameters out of 10, plus written notes. You do the same for them." },
   { key: "profile", icon: UserRound, title: "It lands on your profile", line: "Every score and note, averaged and kept." },
 ] as const;
 
 const STEP_MS = 3200;
 
-/** You, presenting: the first cohort member; the room is the other nine. */
+/** You, presenting: the first cohort member; the room is the other eleven. */
 const YOU = 0;
-const ROOM = COHORT.slice(0, 10).map((m, i) => ({ ...m, i })).filter((m) => m.i !== YOU);
+const ROOM = COHORT.map((m, i) => ({ ...m, i })).filter((m) => m.i !== YOU);
 const SCORES = ROOM.map((m) => Number(scoreFor(YOU, m.i)));
 const AVERAGE = SCORES.reduce((a, b) => a + b, 0) / SCORES.length;
 
@@ -130,7 +130,7 @@ function PresentScene({ live }: { live: boolean }) {
 function ScoreScene({ live, done }: { live: boolean; done: boolean }) {
   const show = live || done;
   return (
-    <div className="grid w-full grid-cols-3 gap-1.5">
+    <div className="grid w-full grid-cols-4 gap-1">
       {ROOM.map((member, k) => {
         const tone = TONES[member.tone % TONES.length];
         return (
@@ -140,7 +140,7 @@ function ScoreScene({ live, done }: { live: boolean; done: boolean }) {
                 "rounded-full border border-white/10 bg-white/[0.06] px-1.5 py-px font-mono text-[9px] leading-tight tabular-nums transition-all duration-300",
                 show ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-75 opacity-0",
               )}
-              style={{ transitionDelay: live ? `${250 + k * 170}ms` : "0ms" }}
+              style={{ transitionDelay: live ? `${250 + k * 140}ms` : "0ms" }}
             >
               <span className={tone.chip}>●</span> {SCORES[k]}
             </span>
@@ -192,7 +192,7 @@ function ProfileScene({ live }: { live: boolean }) {
           live ? "opacity-100 delay-700" : "opacity-70",
         )}
       >
-        &ldquo;the demo made the tradeoff click.&rdquo; · 9 notes
+        &ldquo;the demo made the tradeoff click.&rdquo; · 11 notes
       </p>
     </div>
   );
@@ -235,7 +235,7 @@ export function ProductPreview() {
         <div data-reveal className="max-w-2xl">
           <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">the loop</p>
           <h2 className="heading-display mt-4 text-balance text-3xl leading-[1.15] md:text-5xl md:leading-[1.1]">
-            present once. score nine. get it all back.
+            present once. score eleven. get it all back.
           </h2>
         </div>
 

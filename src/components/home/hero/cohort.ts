@@ -1,8 +1,8 @@
 /**
- * The ten people in a season. Plain data only — mirrors `src/lib/content.ts`.
+ * The twelve people in a season. Plain data only — mirrors `src/lib/content.ts`.
  *
- * This is the whole concept in one array: ten seats, and on any given
- * session one of them is on stage while the *other nine* score the talk.
+ * This is the whole concept in one array: twelve seats, and on any given
+ * session one of them is on stage while the *other eleven* score the talk.
  * The Hero rotates the "on stage" index through all ten, so the audience
  * is always `COHORT` minus whoever is presenting.
  *
@@ -133,6 +133,26 @@ export const COHORT: CohortMember[] = [
     tone: 3,
     presents: "f",
     gesture: 0,
+  },
+  {
+    id: "ishaan",
+    name: "Ishaan Bose",
+    role: "Product Manager",
+    talkTitle: "Shipping an Agent to Real Users",
+    talkSubtitle: "The week between the demo and the launch.",
+    tone: 4,
+    presents: "m",
+    gesture: 3,
+  },
+  {
+    id: "priya",
+    name: "Priya Kulkarni",
+    role: "Data Scientist",
+    talkTitle: "Small Models, Narrow Jobs",
+    talkSubtitle: "When a fine-tuned 1B beats the frontier.",
+    tone: 5,
+    presents: "f",
+    gesture: 2,
   },
 ];
 

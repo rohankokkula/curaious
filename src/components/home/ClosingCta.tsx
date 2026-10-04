@@ -7,8 +7,8 @@ import { INVITE_FORM_URL } from "@/lib/content";
 import { useScrollReveal } from "@/lib/useScrollReveal";
 import { cn } from "@/lib/utils";
 
-/** Nine seats taken, one open: the cast from the hero, minus the last seat. */
-const TAKEN = COHORT.slice(0, 9);
+/** Eleven seats taken, one open: the cast from the hero, minus the last seat. */
+const TAKEN = COHORT.slice(0, COHORT.length - 1);
 
 export function ClosingCta() {
   const ref = useScrollReveal<HTMLDivElement>({ selector: "[data-reveal]", stagger: 0.1 });
@@ -26,22 +26,22 @@ export function ClosingCta() {
         />
 
         <div className="relative">
-          <SectionKicker data-reveal index="04" label="ten seats" className="justify-center" />
+          <SectionKicker data-reveal index="04" label="twelve seats" className="justify-center" />
 
-          {/* the room: nine taken, one with your name on it */}
-          <div data-reveal className="mt-8 flex items-center justify-center gap-1 sm:gap-1.5 md:mt-10 md:gap-2.5">
+          {/* the room: eleven taken, one with your name on it */}
+          <div data-reveal className="mt-8 flex items-center justify-center gap-[3px] sm:gap-1.5 md:mt-10 md:gap-2">
             {TAKEN.map((member) => (
               <span
                 key={member.id}
                 className={cn(
-                  "flex size-[26px] shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] font-mono text-[8px] sm:size-9 sm:text-[10px] md:size-11 md:text-[11px]",
+                  "flex size-[22px] shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] font-mono text-[7px] sm:size-9 sm:text-[10px] md:size-11 md:text-[11px]",
                   TONES[member.tone % TONES.length].chip,
                 )}
               >
                 {initialsFor(member.name)}
               </span>
             ))}
-            <span className="relative flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-accent text-accent sm:size-11 md:size-14">
+            <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-accent text-accent sm:size-11 md:size-14">
               <span aria-hidden className="absolute inset-0 animate-ping rounded-full border border-accent/40 motion-reduce:hidden" />
               <Plus className="size-3.5 sm:size-4 md:size-5" />
             </span>

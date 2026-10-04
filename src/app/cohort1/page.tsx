@@ -250,7 +250,7 @@ export default async function CohortPage() {
         <Section className="pt-6 md:pt-10">
           <SectionKicker index={String(SEASON_NUMBER).padStart(2, "0")} label={season?.name ?? "cohort"} />
           <h1 className="heading-display mt-6 text-balance text-[2.25rem] leading-[1.08] md:text-[3.75rem]">
-            ten curious minds.
+            twelve curious minds.
             <span className="block text-muted">one season, in public.</span>
           </h1>
           {season ? (

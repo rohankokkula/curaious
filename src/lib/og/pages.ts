@@ -26,9 +26,9 @@ export type OgPage = {
 export const OG_PAGES = {
   home: {
     key: "home",
-    kicker: "ten seats · two speakers a session",
-    title: "10 curious minds around ai.",
-    description: "Everyone teaches, everyone learns. A private circle of ten, building in public and giving each other real feedback.",
+    kicker: "twelve seats · two speakers a session",
+    title: "12 curious minds around ai.",
+    description: "Everyone teaches, everyone learns. A private circle of twelve, building in public and giving each other real feedback.",
     accent: "#e08a5a",
     motif: "seats",
   },
@@ -43,7 +43,7 @@ export const OG_PAGES = {
   showcase: {
     key: "showcase",
     kicker: "cohort 01",
-    title: "Ten curious minds, one season",
+    title: "Twelve curious minds, one season",
     description: "The people, the talks and the season so far, week by week.",
     accent: "#f472b6",
     motif: "seats",
@@ -83,7 +83,7 @@ export const OG_PAGES = {
   members: {
     key: "members",
     kicker: "the cohort",
-    title: "Ten people, one room",
+    title: "Twelve people, one room",
     description: "Who's in the cohort, what they're into, and when they're speaking.",
     accent: "#34d399",
     motif: "seats",

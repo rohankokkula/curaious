@@ -7,7 +7,7 @@ import { StageScene } from "@/components/home/hero/StageScene";
 import { COHORT } from "@/components/home/hero/cohort";
 import { INVITE_FORM_URL } from "@/lib/content";
 
-/** One full handover is ~1.8s of motion (walk off, walk on, then nine
+/** One full handover is ~1.8s of motion (walk off, walk on, then eleven
  * scores landing), so the old 2s cadence cut it off mid-sequence. This
  * leaves roughly a second to actually read the slide before the next turn. */
 const ROTATE_MS = 3200;
@@ -73,14 +73,14 @@ export function Hero() {
             data-hero-rise="true"
             className="font-mono text-[11px] uppercase tracking-[0.24em] text-white/50"
           >
-            ten seats · two speakers a session
+            twelve seats · two speakers a session
           </p>
 
           <h1
             data-hero-rise="true"
             className="heading-display mt-6 text-balance text-[2.15rem] leading-[1.1] text-white md:mt-8 md:text-[3.5rem] md:leading-[1.04]"
           >
-            10 curious minds around ai.
+            12 curious minds around ai.
             <span className="mt-2 block text-white/45 md:mt-3">
               everyone teaches, everyone learns.
             </span>

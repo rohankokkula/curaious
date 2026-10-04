@@ -1,30 +1,40 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { OG_PAGES, ogImagePath } from "@/lib/og/pages";
 import "./globals.css";
 
-const display = Inter({
+// Fonts are bundled from ./fonts (latin subset) rather than fetched from
+// Google at build time: next/font/google's Turbopack loader failed on Vercel
+// ("next/font/google queries have exactly one entry"), and a local file can't.
+const display = localFont({
   variable: "--font-display",
-  subsets: ["latin"],
   display: "swap",
-  weight: ["600", "700"],
+  src: [
+    { path: "./fonts/Inter-600.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/Inter-700.woff2", weight: "700", style: "normal" },
+  ],
 });
 
-const body = Inter({
+const body = localFont({
   variable: "--font-body",
-  subsets: ["latin"],
   display: "swap",
-  weight: ["400", "500", "600"],
+  src: [
+    { path: "./fonts/Inter-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/Inter-500.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/Inter-600.woff2", weight: "600", style: "normal" },
+  ],
 });
 
-const mono = IBM_Plex_Mono({
+const mono = localFont({
   variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
   display: "swap",
+  src: [
+    { path: "./fonts/IBMPlexMono-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/IBMPlexMono-500.woff2", weight: "500", style: "normal" },
+  ],
 });
 
 /** Draws under the notch/home indicator (padding handled with safe-area
@@ -57,20 +67,20 @@ export const metadata: Metadata = {
   applicationName: "curaious",
   appleWebApp: { capable: true, title: "curaious", statusBarStyle: "black-translucent" },
   title: {
-    default: "curaious · 10 curious minds around ai",
+    default: "curaious · 12 curious minds around ai",
     template: "%s · curaious",
   },
   description: DESCRIPTION,
   openGraph: {
     siteName: "curaious",
-    title: "curaious · 10 curious minds around ai",
+    title: "curaious · 12 curious minds around ai",
     description: DESCRIPTION,
     type: "website",
-    images: [{ url: ogImagePath("home"), width: 1200, height: 630, alt: "curaious: 10 curious minds around ai" }],
+    images: [{ url: ogImagePath("home"), width: 1200, height: 630, alt: "curaious: 12 curious minds around ai" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "curaious · 10 curious minds around ai",
+    title: "curaious · 12 curious minds around ai",
     description: DESCRIPTION,
     images: [ogImagePath("home")],
   },

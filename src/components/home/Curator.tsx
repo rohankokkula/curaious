@@ -6,7 +6,7 @@ import { useScrollReveal } from "@/lib/useScrollReveal";
 
 /** Where the curator shows up across a season, in order. */
 const TOUCHPOINTS = [
-  { when: "before", icon: Users, what: "reads every application and picks the ten" },
+  { when: "before", icon: Users, what: "reads every application and picks the twelve" },
   { when: "before your talk", icon: PenLine, what: "helps you shape it" },
   { when: "every weekend", icon: Mic, what: "hosts the session" },
   { when: "after", icon: MessageSquareText, what: "gets the room's feedback back to you" },
