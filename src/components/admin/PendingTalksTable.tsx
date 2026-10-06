@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { EditTalkDialog } from "@/components/admin/EditTalkDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -142,6 +143,8 @@ export function PendingTalksTable({ talks, kind = "booking" }: { talks: PendingT
             >
               {copy.approve}
             </Button>
+
+            <EditTalkDialog talkId={talk.id} title={talk.title} description={talk.description} />
 
             <Button
               type="button"

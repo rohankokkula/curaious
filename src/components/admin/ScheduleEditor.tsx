@@ -238,7 +238,7 @@ export function ScheduleEditor({ cohortId, initial }: { cohortId: string; initia
         </Button>
       </div>
 
-      <DndContext sensors={sensors} onDragStart={(e: DragStartEvent) => setActive(String(e.active.id))} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
+      <DndContext id="schedule-editor" sensors={sensors} onDragStart={(e: DragStartEvent) => setActive(String(e.active.id))} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
         <div className="flex gap-3 overflow-x-auto pb-3">
           {dates.map((date) => (
             <DayColumn key={date} date={date} onAdd={() => setDraft(blank(date))}>

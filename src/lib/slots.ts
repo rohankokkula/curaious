@@ -21,7 +21,7 @@ type TalkRow = {
   status: "pending" | "approved";
   deck_path: string | null;
   deck_status: string;
-  presenter: { name: string } | null;
+  presenter: { name: string; avatar_url: string | null } | null;
 };
 
 type SlotRow = {
@@ -59,7 +59,7 @@ export type SeasonSlots = {
 // points at profiles too.
 const SEASON_SELECT = `id, name, number, starts_on, ends_on,
   session_slots (id, slot_date, slot_type, label, sort_order, capacity, starts_at, ends_at, recording_url,
-    talks (id, presenter_id, title, status, deck_path, deck_status, presenter:profiles!presenter_id (name))
+    talks (id, presenter_id, title, status, deck_path, deck_status, presenter:profiles!presenter_id (name, avatar_url))
   )`;
 
 /** Cached per request: the dashboard home and the schedule both call it. */
@@ -73,6 +73,8 @@ export const loadSeasonSlots = cache(async (viewerId: string): Promise<SeasonSlo
     .neq("session_slots.talks.status", "rejected")
     .order("number", { ascending: false })
     .order("sort_order", { referencedTable: "session_slots", ascending: true })
+    // talks within a session: in seat order (the curator can reorder them)
+    .order("submitted_at", { referencedTable: "session_slots.talks", ascending: true })
     .limit(1)
     .maybeSingle<SeasonRow>();
 
@@ -106,6 +108,7 @@ export const loadSeasonSlots = cache(async (viewerId: string): Promise<SeasonSlo
           talkId: talk.id,
           title: approved || isMine ? talk.title : null,
           presenterName: approved || isMine ? (names.get(talk.presenter_id) ?? null) : null,
+          presenterAvatarUrl: approved || isMine ? (talk.presenter?.avatar_url ?? null) : null,
           status: talk.status,
           isMine,
           // Others see the deck once it's been reviewed; you always see your own.

@@ -1,6 +1,9 @@
 import Link from "next/link";
-import { Clock, Plus, Rocket, Trophy, Users } from "lucide-react";
+import { Clock, Plus, Rocket, Trophy } from "lucide-react";
 import { BookSeatDialog, type BookableMember } from "@/components/admin/BookSeatDialog";
+import { DraggableTalk, DroppableSeat } from "@/components/admin/ScheduleDnd";
+import { BadgeArt } from "@/components/dashboard/BadgeArt";
+import { BADGE_LIST } from "@/lib/badges";
 import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
 import { dayPalette, GRAY, groupWeeks, seatNumbers, type DayPalette } from "@/components/dashboard/seasonLayout";
 import { TitleCover } from "@/components/dashboard/TalkCover";
@@ -137,13 +140,22 @@ function TalkTile({
           {/* title + speaker over the slide, on a dark fade */}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-1.5 pt-6 sm:p-2 sm:pt-8">
             <p className="line-clamp-2 text-[10px] leading-tight font-bold text-white sm:text-xs">{talk.title}</p>
-            {talk.presenterName ? <p className="truncate text-[9px] text-white/75 sm:text-[11px]">{talk.presenterName}</p> : null}
+            {talk.presenterName ? (
+              <p className="mt-0.5 flex min-w-0 items-center gap-1 text-[9px] text-white/80 sm:text-[11px]">
+                {talk.presenterAvatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={talk.presenterAvatarUrl} alt="" loading="lazy" className="size-4 shrink-0 rounded-full object-cover sm:size-5" />
+                ) : null}
+                <span className="truncate">{talk.presenterName}</span>
+              </p>
+            ) : null}
           </div>
         </>
       ) : canSeeDetail && talk.title ? (
         <TitleCover
           title={talk.title}
           speaker={talk.presenterName}
+          speakerAvatarUrl={talk.presenterAvatarUrl}
           status={talk.status !== "approved" ? "requested" : talk.deckPending ? "deck-soon" : null}
           number={number}
           palette={palette}
@@ -205,19 +217,32 @@ function SessionTile({
   label: string;
 }) {
   const info = type === "kickoff" || type === "recognition" ? SESSION_INFO[type] : null;
-  const Icon = info?.icon ?? Users;
   return (
-    <div className={cn("mt-2 flex items-start gap-3 rounded-lg border p-3 backdrop-blur-sm", palette.tile)}>
-      <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-md border", palette.well)}>
-        <Icon className={cn("size-5", palette.label)} />
-      </span>
-      <div className="min-w-0">
-        {info ? <p className="text-xs font-semibold">{info.title}</p> : null}
-        {info ? <p className="mt-0.5 text-[11px] leading-snug text-muted">{info.blurb}</p> : null}
-        {recordingUrl ? (
-          <WatchRecordingButton url={recordingUrl} title={info?.title ?? label} className="mt-2.5" />
-        ) : null}
-      </div>
+    <div>
+      {info ? <p className="text-sm leading-relaxed text-muted">{info.blurb}</p> : null}
+      {recordingUrl ? <WatchRecordingButton url={recordingUrl} title={info?.title ?? label} className="mt-3" /> : null}
+
+      {/* recognitions: the season's badges, big and in full color, up for grabs */}
+      {type === "recognition" ? (
+        <Link href="/dashboard/badges" className="mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          {BADGE_LIST.map((badge) => (
+            <span
+              key={badge.key}
+              className={cn(
+                "group/badge flex flex-col items-center rounded-2xl border px-2 pt-4 pb-3 text-center transition hover:-translate-y-0.5 hover:border-foreground/30",
+                palette.tile,
+              )}
+            >
+              <BadgeArt
+                badge={badge.key}
+                className="w-16 drop-shadow-lg transition-transform duration-300 group-hover/badge:-rotate-6 group-hover/badge:scale-110 sm:w-20"
+              />
+              <span className="mt-2.5 text-[13px] leading-tight font-semibold">{badge.name}</span>
+              <span className="mt-0.5 text-[11px] leading-snug text-muted">{badge.awardedFor}</span>
+            </span>
+          ))}
+        </Link>
+      ) : null}
     </div>
   );
 }
@@ -230,7 +255,13 @@ function DayColumn({
   colorIndex,
   firstNumber,
   bookable,
+  single = false,
+  draggable = false,
 }: {
+  /** The only day in its week: kept one column wide so it matches the others. */
+  single?: boolean;
+  /** Curator: talks can be dragged between seats (needs ScheduleDndProvider). */
+  draggable?: boolean;
   slots: SlotView[];
   viewerHasActiveTalk: boolean;
   mode: TimelineMode;
@@ -244,11 +275,17 @@ function DayColumn({
   const talkSlots = slots.filter((slot) => slot.type === "talk");
   const seats = talkSlots.reduce((n, slot) => n + slot.capacity, 0);
   const booked = talkSlots.reduce((n, slot) => n + slot.talks.length, 0);
+  // A day that's only a cohort-wide session gets its name in the header.
+  const sessionSlot = talkSlots.length === 0 && slots.length === 1 ? slots[0] : null;
+  const sessionRange = sessionSlot ? timeRange(sessionSlot.startsAt ?? null, sessionSlot.endsAt ?? null) : null;
+  const SessionIcon =
+    sessionSlot?.type === "kickoff" ? SESSION_INFO.kickoff.icon : sessionSlot?.type === "recognition" ? SESSION_INFO.recognition.icon : null;
 
   return (
     <div
       className={cn(
         "relative min-w-0 flex-1 overflow-hidden rounded-2xl border p-4 shadow-sm backdrop-blur-md sm:rounded-xl",
+        single && "sm:max-w-[calc(50%-0.5rem)]",
         palette.card,
       )}
     >
@@ -290,6 +327,20 @@ function DayColumn({
               <span key={i} className={cn("size-1.5 rounded-full", i < booked ? cn("bg-current", palette.label) : "bg-foreground/15")} />
             ))}
           </div>
+        ) : sessionSlot ? (
+          // a cohort-wide day: its name (and time) sit top right, opposite the date
+          <div className="flex shrink-0 flex-col items-end gap-1.5 text-right">
+            <p className="flex items-center gap-1.5 text-base font-bold tracking-tight capitalize sm:text-lg">
+              {SessionIcon ? <SessionIcon className="size-4 text-muted sm:size-5" /> : null}
+              {sessionSlot.label}
+            </p>
+            {sessionRange ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-background/40 px-2 py-0.5 text-[11px] text-muted ring-1 ring-foreground/10">
+                <Clock className="size-3" />
+                {sessionRange}
+              </span>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
@@ -301,7 +352,7 @@ function DayColumn({
 
           return (
             <div key={slot.id}>
-              <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className={cn("flex flex-wrap items-center justify-between gap-2", sessionSlot && "hidden")}>
                 <p className="text-[15px] font-bold tracking-tight capitalize">{slot.label}</p>
                 {range ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-background/40 px-2 py-0.5 text-[11px] text-muted ring-1 ring-foreground/10">
@@ -316,10 +367,30 @@ function DayColumn({
               ) : (
                 <>
                   <div className="mt-2 grid grid-cols-2 gap-2">
-                    {slot.talks.map((talk, ti) => (
-                      <TalkTile key={talk.talkId} talk={talk} mode={mode} palette={palette} number={(firstNumber.get(slot.id) ?? 1) + ti} />
-                    ))}
-                    {Array.from({ length: openCount }).map((_, oi) => (
+                    {slot.talks.map((talk, ti) => {
+                      const number = (firstNumber.get(slot.id) ?? 1) + ti;
+                      const tile = <TalkTile key={talk.talkId} talk={talk} mode={mode} palette={palette} number={number} />;
+                      return draggable ? (
+                        <DraggableTalk
+                          key={talk.talkId}
+                          talk={{
+                            talkId: talk.talkId,
+                            slotId: slot.id,
+                            title: talk.title ?? "Untitled talk",
+                            speaker: talk.presenterName,
+                            speakerAvatarUrl: talk.presenterAvatarUrl,
+                            number,
+                            palette,
+                          }}
+                        >
+                          {tile}
+                        </DraggableTalk>
+                      ) : (
+                        tile
+                      );
+                    })}
+                    {Array.from({ length: openCount }).map((_, oi) => {
+                      const seat = (
                       <OpenTile
                         key={oi}
                         slotId={slot.id}
@@ -329,7 +400,15 @@ function DayColumn({
                         mode={mode}
                         number={(firstNumber.get(slot.id) ?? 1) + slot.talks.length + oi}
                       />
-                    ))}
+                      );
+                      return draggable ? (
+                        <DroppableSeat key={oi} slotId={slot.id} seat={oi} palette={palette}>
+                          {seat}
+                        </DroppableSeat>
+                      ) : (
+                        seat
+                      );
+                    })}
                   </div>
                   {/* talk days get their recording too, same side panel as the kickoff */}
                   {slot.recordingUrl ? (
@@ -362,7 +441,10 @@ export function SeasonTimeline({
   viewerHasActiveTalk,
   mode = "member",
   bookable,
+  draggable = false,
 }: {
+  /** Curator: drag talks between seats; wrap in ScheduleDndProvider. */
+  draggable?: boolean;
   slots: SlotView[];
   viewerHasActiveTalk: boolean;
   /** "admin" renders the identical layout; open seats book for a member when `bookable` is given. */
@@ -401,6 +483,8 @@ export function SeasonTimeline({
           <div className="flex flex-col gap-4 sm:mb-1 sm:min-w-0 sm:flex-1 sm:flex-row">
             {week.days.map((daySlots, di) => (
               <DayColumn
+                single={week.days.length === 1}
+                draggable={draggable}
                 key={daySlots[0].date}
                 slots={daySlots}
                 viewerHasActiveTalk={viewerHasActiveTalk}

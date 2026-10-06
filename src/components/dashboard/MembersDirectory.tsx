@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, MapPin, Mic, Search } from "lucide-react";
+import { ArrowUpRight, MapPin, Mic, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Avatar } from "@/components/dashboard/Avatar";
+import type { DayPalette } from "@/components/dashboard/seasonLayout";
 import { cn } from "@/lib/utils";
 
 export type DirectoryMember = {
@@ -14,8 +14,10 @@ export type DirectoryMember = {
   location: string | null;
   tags: string[];
   isYou: boolean;
-  /** Their approved talk this season, if any. */
-  talk: { title: string; date: string; done: boolean } | null;
+  /** Their booked talk this season, if any. */
+  talk: { title: string; date: string; done: boolean; number: number | null } | null;
+  /** Their talk's day color from the schedule (plain class strings). */
+  accent: DayPalette;
 };
 
 type Filter = "all" | "upcoming" | "presented" | "open";
@@ -37,32 +39,114 @@ function matchesFilter(member: DirectoryMember, filter: Filter) {
 const shortDate = (date: string) =>
   new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
-function TalkStatus({ talk, compact = false }: { talk: DirectoryMember["talk"]; compact?: boolean }) {
-  if (!talk) {
-    return <span className="text-xs text-muted">{compact ? "No talk yet" : "Hasn’t claimed a slot yet"}</span>;
-  }
+function initialsFor(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+}
+
+/**
+ * One member, as a small version of their profile card: photo, name and
+ * headline, their talk in its day color, a few interests. The whole card
+ * takes the color of their talk's day on the schedule.
+ */
+function MemberCard({ m }: { m: DirectoryMember }) {
+  const { accent } = m;
   return (
-    <span className="flex min-w-0 items-center gap-1.5 text-xs">
-      <span
-        className={cn(
-          "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold",
-          talk.done
-            ? "bg-success-soft text-success"
-            : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+    <Link
+      href={`/dashboard/members/${m.id}`}
+      className="group relative flex flex-col overflow-hidden rounded-3xl border border-border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-xl sm:p-5"
+    >
+      {/* glow + grid in the accent color */}
+      <div aria-hidden className={cn("pointer-events-none absolute inset-0", accent.label)}>
+        <span className="absolute -top-16 -right-16 size-48 rounded-full bg-current opacity-[0.13] blur-3xl transition-opacity duration-300 group-hover:opacity-[0.22]" />
+        <span
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage: "linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)",
+            backgroundSize: "22px 22px",
+            maskImage: "radial-gradient(ellipse at 100% 0%, black 0%, transparent 60%)",
+          }}
+        />
+      </div>
+
+      <div className="relative flex items-start gap-4">
+        {m.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={m.avatarUrl}
+            alt=""
+            loading="lazy"
+            className={cn("size-16 shrink-0 rounded-2xl border-2 object-cover shadow-md sm:size-20", accent.well)}
+          />
+        ) : (
+          <span
+            className={cn(
+              "relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 sm:size-20",
+              accent.well,
+              accent.label,
+            )}
+          >
+            <span aria-hidden className="absolute -top-6 -right-6 size-16 rounded-full bg-current opacity-25 blur-2xl" />
+            <span className="relative text-xl font-bold tracking-tight sm:text-2xl">{initialsFor(m.name)}</span>
+          </span>
         )}
-      >
-        {talk.done ? "Presented" : `Speaking ${shortDate(talk.date)}`}
-      </span>
-      {compact ? null : <span className="truncate text-muted">{talk.title}</span>}
-    </span>
+
+        <div className="min-w-0 flex-1 pt-0.5">
+          <p className="truncate text-lg leading-tight font-bold tracking-tight">
+            {m.name}
+            {m.isYou ? <span className="ml-1.5 text-xs font-medium text-muted">(you)</span> : null}
+          </p>
+          <p className="mt-1 line-clamp-2 text-sm leading-snug text-muted">{m.headline ?? "No headline yet"}</p>
+          {m.location ? (
+            <p className="mt-1.5 flex items-center gap-1 text-xs text-muted">
+              <MapPin className="size-3.5 shrink-0" />
+              <span className="truncate">{m.location}</span>
+            </p>
+          ) : null}
+        </div>
+
+        <ArrowUpRight className="size-4 shrink-0 text-muted opacity-0 transition group-hover:opacity-100" />
+      </div>
+
+      {m.talk ? (
+        <div className={cn("relative mt-4 rounded-2xl border p-3.5", accent.card)}>
+          <div className="flex items-center justify-between gap-2">
+            <p className={cn("flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.16em] whitespace-nowrap uppercase", accent.label)}>
+              <Mic className="size-3.5" />
+              {m.talk.done ? "Presented" : "Speaking"}
+              {m.talk.number ? ` · talk ${String(m.talk.number).padStart(2, "0")}` : ""}
+            </p>
+            <span className={cn("shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase", accent.well, accent.label)}>
+              {shortDate(m.talk.date)}
+            </span>
+          </div>
+          <p className="mt-2 line-clamp-2 text-[15px] leading-snug font-semibold">{m.talk.title}</p>
+        </div>
+      ) : (
+        <div className="relative mt-4 rounded-2xl border border-dashed border-border px-3.5 py-3 text-sm text-muted">
+          Not on the schedule yet
+        </div>
+      )}
+
+      {m.tags.length > 0 ? (
+        <div className="relative mt-3 flex flex-wrap gap-1.5">
+          {m.tags.slice(0, 3).map((tag) => (
+            <span key={tag} className="rounded-full border border-border bg-background/40 px-2.5 py-0.5 text-xs text-muted">
+              {tag}
+            </span>
+          ))}
+          {m.tags.length > 3 ? (
+            <span className="rounded-full border border-border bg-background/40 px-2.5 py-0.5 text-xs text-muted">+{m.tags.length - 3}</span>
+          ) : null}
+        </div>
+      ) : null}
+    </Link>
   );
 }
 
 /**
- * The cohort roster. A phone gets a contacts-style list (small avatar, one
- * line of context, chevron); wider screens get a card grid with room for
- * location, interests and the talk itself. Search and the status filter run
- * client-side — a cohort is ten people, there's nothing to page.
+ * The cohort roster as profile cards. Search and the status filter run
+ * client-side — a cohort is a dozen people, there's nothing to page.
  */
 export function MembersDirectory({ members }: { members: DirectoryMember[] }) {
   const [query, setQuery] = useState("");
@@ -78,8 +162,7 @@ export function MembersDirectory({ members }: { members: DirectoryMember[] }) {
     return members.filter((m) => {
       if (!matchesFilter(m, filter)) return false;
       if (!q) return true;
-      return [m.name, m.headline ?? "", m.location ?? "", ...m.tags, m.talk?.title ?? ""]
-        .some((field) => field.toLowerCase().includes(q));
+      return [m.name, m.headline ?? "", m.location ?? "", ...m.tags, m.talk?.title ?? ""].some((field) => field.toLowerCase().includes(q));
     });
   }, [members, query, filter]);
 
@@ -106,9 +189,7 @@ export function MembersDirectory({ members }: { members: DirectoryMember[] }) {
               onClick={() => setFilter(f.id)}
               className={cn(
                 "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium whitespace-nowrap transition",
-                filter === f.id
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border text-muted hover:text-foreground",
+                filter === f.id ? "border-foreground bg-foreground text-background" : "border-border text-muted hover:text-foreground",
               )}
             >
               {f.label}
@@ -119,78 +200,13 @@ export function MembersDirectory({ members }: { members: DirectoryMember[] }) {
       </div>
 
       {visible.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted">
-          Nobody matches that.
-        </p>
+        <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted">Nobody matches that.</p>
       ) : (
-        <>
-          {/* phone: contacts-style list */}
-          <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card sm:hidden">
-            {visible.map((m) => (
-              <li key={m.id}>
-                <Link href={`/dashboard/members/${m.id}`} className="flex items-center gap-3 px-3.5 py-3 active:bg-surface">
-                  <Avatar name={m.name} src={m.avatarUrl} className="size-12 text-sm" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-semibold">
-                      {m.name}
-                      {m.isYou ? <span className="ml-1 text-xs font-normal text-muted">(you)</span> : null}
-                    </p>
-                    {m.headline ? <p className="truncate text-[13px] text-muted">{m.headline}</p> : null}
-                    <div className="mt-1">
-                      <TalkStatus talk={m.talk} compact />
-                    </div>
-                  </div>
-                  <ChevronRight className="size-4 shrink-0 text-muted" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-
-          {/* wider: card grid */}
-          <div className="hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3">
-            {visible.map((m) => (
-              <Link
-                key={m.id}
-                href={`/dashboard/members/${m.id}`}
-                className="group flex flex-col rounded-2xl border border-border bg-card p-5 transition-all duration-150 hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-md"
-              >
-                <div className="flex items-start gap-4">
-                  <Avatar name={m.name} src={m.avatarUrl} className="size-14 text-base" />
-                  <div className="min-w-0 flex-1 pt-0.5">
-                    <p className="truncate font-semibold">
-                      {m.name}
-                      {m.isYou ? <span className="ml-1 text-sm font-normal text-muted">(you)</span> : null}
-                    </p>
-                    <p className="mt-0.5 line-clamp-2 text-sm text-muted">{m.headline ?? "No headline yet"}</p>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex-1 space-y-3">
-                  {m.location ? (
-                    <p className="flex items-center gap-1.5 text-xs text-muted">
-                      <MapPin className="size-3.5 shrink-0" /> <span className="truncate">{m.location}</span>
-                    </p>
-                  ) : null}
-                  {m.tags.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {m.tags.slice(0, 3).map((tag) => (
-                        <span key={tag} className="rounded-full bg-surface px-2.5 py-0.5 text-xs text-muted">{tag}</span>
-                      ))}
-                      {m.tags.length > 3 ? (
-                        <span className="rounded-full bg-surface px-2.5 py-0.5 text-xs text-muted">+{m.tags.length - 3}</span>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="mt-4 flex items-center gap-2 border-t border-border pt-3">
-                  <Mic className="size-3.5 shrink-0 text-muted" />
-                  <TalkStatus talk={m.talk} />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </>
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+          {visible.map((m) => (
+            <MemberCard key={m.id} m={m} />
+          ))}
+        </div>
       )}
     </div>
   );

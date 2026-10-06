@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ScheduleDndProvider } from "@/components/admin/ScheduleDnd";
 import { ScheduleEditor } from "@/components/admin/ScheduleEditor";
 import { SeasonTimeline } from "@/components/dashboard/SeasonTimeline";
 import { getActiveCohort } from "@/lib/cohort";
@@ -33,12 +34,14 @@ export default async function AdminSchedulePage() {
         .select("id, slot_id, title, status, presenter_id, deck_path, deck_status")
         .in("slot_id", ids)
         .neq("status", "rejected")
+        .order("submitted_at", { ascending: true })
     : { data: [] };
   const presenterIds = [...new Set((talks ?? []).map((t) => t.presenter_id))];
   const { data: people } = presenterIds.length
-    ? await supabase.from("profiles").select("id, name").in("id", presenterIds)
+    ? await supabase.from("profiles").select("id, name, avatar_url").in("id", presenterIds)
     : { data: [] };
   const names = new Map((people ?? []).map((p) => [p.id, p.name as string]));
+  const avatars = new Map((people ?? []).map((p) => [p.id, (p.avatar_url as string | null) ?? null]));
   const talksBySlot = new Map<string, typeof talks>();
   for (const t of talks ?? []) talksBySlot.set(t.slot_id, [...(talksBySlot.get(t.slot_id) ?? []), t]);
 
@@ -81,6 +84,7 @@ export default async function AdminSchedulePage() {
         talkId: talk.id,
         title: talk.title,
         presenterName: names.get(talk.presenter_id) ?? "Unknown",
+        presenterAvatarUrl: avatars.get(talk.presenter_id) ?? null,
         status: talk.status as "pending" | "approved",
         isMine: false,
         hasDeck: Boolean(talk.deck_path),
@@ -108,10 +112,12 @@ export default async function AdminSchedulePage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-bold tracking-tight">Schedule</h1>
-        <p className="mt-1 text-muted">{cohort.name}: tap an open seat to book it for a member, or edit sessions, slots and talk assignments below.</p>
+        <p className="mt-1 text-muted">{cohort.name}: drag a talk onto an open seat to move it, or onto another talk to swap them. Tap an open seat to book it for a member.</p>
       </header>
 
-      <SeasonTimeline slots={timeline} viewerHasActiveTalk={false} mode="admin" bookable={bookable} />
+      <ScheduleDndProvider>
+        <SeasonTimeline slots={timeline} viewerHasActiveTalk={false} mode="admin" bookable={bookable} draggable />
+      </ScheduleDndProvider>
 
       <section className="space-y-4 border-t border-border pt-6">
         <div>

@@ -1,4 +1,6 @@
 import { MembersDirectory, type DirectoryMember } from "@/components/dashboard/MembersDirectory";
+import { DAY_PALETTE, talkLooks } from "@/components/dashboard/seasonLayout";
+import { loadSeasonSlots } from "@/lib/slots";
 import { getActiveCohort } from "@/lib/cohort";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient, getSessionUser, getViewerProfile } from "@/lib/supabase/server";
@@ -53,12 +55,16 @@ export default async function MembersPage() {
     cohort
       ? supabase
           .from("talks")
-          .select("presenter_id, title, slot:session_slots!inner(slot_date, season_id)")
+          .select("id, presenter_id, title, slot:session_slots!inner(slot_date, season_id)")
           .eq("status", "approved")
           .eq("slot.season_id", cohort.id)
-          .returns<{ presenter_id: string; title: string; slot: { slot_date: string } }[]>()
-      : Promise.resolve({ data: [] as { presenter_id: string; title: string; slot: { slot_date: string } }[] }),
+          .returns<{ id: string; presenter_id: string; title: string; slot: { slot_date: string } }[]>()
+      : Promise.resolve({ data: [] as { id: string; presenter_id: string; title: string; slot: { slot_date: string } }[] }),
   ]);
+
+  // Talk numbers and day colors exactly as the schedule shows them (cached).
+  const { slots: seasonSlots } = user ? await loadSeasonSlots(user.id) : { slots: [] };
+  const looks = talkLooks(seasonSlots);
 
   // Members don't see who's an admin — only admins see the full roster.
   const roster = (memberships ?? [])
@@ -80,7 +86,11 @@ export default async function MembersPage() {
         location: m.location,
         tags: m.tags ?? [],
         isYou: m.id === user?.id,
-        talk: talk ? { title: talk.title, date: talk.slot.slot_date, done: talk.slot.slot_date < today } : null,
+        talk: talk
+          ? { title: talk.title, date: talk.slot.slot_date, done: talk.slot.slot_date < today, number: looks.get(talk.id)?.number ?? null }
+          : null,
+        // their talk's day color; no talk → a steady color from their name
+        accent: looks.get(talk?.id ?? "")?.palette ?? DAY_PALETTE[[...m.name].reduce((n, c) => n + c.charCodeAt(0), 0) % DAY_PALETTE.length],
       };
     })
     .sort((a, b) => Number(b.isYou) - Number(a.isYou) || a.name.localeCompare(b.name));

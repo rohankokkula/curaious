@@ -43,7 +43,7 @@ export default async function AdminOverviewPage() {
   const slotIds = (slots ?? []).map((s) => s.id);
   const [{ data: talks }, { count: memberCount }, inviteRows] = await Promise.all([
     slotIds.length ? supabase.from("talks").select("slot_id, status").in("slot_id", slotIds).neq("status", "rejected") : Promise.resolve({ data: [] as { slot_id: string; status: string }[] }),
-    supabase.from("cohort_members").select("profile_id", { count: "exact", head: true }).eq("cohort_id", cohort.id).eq("status", "active"),
+    supabase.from("cohort_members").select("profile_id", { count: "exact", head: true }).eq("cohort_id", cohort.id).eq("status", "active").neq("role", "admin"),
     loadInvites(),
   ]);
 
@@ -70,7 +70,7 @@ export default async function AdminOverviewPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat value={pending} label="Talks awaiting review" hint="Review and approve" href="/admin/talks" icon={FileText} />
         <Stat value={`${filled} / ${totalCapacity}`} label="Talk spots filled" hint={`Across ${byDate.size} days`} href="/admin/schedule" icon={CalendarDays} />
-        <Stat value={memberCount ?? 0} label="Members" hint={`of ${cohort.capacity} seats`} href="/admin/members" icon={Users} />
+        <Stat value={memberCount ?? 0} label="Members" hint="active in the cohort" href="/admin/members" icon={Users} />
         <Stat value={unaccepted} label="Invites not signed in" hint={`${inviteRows.length} invited`} href="/admin/invites" icon={Mail} />
       </div>
 

@@ -89,12 +89,13 @@ export const loadCohortPage = cache(async (number: number): Promise<CohortPageDa
     .select(
       `id, name, number, starts_on, ends_on,
       session_slots (id, slot_date, slot_type, label, sort_order, capacity, recording_url,
-        talks (id, presenter_id, title, description, status)
+        talks (id, presenter_id, title, description, status, submitted_at)
       )`,
     )
     .eq("number", number)
     .eq("session_slots.talks.status", "approved")
     .order("sort_order", { referencedTable: "session_slots", ascending: true })
+    .order("submitted_at", { referencedTable: "session_slots.talks", ascending: true })
     .limit(1)
     .maybeSingle<SeasonRow>();
 

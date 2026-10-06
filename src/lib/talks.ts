@@ -26,6 +26,7 @@ export type SlotTalk = {
   /** Only ever set once approved — pending claims stay anonymous unless it's yours. */
   title: string | null;
   presenterName: string | null;
+  presenterAvatarUrl: string | null;
   status: "pending" | "approved";
   isMine: boolean;
   /** Whether the viewer may see the deck, so the tile can render its first slide. */

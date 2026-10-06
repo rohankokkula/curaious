@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 export function TitleCover({
   title,
   speaker,
+  speakerAvatarUrl = null,
   status,
   number,
   palette,
@@ -17,6 +18,7 @@ export function TitleCover({
 }: {
   title: string;
   speaker: string | null;
+  speakerAvatarUrl?: string | null;
   /** Small tag in the corner: the request is pending, or the deck isn't up yet. */
   status: "requested" | "deck-soon" | null;
   number: number;
@@ -96,9 +98,19 @@ export function TitleCover({
         </p>
         {speaker ? (
           <p className={cn("flex min-w-0 items-center gap-1.5 font-semibold", lg ? "mt-3 text-sm md:text-base" : "mt-1 text-[9px] sm:mt-1.5 sm:text-[11px]")}>
-            <span className={cn("flex shrink-0 items-center justify-center rounded-full bg-current", lg ? "size-6" : "size-3.5 sm:size-4")}>
-              <span className={cn("font-bold text-black/80", lg ? "text-[9px]" : "text-[6px] sm:text-[7px]")}>{initialsOf(speaker)}</span>
-            </span>
+            {speakerAvatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={speakerAvatarUrl}
+                alt=""
+                loading="lazy"
+                className={cn("shrink-0 rounded-full object-cover ring-2 ring-current", lg ? "size-8" : "size-5 sm:size-6")}
+              />
+            ) : (
+              <span className={cn("flex shrink-0 items-center justify-center rounded-full bg-current ring-2 ring-current", lg ? "size-8" : "size-5 sm:size-6")}>
+                <span className={cn("font-bold text-black/80", lg ? "text-[10px]" : "text-[7px] sm:text-[8px]")}>{initialsOf(speaker)}</span>
+              </span>
+            )}
             <span className="truncate">{speaker}</span>
           </p>
         ) : null}

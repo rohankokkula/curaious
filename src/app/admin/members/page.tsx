@@ -22,6 +22,8 @@ export default async function AdminMembersPage() {
     // re-inviting their email brings them back
     .eq("status", "active");
   const ids = (memberships ?? []).map((m) => m.profile_id);
+  // The headline count is the cohort itself: you (the curator) aren't one of the seats.
+  const memberCount = (memberships ?? []).filter((m) => m.role !== "admin").length;
   const { data: profiles } = ids.length
     ? await supabase.from("profiles").select("id, name, email, avatar_url").in("id", ids)
     : { data: [] };
@@ -37,7 +39,7 @@ export default async function AdminMembersPage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Members</h1>
-          <p className="mt-1 text-muted">{cohort.name} · {ids.length} of {cohort.capacity} seats</p>
+          <p className="mt-1 text-muted">{cohort.name} · {memberCount} {memberCount === 1 ? "member" : "members"}</p>
         </div>
         <Button asChild><Link href="/admin/invites">Invite people</Link></Button>
       </header>

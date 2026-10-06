@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Check, EyeOff, FileText, Mail, MapPin, Plus } from "lucide-react";
+import { ArrowUpRight, Award, Check, EyeOff, Link2, Mail, MapPin, Mic, Plus, Sparkles } from "lucide-react";
 import { BadgeArt } from "@/components/dashboard/BadgeArt";
 import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
 import { DeckUploadPanel } from "@/components/dashboard/DeckUploadPanel";
@@ -12,13 +12,16 @@ import { RecordingCard } from "@/components/dashboard/RecordingCard";
 import { RemoveMemberButton } from "@/components/dashboard/RemoveMemberButton";
 import { ShareProfileButton } from "@/components/dashboard/ShareProfileButton";
 import { GithubIcon, LinkedinIcon, XIcon } from "@/components/icons/SocialIcons";
+import { DAY_PALETTE, talkLooks } from "@/components/dashboard/seasonLayout";
+import { Wordmark } from "@/components/shell/Wordmark";
+import { loadSeasonSlots } from "@/lib/slots";
 import { BADGES, isBadgeKey } from "@/lib/badges";
 import { getActiveCohort } from "@/lib/cohort";
 import { canSee, resolveVisibility } from "@/lib/profile";
-import { RECORDINGS_VISIBLE_TO, SAMPLE_RECORDING_URL } from "@/lib/recording";
+import { RECORDINGS_VISIBLE_TO } from "@/lib/recording";
 import { RATING_MAX, RATING_PARAMETERS, type RatingParameterKey } from "@/lib/ratings";
 import { loadRatingAggregate } from "@/lib/ratingsAggregate";
-import { deckIsPublic, formatSlotDate, type DeckStatus, type TalkStatus } from "@/lib/talks";
+import type { DeckStatus, TalkStatus } from "@/lib/talks";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient, getSessionUser, getViewerProfile } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
@@ -67,20 +70,6 @@ function Card({ children, className }: { children: React.ReactNode; className?: 
   return <div className={cn("rounded-2xl border border-border bg-card p-5 sm:p-6", className)}>{children}</div>;
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">{children}</p>;
-}
-
-function StatusBadge({ status }: { status: TalkStatus }) {
-  return status === "approved" ? (
-    <span className="rounded-full bg-success-soft px-2.5 py-1 text-[11px] font-semibold text-success">Booked</span>
-  ) : (
-    <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
-      Requested
-    </span>
-  );
-}
-
 /** Quiet marker on a field that's only on screen because it's your own
  * profile — so you can tell at a glance what the rest of the cohort can't see.
  * An icon rather than a pill so it never pushes a line onto two. */
@@ -109,14 +98,9 @@ function ScoreBar({ label, value }: { label: string; value: number | null }) {
   );
 }
 
-/** Number over label, side by side with the avatar like a profile header in an app. */
-function Stat({ value, label }: { value: React.ReactNode; label: string }) {
-  return (
-    <div className="min-w-0 text-center">
-      <p className="truncate text-lg leading-tight font-bold tracking-tight tabular-nums sm:text-xl">{value}</p>
-      <p className="mt-0.5 truncate text-[11px] text-muted sm:text-xs">{label}</p>
-    </div>
-  );
+function initialsFor(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
 }
 
 const shortDate = (date: string) =>
@@ -232,18 +216,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
     { href: member.github_url, key: "github" as const, icon: GithubIcon, label: "GitHub" },
   ].filter((link) => link.href && show(link.key));
 
-  /* ── at-a-glance numbers ── */
   const scoresVisible = Boolean(aggregate && show("scores") && aggregate.count > 0);
-  const statItems = [
-    {
-      label: "Talk",
-      value: !talk || !talkVisible ? "–" : talkDone ? "Done" : talk.slot ? shortDate(talk.slot.slot_date) : "Booked",
-    },
-    { label: `Score / ${RATING_MAX}`, value: scoresVisible ? aggregate!.averages.overall : "–" },
-    canSeeGiven
-      ? { label: "Rated", value: given.length }
-      : { label: "Responses", value: scoresVisible ? aggregate!.count : "–" },
-  ];
 
   /* ── your own profile: what's still missing ── */
   const checklist = [
@@ -260,151 +233,230 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   const hasAbout = Boolean(member.bio && show("bio"));
   const hasTags = Boolean(member.tags && member.tags.length > 0 && show("tags"));
 
-  /* ── header: avatar + stats, who they are, about and interests, then actions ── */
+  /* ── header: a profile card in their talk's color ── */
+  // Their talk's day color from the schedule, so a profile and the talk cover
+  // match; members without a talk get a steady color from their name.
+  const { slots: seasonSlots } = await loadSeasonSlots(user.id);
+  const look = talk ? talkLooks(seasonSlots).get(talk.id) : undefined;
+  const accent = look?.palette ?? DAY_PALETTE[[...member.name].reduce((n, c) => n + c.charCodeAt(0), 0) % DAY_PALETTE.length];
+  const talkStatus = !talk ? null : talk.status !== "approved" ? "Requested" : talkDone ? "Presented" : talk.deck_status === "approved" ? null : "Deck soon";
+
   const header = (
-    <Card className="p-5 sm:p-6">
-      <div className="flex items-center gap-5 sm:gap-6">
-        <Avatar
-          name={member.name}
-          src={member.avatar_url}
-          size="xl"
-          className="size-20 text-xl ring-4 ring-surface sm:size-24 sm:text-2xl"
+    <section className="relative overflow-hidden rounded-3xl border border-border bg-card p-5 sm:p-8">
+      {/* decoration in the accent color: a glow and a faint grid from the top right */}
+      <div aria-hidden className={cn("pointer-events-none absolute inset-0", accent.label)}>
+        <span className="absolute -top-24 -right-24 size-96 rounded-full bg-current opacity-[0.14] blur-3xl" />
+        <span
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage: "linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+            maskImage: "radial-gradient(ellipse at 90% 0%, black 0%, transparent 65%)",
+          }}
         />
-        <div className="hidden min-w-0 flex-1 md:block">
-          <h1 className="truncate text-2xl font-bold tracking-tight">{member.name}</h1>
-          {member.headline && show("headline") ? (
-            <p className="mt-0.5 text-sm text-muted">
-              {member.headline}
-              <OnlyYou when={hiddenFromOthers("headline")} />
-            </p>
-          ) : null}
+      </div>
+
+      <div className="relative">
+        {/* top bar: wordmark + cohort, actions */}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="leading-none max-md:hidden">
+            <Wordmark className="block text-lg font-bold tracking-tight" />
+            <span className="mt-1.5 block text-[10px] font-semibold tracking-[0.24em] text-muted uppercase">{cohort?.name ?? "Cohort"}</span>
+          </div>
+          <div className="flex flex-wrap gap-2 [&_button]:h-9">
+            {isSelf ? (
+              <EditProfileDialog
+                profile={{
+                  name: member.name,
+                  headline: member.headline,
+                  location: member.location,
+                  bio: member.bio,
+                  tags: member.tags ?? [],
+                  avatar_url: member.avatar_url,
+                  linkedin_url: member.linkedin_url,
+                  twitter_url: member.twitter_url,
+                  github_url: member.github_url,
+                  visibility: member.visibility,
+                }}
+              />
+            ) : null}
+            <ShareProfileButton />
+            {canRemove && cohort ? <RemoveMemberButton cohortId={cohort.id} profileId={member.id} name={member.name} /> : null}
+          </div>
         </div>
-        <div className="grid flex-1 grid-cols-3 gap-2 md:max-w-xs md:flex-none md:gap-6 md:border-l md:border-border md:pl-6">
-          {statItems.map((stat) => (
-            <Stat key={stat.label} label={stat.label} value={stat.value} />
-          ))}
-        </div>
-      </div>
 
-      {/* phone: name sits under the avatar row, like an app profile */}
-      <div className="mt-4 md:hidden">
-        <h1 className="text-xl font-bold tracking-tight">{member.name}</h1>
-        {member.headline && show("headline") ? (
-          <p className="mt-0.5 text-sm text-muted">
-            {member.headline}
-            <OnlyYou when={hiddenFromOthers("headline")} />
-          </p>
-        ) : null}
-      </div>
+        {/* who they are + photo */}
+        <div className="mt-5 grid gap-5 md:mt-6 md:grid-cols-[auto_minmax(0,1fr)] md:items-center md:gap-10">
+          <div className="min-w-0 md:pt-2">
+            <h1 className="text-4xl leading-[0.95] font-bold tracking-tight text-balance md:text-6xl">{member.name}</h1>
+            {member.headline && show("headline") ? (
+              <p className="mt-3 text-lg text-muted md:text-2xl">
+                {member.headline}
+                <OnlyYou when={hiddenFromOthers("headline")} />
+              </p>
+            ) : null}
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-muted">
-        {member.location && show("location") ? (
-          <span className="inline-flex items-center gap-1.5">
-            <MapPin className="size-3.5 shrink-0" />
-            {member.location}
-            <OnlyYou when={hiddenFromOthers("location")} />
-          </span>
-        ) : null}
-        {show("email") ? (
-          <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
-            <Mail className="size-3.5 shrink-0" />
-            <span className="truncate">{member.email}</span>
-            <OnlyYou when={hiddenFromOthers("email")} />
-          </span>
-        ) : null}
-        {links.length > 0 ? (
-          <span className="flex items-center gap-1.5">
-            {links.map(({ href, icon: Icon, label }) => (
-              <a
-                key={label}
-                href={href!}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={label}
-                className="flex size-7 items-center justify-center rounded-full border border-border text-muted transition hover:border-foreground/30 hover:text-foreground"
-              >
-                <Icon className="size-3.5" />
-              </a>
-            ))}
-          </span>
-        ) : null}
-      </div>
+            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted">
+              {member.location && show("location") ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin className="size-4 shrink-0" />
+                  {member.location}
+                  <OnlyYou when={hiddenFromOthers("location")} />
+                </span>
+              ) : null}
+              {show("email") ? (
+                <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+                  <Mail className="size-4 shrink-0" />
+                  <span className="truncate">{member.email}</span>
+                  <OnlyYou when={hiddenFromOthers("email")} />
+                </span>
+              ) : null}
+            </div>
 
-      {hasAbout || hasTags ? (
-        <div className="mt-4 grid gap-4 border-t border-border pt-4 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] md:gap-8">
-          {hasAbout ? (
-            <div>
-              <SectionLabel>
-                About
+            {hasAbout ? (
+              <p className="mt-5 max-w-xl text-[15px] leading-relaxed whitespace-pre-line text-muted">
+                {member.bio}
                 <OnlyYou when={hiddenFromOthers("bio")} />
-              </SectionLabel>
-              <p className="mt-1.5 text-sm leading-relaxed whitespace-pre-line text-muted">{member.bio}</p>
-            </div>
-          ) : null}
-          {hasTags ? (
-            <div>
-              <SectionLabel>
-                Interests
-                <OnlyYou when={hiddenFromOthers("tags")} />
-              </SectionLabel>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {member.tags!.map((tag) => (
-                  <span key={tag} className="rounded-full bg-surface px-2.5 py-1 text-xs text-muted ring-1 ring-border">
-                    {tag}
-                  </span>
-                ))}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="order-first">
+            {member.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={member.avatar_url}
+                alt={member.name}
+                className={cn("aspect-square w-28 rounded-2xl border-2 object-cover shadow-xl sm:w-36 md:w-60 lg:w-72", accent.well)}
+              />
+            ) : (
+              <div
+                className={cn(
+                  "relative flex aspect-square w-28 items-center justify-center overflow-hidden rounded-2xl border-2 sm:w-36 md:w-60 lg:w-72",
+                  accent.well,
+                  accent.label,
+                )}
+              >
+                <span aria-hidden className="absolute -top-10 -right-10 size-40 rounded-full bg-current opacity-25 blur-3xl" />
+                <span className="relative text-4xl font-bold tracking-tight md:text-7xl">{initialsFor(member.name)}</span>
               </div>
+            )}
+          </div>
+        </div>
+
+        {/* their talk + links */}
+        <div className={cn("mt-6 grid gap-4", links.length > 0 && "md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]")}>
+          {talk && talkVisible ? (
+            <Link
+              href={`/dashboard/talks/${talk.id}/present`}
+              className={cn("group relative block overflow-hidden rounded-2xl border p-5 transition hover:-translate-y-0.5 hover:shadow-lg", accent.card)}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className={cn("flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] uppercase", accent.label)}>
+                  <Mic className="size-4" /> {talkDone ? "Spoke at curaious" : "Speaking at curaious"}
+                </p>
+                <div className="flex items-center gap-1.5">
+                  {talkStatus ? (
+                    <span className="rounded-full bg-background/50 px-2 py-0.5 text-[10px] font-semibold text-muted">{talkStatus}</span>
+                  ) : null}
+                  {talk.slot ? (
+                    <span className={cn("rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase", accent.well, accent.label)}>
+                      {shortDate(talk.slot.slot_date)}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+              <h2 className="mt-3 text-xl leading-tight font-bold tracking-tight text-balance md:text-2xl">{talk.title}</h2>
+              <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-muted">{talk.description}</p>
+              {scoresVisible ? (
+                <p className="mt-3 text-sm">
+                  <span className="text-lg font-bold tabular-nums">{aggregate!.averages.overall}</span>
+                  <span className="text-muted"> / {RATING_MAX} from {aggregate!.count} {aggregate!.count === 1 ? "rating" : "ratings"}</span>
+                </p>
+              ) : null}
+            </Link>
+          ) : (
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-dashed border-border p-5">
+              <p className="text-sm text-muted">{isSelf ? "You're not on the schedule yet." : "Not on the schedule yet."}</p>
+              {isSelf ? (
+                <Link href="/dashboard/schedule" className="shrink-0 rounded-full bg-foreground px-3.5 py-1.5 text-xs font-semibold text-background">
+                  Claim a slot
+                </Link>
+              ) : null}
+            </div>
+          )}
+
+          {links.length > 0 ? (
+            <div>
+              <p className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] text-muted uppercase">
+                <Link2 className="size-4" /> Links
+              </p>
+              <ul className="mt-3 space-y-2">
+                {links.map(({ href, icon: Icon, label, key }) => (
+                  <li key={label}>
+                    <a
+                      href={href!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 rounded-xl border border-border bg-background/40 px-4 py-3 text-sm font-medium transition hover:border-foreground/30"
+                    >
+                      <Icon className="size-5" />
+                      <span className="flex-1">
+                        {label}
+                        <OnlyYou when={hiddenFromOthers(key)} />
+                      </span>
+                      <ArrowUpRight className="size-4 text-muted" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </div>
           ) : null}
         </div>
-      ) : null}
 
-      {badges.length > 0 ? (
-        <div className="mt-4 border-t border-border pt-4">
-          <SectionLabel>Badges</SectionLabel>
-          <ul className="mt-2.5 flex flex-wrap gap-2">
-            {badges.map((badge) => (
-              <li key={badge.key}>
-                <Link
-                  href="/dashboard/badges"
-                  title={`${badge.name}: ${badge.awardedFor}`}
-                  className="flex items-center gap-2 rounded-full border border-border bg-surface py-1 pr-3 pl-1.5 transition hover:border-foreground/30"
-                >
-                  <BadgeArt badge={badge.key} className="w-6" />
-                  <span className="text-xs font-semibold">{badge.name}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      <div
-        className={cn(
-          "mt-4 grid gap-2 [&_button]:h-9 [&_button]:w-full",
-          isSelf || canRemove ? "grid-cols-2 md:max-w-sm" : "grid-cols-1 md:max-w-[12rem]",
-        )}
-      >
-        {isSelf ? (
-          <EditProfileDialog
-            profile={{
-              name: member.name,
-              headline: member.headline,
-              location: member.location,
-              bio: member.bio,
-              tags: member.tags ?? [],
-              avatar_url: member.avatar_url,
-              linkedin_url: member.linkedin_url,
-              twitter_url: member.twitter_url,
-              github_url: member.github_url,
-              visibility: member.visibility,
-            }}
-          />
+        {/* interests, badges, numbers */}
+        {hasTags || badges.length > 0 ? (
+          <div className="mt-6 grid gap-5 border-t border-border pt-5 md:mt-8 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+            {hasTags ? (
+              <div>
+                <p className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] text-muted uppercase">
+                  <Sparkles className="size-4" /> Interests
+                  <OnlyYou when={hiddenFromOthers("tags")} />
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {member.tags!.map((tag) => (
+                    <span key={tag} className="rounded-full border border-border bg-background/40 px-3 py-1.5 text-sm">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {badges.length > 0 ? (
+              <div>
+                <p className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] text-muted uppercase">
+                  <Award className="size-4" /> Badges
+                </p>
+                <ul className="mt-3 flex flex-wrap gap-2">
+                  {badges.map((badge) => (
+                    <li key={badge.key}>
+                      <Link
+                        href="/dashboard/badges"
+                        title={`${badge.name}: ${badge.awardedFor}`}
+                        className="flex items-center gap-2 rounded-full border border-border bg-background/40 py-1 pr-3 pl-1.5 transition hover:border-foreground/30"
+                      >
+                        <BadgeArt badge={badge.key} className="w-6" />
+                        <span className="text-xs font-semibold">{badge.name}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
         ) : null}
-        <ShareProfileButton />
-        {canRemove && cohort ? <RemoveMemberButton cohortId={cohort.id} profileId={member.id} name={member.name} /> : null}
       </div>
-    </Card>
+    </section>
   );
 
   /* ── side panel: profile completeness, yours only ── */
@@ -444,111 +496,71 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   /* ── presentation tab ── */
   const presentationTab = (
     <div className="space-y-4 sm:space-y-6">
-      {!talk || !talkVisible ? (
-        <Card>
-          <div className="flex flex-col items-center py-4 text-center">
-            <span className="flex size-12 items-center justify-center rounded-full bg-surface">
-              <FileText className="size-5 text-muted" />
-            </span>
-            <p className="mt-3 text-sm text-muted">
-              {talk && !show("talk")
-                ? "This member keeps their talk private."
-                : isSelf
-                  ? "You haven't claimed a slot yet."
-                  : "No talk on the calendar yet."}
-            </p>
-            {isSelf && !talk ? (
-              <Link
-                href="/dashboard/schedule"
-                className="mt-4 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
-              >
-                Claim a slot
-              </Link>
+      {/* The talk itself lives in the profile card above. What's left here:
+          why a request came back, and (for you / the curator) deck tools. */}
+      {sentBack ? (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-300">
+            Sent back · {sentBack.title}
+          </p>
+          <p className="mt-2 text-sm text-foreground">{sentBack.rejection_reason || "No reason given. Ask the curator."}</p>
+          {isSelf ? <p className="mt-2 text-sm text-muted">The slot is open again. Claim any open slot from the schedule.</p> : null}
+        </div>
+      ) : null}
+
+      {talk && (isSelf || (isAdmin && talk.deck_path)) ? (
+        <Card className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-base font-bold">{isSelf ? "Manage your talk" : "Deck"}</h3>
+            {talk.deck_path ? (
+              <div className="flex gap-2">
+                <Link
+                  href={`/dashboard/talks/${talk.id}/present`}
+                  className="rounded-full bg-foreground px-4 py-1.5 text-sm font-semibold text-background transition hover:bg-foreground/90"
+                >
+                  View deck
+                </Link>
+                <a
+                  href={`/api/talks/${talk.id}/deck/view`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full border border-border px-4 py-1.5 text-sm font-medium transition hover:bg-surface"
+                >
+                  Open PDF
+                </a>
+              </div>
             ) : null}
           </div>
-
-          {sentBack ? (
-            <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-300">
-                Sent back · {sentBack.title}
-              </p>
-              <p className="mt-2 text-sm text-foreground">
-                {sentBack.rejection_reason || "No reason given. Ask the curator."}
-              </p>
-              {isSelf ? (
-                <p className="mt-2 text-sm text-muted">The slot is open again. Claim any open slot from the schedule.</p>
-              ) : null}
+          {talk.deck_path ? (
+            <div className="relative aspect-video max-w-md overflow-hidden rounded-xl border border-border bg-surface">
+              <DeckPageThumbnail talkId={talk.id} className="absolute inset-0" />
             </div>
           ) : null}
-        </Card>
-      ) : (
-        <Card className="overflow-hidden p-0 sm:p-0">
-          <div className="sm:flex">
-            {talk.deck_path && (isSelf || isAdmin || deckIsPublic(talk)) ? (
-              <div className="relative aspect-video bg-surface sm:w-64 sm:shrink-0 md:w-72">
-                <DeckPageThumbnail talkId={talk.id} className="absolute inset-0" />
+          {isSelf ? (
+            <>
+              <DeckUploadPanel talkId={talk.id} booked={talk.status === "approved"} deckStatus={talk.deck_status} feedback={talk.deck_feedback} />
+              <div className="border-t border-border pt-4">
+                <DeleteTalkButton talkId={talk.id} />
               </div>
-            ) : null}
-
-            <div className="min-w-0 flex-1 p-5 sm:p-6">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs text-muted capitalize">
-                  {talk.slot ? `${talk.slot.label} · ${formatSlotDate(talk.slot.slot_date)}` : "Slot"}
-                </p>
-                <StatusBadge status={talk.status} />
-              </div>
-              <h2 className="mt-2 text-xl font-bold tracking-tight text-balance">{talk.title}</h2>
-              <p className="mt-2 text-sm leading-relaxed whitespace-pre-line text-muted">{talk.description}</p>
-
-              {/* The deck itself is only for the presenter (or an admin) to open
-                  from their own profile — everyone else's route to it is the
-                  actual review page (/present), where viewing the deck is part
-                  of rating the talk, not a standalone download. */}
-              {talk.deck_path && (isSelf || isAdmin) ? (
-                <div className="mt-5 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                  <Link
-                    href={`/dashboard/talks/${talk.id}/present`}
-                    className="rounded-full bg-foreground px-4 py-2 text-center text-sm font-semibold text-background transition hover:bg-foreground/90"
-                  >
-                    View deck
-                  </Link>
-                  <a
-                    href={`/api/talks/${talk.id}/deck/view`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-full border border-border px-4 py-2 text-center text-sm font-medium transition hover:bg-surface"
-                  >
-                    Open PDF
-                  </a>
-                </div>
-              ) : null}
-
-              {isSelf ? (
-                <div className="mt-5">
-                  <DeckUploadPanel
-                    talkId={talk.id}
-                    booked={talk.status === "approved"}
-                    deckStatus={talk.deck_status}
-                    feedback={talk.deck_feedback}
-                  />
-                </div>
-              ) : null}
-
-              {isSelf ? (
-                <div className="mt-5 border-t border-border pt-4">
-                  <DeleteTalkButton talkId={talk.id} />
-                </div>
-              ) : null}
-            </div>
-          </div>
+            </>
+          ) : null}
         </Card>
-      )}
+      ) : null}
 
-      {/* Members see a recording once one exists (and the speaker shows it).
-          The curator alone still gets the card against a sample link before
-          then, so the layout can be checked. */}
-      {talk && talk.status === "approved" && canSeeRecording && (talk.recording_url || isAdmin) ? (
-        <RecordingCard url={talk.recording_url ?? SAMPLE_RECORDING_URL} title={talk.title} isSample={!talk.recording_url} />
+      {!talk || !talkVisible || talk.status !== "approved" ? (
+        !sentBack && !(talk && isSelf) ? (
+          <Card>
+            <p className="py-2 text-center text-sm text-muted">
+              {talk && !show("talk") ? "This member keeps their talk private." : "Scores and feedback show up here after the talk."}
+            </p>
+          </Card>
+        ) : null
+      ) : null}
+
+      {/* A recording attached to this talk, once one exists (and the speaker
+          shows it). Session recordings live on the schedule. */}
+      {talk && talk.status === "approved" && canSeeRecording && talk.recording_url ? (
+        <RecordingCard url={talk.recording_url} title={talk.title} isSample={false} />
       ) : null}
 
       {talk && talk.status === "approved" && show("scores") ? (
@@ -678,7 +690,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
             tabs={[
               {
                 id: "presentation",
-                label: isSelf ? "My presentation" : "Presentation",
+                label: isSelf ? "My talk" : "Scores & feedback",
                 content: presentationTab,
               },
               ...(canSeeGiven

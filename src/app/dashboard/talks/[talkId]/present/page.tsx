@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DeleteTalkButton } from "@/components/dashboard/DeleteTalkButton";
 import { RatingForm } from "@/components/dashboard/RatingForm";
 import { RatingWindowToggle } from "@/components/dashboard/RatingWindowToggle";
+import { EditTalkDialog } from "@/components/admin/EditTalkDialog";
+import { weekKey } from "@/components/dashboard/seasonLayout";
 import { DeckUploadPanel } from "@/components/dashboard/DeckUploadPanel";
 import { SlideDeck } from "@/components/dashboard/SlideDeck";
 import { SpeakerCard } from "@/components/dashboard/SpeakerCard";
@@ -107,8 +109,10 @@ export default async function TalkPage({ params }: { params: Promise<{ talkId: s
   const presenter = talk.presenter;
   const season = slot?.season ?? null;
 
+  // Monday-anchored weeks, the same grouping the schedule uses, so "Week 2"
+  // here is "Week 2" there.
   const weekIndex = slot && season
-    ? Math.floor((Date.parse(`${slot.slot_date}T00:00:00Z`) - Date.parse(`${season.starts_on}T00:00:00Z`)) / (7 * 86400000)) + 1
+    ? Math.round((Date.parse(`${weekKey(slot.slot_date)}T00:00:00Z`) - Date.parse(`${weekKey(season.starts_on)}T00:00:00Z`)) / (7 * 86400000)) + 1
     : null;
 
   // Siblings sharing the same slot, for "talk N of M" and prev/next.
@@ -147,7 +151,10 @@ export default async function TalkPage({ params }: { params: Promise<{ talkId: s
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-5">
           <div className="rounded-xl border border-border bg-card p-5">
-            {when ? <Badge>{when}</Badge> : null}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              {when ? <Badge>{when}</Badge> : <span />}
+              {isAdmin ? <EditTalkDialog talkId={talk.id} title={talk.title} description={talk.description} /> : null}
+            </div>
             <h1 className="mt-3 text-2xl font-bold tracking-tight">{talk.title}</h1>
             <p className="mt-2 leading-relaxed text-muted">{talk.description}</p>
           </div>

@@ -50,6 +50,7 @@ function Thumb({ talk, className, size = "sm" }: { talk: TalkView; className?: s
         <TitleCover
           title={talk.title}
           speaker={talk.presenter?.name ?? null}
+          speakerAvatarUrl={talk.presenter?.avatar_url ?? null}
           status={talk.inReview ? "requested" : talk.deckPending ? "deck-soon" : null}
           number={talk.look.number}
           palette={talk.look.palette}
@@ -198,7 +199,9 @@ export default async function TalksPage() {
         hasThumb: talk.presenter_id === user?.id ? Boolean(talk.deck_path) : deckIsPublic(talk),
       };
     })
-    .sort((a, b) => a.date.localeCompare(b.date));
+    // The schedule's own sequence: talk 01, 02, 03… (date, then seat within
+    // the session). Anything without a seat number falls back to its date.
+    .sort((a, b) => (a.look?.number ?? Number.MAX_SAFE_INTEGER) - (b.look?.number ?? Number.MAX_SAFE_INTEGER) || a.date.localeCompare(b.date));
 
   const upcoming = talks.filter((t) => t.date >= today);
   // Most recent first: what you'd most likely want to go back and rate.
