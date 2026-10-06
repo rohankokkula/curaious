@@ -1,92 +1,20 @@
 import Link from "next/link";
-import { FileText, Plus, Rocket, Trophy, Users } from "lucide-react";
+import { Clock, Plus, Rocket, Trophy, Users } from "lucide-react";
 import { BookSeatDialog, type BookableMember } from "@/components/admin/BookSeatDialog";
 import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
+import { dayPalette, GRAY, groupWeeks, seatNumbers, type DayPalette } from "@/components/dashboard/seasonLayout";
+import { TitleCover } from "@/components/dashboard/TalkCover";
 import { WatchRecordingButton } from "@/components/dashboard/WatchRecordingButton";
 import type { SlotView } from "@/lib/talks";
 import { cn } from "@/lib/utils";
 
-/** One color per day card: a tint, a matching border and the date label
- * in the same hue. Dark mode uses each
- * hue's deepest shade rather than a faint wash of the bright one — a 16%
- * wash over pure black came out muddy (amber read as brown). Amber and
- * orange are left out for the same reason. Paired light/dark per color
- * since this page follows the theme toggle. */
-const DAY_PALETTE = [
-  {
-    card: "border-violet-300/70 bg-violet-100/90 dark:border-violet-400/30 dark:bg-violet-950/70",
-    label: "text-violet-700 dark:text-violet-300",
-    tile: "border-violet-300/60 bg-white/70 hover:border-violet-400 dark:border-violet-400/20 dark:bg-violet-900/30 dark:hover:border-violet-400/50",
-    well: "border-violet-400/50 bg-violet-50 dark:border-violet-400/30 dark:bg-violet-950/60",
-  },
-  {
-    card: "border-cyan-300/70 bg-cyan-100/90 dark:border-cyan-400/30 dark:bg-cyan-950/70",
-    label: "text-cyan-700 dark:text-cyan-300",
-    tile: "border-cyan-300/60 bg-white/70 hover:border-cyan-400 dark:border-cyan-400/20 dark:bg-cyan-900/30 dark:hover:border-cyan-400/50",
-    well: "border-cyan-400/50 bg-cyan-50 dark:border-cyan-400/30 dark:bg-cyan-950/60",
-  },
-  {
-    card: "border-rose-300/70 bg-rose-100/90 dark:border-rose-400/30 dark:bg-rose-950/70",
-    label: "text-rose-700 dark:text-rose-300",
-    tile: "border-rose-300/60 bg-white/70 hover:border-rose-400 dark:border-rose-400/20 dark:bg-rose-900/30 dark:hover:border-rose-400/50",
-    well: "border-rose-400/50 bg-rose-50 dark:border-rose-400/30 dark:bg-rose-950/60",
-  },
-  {
-    card: "border-emerald-300/70 bg-emerald-100/90 dark:border-emerald-400/30 dark:bg-emerald-950/70",
-    label: "text-emerald-700 dark:text-emerald-300",
-    tile: "border-emerald-300/60 bg-white/70 hover:border-emerald-400 dark:border-emerald-400/20 dark:bg-emerald-900/30 dark:hover:border-emerald-400/50",
-    well: "border-emerald-400/50 bg-emerald-50 dark:border-emerald-400/30 dark:bg-emerald-950/60",
-  },
-  {
-    card: "border-indigo-300/70 bg-indigo-100/90 dark:border-indigo-400/30 dark:bg-indigo-950/70",
-    label: "text-indigo-700 dark:text-indigo-300",
-    tile: "border-indigo-300/60 bg-white/70 hover:border-indigo-400 dark:border-indigo-400/20 dark:bg-indigo-900/30 dark:hover:border-indigo-400/50",
-    well: "border-indigo-400/50 bg-indigo-50 dark:border-indigo-400/30 dark:bg-indigo-950/60",
-  },
-  {
-    card: "border-fuchsia-300/70 bg-fuchsia-100/90 dark:border-fuchsia-400/30 dark:bg-fuchsia-950/70",
-    label: "text-fuchsia-700 dark:text-fuchsia-300",
-    tile: "border-fuchsia-300/60 bg-white/70 hover:border-fuchsia-400 dark:border-fuchsia-400/20 dark:bg-fuchsia-900/30 dark:hover:border-fuchsia-400/50",
-    well: "border-fuchsia-400/50 bg-fuchsia-50 dark:border-fuchsia-400/30 dark:bg-fuchsia-950/60",
-  },
-];
 
-type DayPalette = (typeof DAY_PALETTE)[number];
-
-/** Yellow sits outside the rotation and is handed out on purpose, to the
- * dates pinned below.
- * Its dark tint is kept low and the border and label carry the color; a
- * stronger yellow wash over black turns olive. */
-const YELLOW: DayPalette = {
-  card: "border-yellow-300/80 bg-yellow-100/90 dark:border-yellow-400/40 dark:bg-yellow-400/[0.10]",
-  label: "text-yellow-700 dark:text-yellow-300",
-  tile: "border-yellow-300/70 bg-white/70 hover:border-yellow-400 dark:border-yellow-400/25 dark:bg-yellow-400/[0.06] dark:hover:border-yellow-400/50",
-  well: "border-yellow-400/60 bg-yellow-50 dark:border-yellow-400/35 dark:bg-yellow-400/[0.07]",
-};
-
-/** Neutral gray for the cohort-wide sessions (kickoff, recognitions), so the
- * colored cards stay about talks. */
-const GRAY: DayPalette = {
-  card: "border-neutral-300/80 bg-neutral-100/90 dark:border-neutral-500/30 dark:bg-neutral-800/50",
-  label: "text-neutral-600 dark:text-neutral-300",
-  tile: "border-neutral-300/70 bg-white/70 hover:border-neutral-400 dark:border-neutral-500/25 dark:bg-neutral-800/40 dark:hover:border-neutral-400/50",
-  well: "border-neutral-400/50 bg-neutral-50 dark:border-neutral-500/30 dark:bg-neutral-900/60",
-};
-
-/** Days that always get yellow, regardless of the rotation. */
-const YELLOW_DATES = new Set(["2026-10-24"]);
-
-/** Monday-anchored ISO week key, used to group slots into one "Week N" row. */
-function weekKey(date: string) {
-  const parsed = new Date(`${date}T00:00:00Z`);
-  parsed.setUTCDate(parsed.getUTCDate() - ((parsed.getUTCDay() + 6) % 7));
-  return parsed.toISOString().slice(0, 10);
-}
 
 function dateParts(date: string) {
   const parsed = new Date(`${date}T00:00:00Z`);
   return {
     weekday: parsed.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" }).toUpperCase(),
+    weekdayLong: parsed.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" }),
     day: parsed.getUTCDate(),
     month: parsed.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" }).toUpperCase(),
   };
@@ -103,15 +31,19 @@ function timeRange(startsAt: string | null, endsAt: string | null) {
  * the season, so the same tile is inert for them. */
 type TimelineMode = "member" | "admin";
 
-/** Faint season-wide talk number in a tile's top-left corner. */
-/** The season-wide talk number, big and centered in the tile. Over a deck's
- * first slide it shrinks to a small corner tag so the slide stays readable. */
+/** Every seat — open, booked, or with its deck up — is this one box, so a
+ * day's cards line up whatever mix of seats it has. A bit taller on phones,
+ * where the tiles are narrow. */
+const SEAT_BOX = "relative aspect-[4/3] overflow-hidden rounded-md border sm:aspect-video";
+
+/** The season-wide talk number, big and centered. Over a deck's first slide
+ * it shrinks to a small corner tag so the slide stays readable. */
 function TalkNumber({ n, onImage = false, tone }: { n: number; onImage?: boolean; tone?: string }) {
   if (onImage) {
     return (
       <span
         aria-label={`Talk ${n}`}
-        className="absolute top-1.5 left-1.5 rounded bg-black/55 px-1 py-0.5 font-mono text-[10px] leading-none font-semibold text-white/85 tabular-nums"
+        className="absolute top-1.5 left-1.5 z-10 rounded bg-black/55 px-1 py-0.5 font-mono text-[10px] leading-none font-semibold text-white/85 tabular-nums"
       >
         {String(n).padStart(2, "0")}
       </span>
@@ -133,7 +65,6 @@ function OpenTile({
   disabled,
   mode,
   number,
-  palette,
   bookable,
 }: {
   slotId: string;
@@ -141,22 +72,29 @@ function OpenTile({
   disabled: boolean;
   mode: TimelineMode;
   number: number;
-  palette: DayPalette;
   /** Admin only: members who can still be booked into a seat. */
   bookable?: BookableMember[];
 }) {
   const adminBooks = mode === "admin" && bookable !== undefined;
   const inert = (disabled || mode === "admin") && !adminBooks;
+  const heading = adminBooks ? "Book for a member" : inert ? "Open" : "Request this slot";
+  const sub = adminBooks ? "Booked straight away" : mode === "admin" ? "Unclaimed" : disabled ? "You already have a slot" : "Title + description, deck later";
+
   const body = (
-    <div className={cn("rounded-lg border p-2 backdrop-blur-sm transition-colors", palette.tile)}>
-      <div className={cn("relative flex aspect-video items-center justify-center rounded-md border border-dashed", palette.well)}>
-        <TalkNumber n={number} tone={palette.label} />
-        <Plus className={cn("absolute right-1.5 bottom-1.5 size-3 opacity-70", palette.label)} />
+    // Open seats stay neutral gray; only booked talks carry the day's color.
+    <div className={cn("rounded-lg border p-2 backdrop-blur-sm transition-colors", GRAY.tile)}>
+      <div className={cn(SEAT_BOX, "flex flex-col items-center justify-center border-dashed", GRAY.well)}>
+        <span className="-mt-3 sm:-mt-4">
+          <TalkNumber n={number} tone="text-neutral-400 dark:text-neutral-500" />
+        </span>
+        <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-1 p-1.5 sm:p-2">
+          <div className="min-w-0">
+            <p className="truncate text-[10px] font-semibold sm:text-xs">{heading}</p>
+            <p className="truncate text-[9px] leading-tight text-muted max-sm:hidden sm:text-[11px]">{sub}</p>
+          </div>
+          <Plus className="size-3 shrink-0 text-neutral-400 opacity-70 dark:text-neutral-500" />
+        </div>
       </div>
-      <p className="mt-1.5 truncate text-xs font-semibold">{adminBooks ? "Book for a member" : inert ? "Open" : "Request this slot"}</p>
-      <p className="mt-0.5 truncate text-[11px] leading-tight text-muted">
-        {adminBooks ? "Booked straight away" : mode === "admin" ? "Unclaimed" : disabled ? "You already have a slot" : "Title + description, deck later"}
-      </p>
     </div>
   );
   if (adminBooks) {
@@ -186,41 +124,54 @@ function TalkTile({
   // a request still waiting on the curator is only readable by its author.
   const canSeeDetail = talk.status === "approved" || talk.isMine || mode === "admin";
   // The deck's first slide once it's been reviewed (hasDeck already folds in
-  // who may see it) — otherwise the numbered tile stands in, and stays the
+  // who may see it) — otherwise the title cover stands in, and stays the
   // fallback if the deck fails to render, e.g. a corrupt PDF.
   const showDeckPage = canSeeDetail && talk.hasDeck && (talk.status === "approved" || talk.isMine);
+
   const body = (
-    <>
-      <div className={cn("relative flex aspect-video items-center justify-center overflow-hidden rounded-md border", palette.well)}>
-        {showDeckPage ? (
+    <div className={cn(SEAT_BOX, "flex items-center justify-center", palette.well)}>
+      {showDeckPage ? (
+        <>
           <DeckPageThumbnail talkId={talk.talkId} className="absolute inset-0" />
-        ) : (
-          <>
+          <TalkNumber n={number} onImage />
+          {/* title + speaker over the slide, on a dark fade */}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-1.5 pt-6 sm:p-2 sm:pt-8">
+            <p className="line-clamp-2 text-[10px] leading-tight font-bold text-white sm:text-xs">{talk.title}</p>
+            {talk.presenterName ? <p className="truncate text-[9px] text-white/75 sm:text-[11px]">{talk.presenterName}</p> : null}
+          </div>
+        </>
+      ) : canSeeDetail && talk.title ? (
+        <TitleCover
+          title={talk.title}
+          speaker={talk.presenterName}
+          status={talk.status !== "approved" ? "requested" : talk.deckPending ? "deck-soon" : null}
+          number={number}
+          palette={palette}
+        />
+      ) : (
+        // someone else's request, not yet confirmed: no details
+        <>
+          <span className="-mt-3 sm:-mt-4">
             <TalkNumber n={number} tone={palette.label} />
-            <FileText className={cn("absolute right-1.5 bottom-1.5 size-3 opacity-70", palette.label)} />
-          </>
-        )}
-        {showDeckPage ? <TalkNumber n={number} onImage /> : null}
-      </div>
-      <p className="mt-1.5 truncate text-xs font-semibold">
-        {canSeeDetail ? talk.title : "Requested"}
-      </p>
-      <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-muted">
-        {canSeeDetail ? (talk.presenterName ?? "") : "Awaiting the curator"}
-        {canSeeDetail && talk.status !== "approved" ? (
-          <span className="shrink-0 rounded-full bg-amber-500/15 px-1.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
-            Requested
           </span>
-        ) : canSeeDetail && talk.deckPending ? (
-          <span className="shrink-0 rounded-full bg-foreground/10 px-1.5 text-[10px] font-semibold">Deck soon</span>
-        ) : null}
-      </p>
-    </>
+          <div className="absolute inset-x-0 bottom-0 p-1.5 sm:p-2">
+            <p className="truncate text-[10px] font-semibold sm:text-xs">Requested</p>
+            <p className="truncate text-[9px] text-muted max-sm:hidden sm:text-[11px]">Awaiting the curator</p>
+          </div>
+        </>
+      )}
+    </div>
   );
 
   if (canSeeDetail) {
     return (
-      <Link href={`/dashboard/talks/${talk.talkId}/present`} className={cn("block rounded-lg border p-2 backdrop-blur-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-sm", palette.tile)}>
+      <Link
+        href={`/dashboard/talks/${talk.talkId}/present`}
+        className={cn(
+          "group block rounded-lg border p-2 backdrop-blur-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg",
+          palette.tile,
+        )}
+      >
         {body}
       </Link>
     );
@@ -288,13 +239,11 @@ function DayColumn({
   firstNumber: Map<string, number>;
   bookable?: BookableMember[];
 }) {
-  const { weekday, day, month } = dateParts(slots[0].date);
-  const isSessionDay = slots.some((slot) => slot.type === "kickoff" || slot.type === "recognition");
-  const palette = isSessionDay
-    ? GRAY
-    : YELLOW_DATES.has(slots[0].date)
-      ? YELLOW
-      : DAY_PALETTE[colorIndex % DAY_PALETTE.length];
+  const { weekdayLong, day, month } = dateParts(slots[0].date);
+  const palette = dayPalette(slots, colorIndex);
+  const talkSlots = slots.filter((slot) => slot.type === "talk");
+  const seats = talkSlots.reduce((n, slot) => n + slot.capacity, 0);
+  const booked = talkSlots.reduce((n, slot) => n + slot.talks.length, 0);
 
   return (
     <div
@@ -303,11 +252,48 @@ function DayColumn({
         palette.card,
       )}
     >
-      <p className={cn("text-[11px] font-semibold tracking-wide", palette.label)}>
-        {weekday} {day} {month}
-      </p>
+      {/* decoration, all in the day's own color */}
+      <div aria-hidden className={cn("pointer-events-none absolute inset-0", palette.label)}>
+        <span className="absolute -top-16 -right-12 size-48 rounded-full bg-current opacity-[0.12] blur-3xl" />
+        <span
+          className="absolute inset-0 opacity-[0.05]"
+          style={{
+            backgroundImage: "linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)",
+            backgroundSize: "22px 22px",
+            maskImage: "radial-gradient(ellipse at 100% 0%, black 0%, transparent 60%)",
+          }}
+        />
+        <span className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-current to-transparent opacity-40" />
+      </div>
 
-      <div className="mt-3 space-y-4">
+      {/* header: a little calendar chip, the weekday, and how full the day is */}
+      <div className="relative flex items-center gap-3">
+        <div className={cn("flex w-11 shrink-0 flex-col items-center overflow-hidden rounded-xl border bg-background/40 text-center shadow-sm", palette.well)}>
+          <span className={cn("w-full bg-current/15 py-0.5 text-[8px] font-bold tracking-[0.14em]", palette.label)}>{month}</span>
+          <span className="py-0.5 text-lg leading-tight font-bold tabular-nums">{day}</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className={cn("text-[11px] font-semibold tracking-[0.14em] uppercase", palette.label)}>{weekdayLong}</p>
+          <p className="mt-0.5 truncate text-xs text-muted">
+            {seats > 0 ? (
+              <>
+                <span className="font-semibold text-foreground tabular-nums">{booked}</span>/{seats} seats booked
+              </>
+            ) : (
+              "Whole cohort"
+            )}
+          </p>
+        </div>
+        {seats > 0 ? (
+          <div className="flex shrink-0 gap-1" aria-hidden>
+            {Array.from({ length: seats }).map((_, i) => (
+              <span key={i} className={cn("size-1.5 rounded-full", i < booked ? cn("bg-current", palette.label) : "bg-foreground/15")} />
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="relative mt-4 space-y-4">
         {slots.map((slot) => {
           const isSession = slot.type !== "talk";
           const openCount = Math.max(0, slot.capacity - slot.talks.length);
@@ -315,9 +301,14 @@ function DayColumn({
 
           return (
             <div key={slot.id}>
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="text-sm font-bold capitalize">{slot.label}</p>
-                {range ? <p className="text-xs text-muted">{range}</p> : null}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[15px] font-bold tracking-tight capitalize">{slot.label}</p>
+                {range ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-background/40 px-2 py-0.5 text-[11px] text-muted ring-1 ring-foreground/10">
+                    <Clock className="size-3" />
+                    {range}
+                  </span>
+                ) : null}
               </div>
 
               {isSession ? (
@@ -336,7 +327,6 @@ function DayColumn({
                         bookable={bookable}
                         disabled={viewerHasActiveTalk}
                         mode={mode}
-                        palette={palette}
                         number={(firstNumber.get(slot.id) ?? 1) + slot.talks.length + oi}
                       />
                     ))}
@@ -355,6 +345,18 @@ function DayColumn({
   );
 }
 
+/** "10–11 Oct" (or "31 Oct – 1 Nov") for a week's days. */
+function weekRange(week: ReturnType<typeof groupWeeks>[number]) {
+  const dates = week.days.map((d) => d[0].date).sort();
+  const fmt = (date: string, withMonth: boolean) =>
+    new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", ...(withMonth ? { month: "short" } : {}), timeZone: "UTC" });
+  const first = dates[0];
+  const last = dates[dates.length - 1];
+  if (first === last) return fmt(first, true);
+  const sameMonth = first.slice(0, 7) === last.slice(0, 7);
+  return sameMonth ? `${fmt(first, false)}–${fmt(last, true)}` : `${fmt(first, true)} – ${fmt(last, true)}`;
+}
+
 export function SeasonTimeline({
   slots,
   viewerHasActiveTalk,
@@ -367,30 +369,8 @@ export function SeasonTimeline({
   mode?: TimelineMode;
   bookable?: BookableMember[];
 }) {
-  const weekKeys = [...new Set(slots.map((s) => weekKey(s.date)))].sort();
-
-  // Group into weeks, then within each week group by calendar date (Sat, Sun, …).
-  const weeks = weekKeys.map((wk) => {
-    const weekSlots = slots.filter((s) => weekKey(s.date) === wk);
-    const dates = [...new Set(weekSlots.map((s) => s.date))].sort();
-    const days = dates.map((date) => weekSlots.filter((s) => s.date === date));
-    return { key: wk, days };
-  });
-
-  // Number every talk seat across the season in the order it's shown
-  // (talk 1, 2, 3...), so a tile can say which talk of the season it is.
-  // Sessions (kickoff, recognitions) take no numbers.
-  const firstNumber = new Map<string, number>();
-  let next = 1;
-  for (const week of weeks) {
-    for (const day of week.days) {
-      for (const slot of day) {
-        if (slot.type !== "talk") continue;
-        firstNumber.set(slot.id, next);
-        next += Math.max(slot.capacity, slot.talks.length);
-      }
-    }
-  }
+  const weeks = groupWeeks(slots);
+  const firstNumber = seatNumbers(weeks);
 
   return (
     <div className="space-y-7 sm:space-y-6">
@@ -398,11 +378,13 @@ export function SeasonTimeline({
         <div key={week.key} className="sm:flex sm:gap-5">
           {/* desktop/tablet: the vertical week rail */}
           <div className="hidden w-16 shrink-0 flex-col items-center sm:flex">
-            <div className="flex size-16 shrink-0 flex-col items-center justify-center rounded-full border-2 border-border/60 bg-card/70 shadow-sm backdrop-blur-md">
-              <span className="text-[10px] font-semibold text-muted">WEEK</span>
-              <span className="text-xl leading-tight font-bold">{wi + 1}</span>
+            <div className="relative flex size-16 shrink-0 flex-col items-center justify-center rounded-2xl border border-border/70 bg-gradient-to-b from-card to-surface shadow-sm">
+              <span className="absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-foreground/40 to-transparent" />
+              <span className="text-[9px] font-semibold tracking-[0.18em] text-muted">WEEK</span>
+              <span className="text-2xl leading-none font-bold tabular-nums">{wi + 1}</span>
             </div>
-            {wi < weeks.length - 1 ? <span className="mt-1 w-0.5 flex-1 bg-border" /> : null}
+            <span className="mt-2 text-center text-[10px] leading-tight text-muted">{weekRange(week)}</span>
+            {wi < weeks.length - 1 ? <span className="mt-2 w-px flex-1 bg-gradient-to-b from-border via-border to-transparent" /> : null}
           </div>
 
           {/* phone: a section header instead of a rail — the rail cost a
@@ -411,6 +393,7 @@ export function SeasonTimeline({
             <span className="rounded-full bg-foreground px-3 py-1 text-xs font-bold tracking-wide text-background">
               Week {wi + 1}
             </span>
+            <span className="text-xs text-muted">{weekRange(week)}</span>
             <span className="h-px flex-1 bg-border" />
           </div>
 

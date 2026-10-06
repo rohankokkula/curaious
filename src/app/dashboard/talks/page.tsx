@@ -2,6 +2,9 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, FileText, Mic } from "lucide-react";
 import { Avatar } from "@/components/dashboard/Avatar";
 import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
+import { groupWeeks, talkLooks, type DayPalette } from "@/components/dashboard/seasonLayout";
+import { TitleCover } from "@/components/dashboard/TalkCover";
+import { loadSeasonSlots } from "@/lib/slots";
 import { getActiveCohort } from "@/lib/cohort";
 import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
 import { deckIsPublic } from "@/lib/talks";
@@ -30,12 +33,31 @@ type TalkView = TalkRow & {
   isMine: boolean;
   inReview: boolean;
   hasThumb: boolean;
+  /** The talk's season number and day color, exactly as the schedule shows it. */
+  look: { number: number; palette: DayPalette } | null;
+  deckPending: boolean;
 };
 
 const shortDate = (date: string) =>
   new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 
-function Thumb({ talk, className }: { talk: TalkView; className?: string }) {
+/** The deck's first slide once it's up; until then the same title cover the
+ * schedule shows, in the talk's day color. */
+function Thumb({ talk, className, size = "sm" }: { talk: TalkView; className?: string; size?: "sm" | "lg" }) {
+  if (!talk.hasThumb && talk.look) {
+    return (
+      <div className={cn("group relative aspect-video overflow-hidden", talk.look.palette.well, className)}>
+        <TitleCover
+          title={talk.title}
+          speaker={talk.presenter?.name ?? null}
+          status={talk.inReview ? "requested" : talk.deckPending ? "deck-soon" : null}
+          number={talk.look.number}
+          palette={talk.look.palette}
+          size={size}
+        />
+      </div>
+    );
+  }
   return (
     <div className={cn("relative flex aspect-video items-center justify-center overflow-hidden bg-surface", className)}>
       {talk.hasThumb ? (
@@ -43,10 +65,6 @@ function Thumb({ talk, className }: { talk: TalkView; className?: string }) {
       ) : (
         <FileText className="size-6 text-muted/50" />
       )}
-      <span className="absolute top-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
-        {talk.week ? `Week ${talk.week} · ` : ""}
-        {shortDate(talk.date)}
-      </span>
       {talk.inReview ? (
         <span className="absolute top-2 right-2 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-semibold text-black">
           Requested
@@ -55,6 +73,8 @@ function Thumb({ talk, className }: { talk: TalkView; className?: string }) {
     </div>
   );
 }
+
+const whenLabel = (talk: TalkView) => `${talk.week ? `Week ${talk.week} · ` : ""}${shortDate(talk.date)}`;
 
 function Speaker({ talk, size = "sm" }: { talk: TalkView; size?: "sm" | "md" }) {
   return (
@@ -65,7 +85,9 @@ function Speaker({ talk, size = "sm" }: { talk: TalkView; size?: "sm" | "md" }) 
           {talk.presenter?.name ?? "Unknown"}
           {talk.isMine ? <span className="ml-1 font-normal text-muted">(you)</span> : null}
         </p>
-        <p className="truncate text-[11px] text-muted capitalize">{talk.slot?.label}</p>
+        <p className="truncate text-[11px] text-muted">
+          <span className="capitalize">{talk.slot?.label}</span> · {whenLabel(talk)}
+        </p>
       </div>
     </div>
   );
@@ -78,7 +100,7 @@ function FeaturedTalk({ talk }: { talk: TalkView }) {
       href={`/dashboard/talks/${talk.id}/present`}
       className="group block overflow-hidden rounded-2xl border border-border bg-card transition hover:border-foreground/30 md:grid md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]"
     >
-      <Thumb talk={talk} className="md:aspect-auto md:min-h-64" />
+      <Thumb talk={talk} size="lg" className="md:aspect-auto md:min-h-72" />
       <div className="flex flex-col p-5 md:p-7">
         <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-primary">
           <Mic className="size-3.5" /> Next up
@@ -134,6 +156,14 @@ export default async function TalksPage() {
     getSessionUser(),
   ]);
 
+  // The schedule's own layout (cached per request): week numbers, talk
+  // numbers and day colors come from the same place, so a talk looks
+  // identical here and on the schedule.
+  const { slots: seasonSlots } = user ? await loadSeasonSlots(user.id) : { slots: [] };
+  const looks = talkLooks(seasonSlots);
+  const weekOf = new Map<string, number>();
+  groupWeeks(seasonSlots).forEach((week, wi) => week.days.flat().forEach((slot) => slot.talks.forEach((t) => weekOf.set(t.talkId, wi + 1))));
+
   // One request: each talk with its slot (inner-joined so only this season's
   // slots match) and its presenter.
   // RLS returns approved talks plus anything of your own, so a pending talk
@@ -151,7 +181,6 @@ export default async function TalksPage() {
     : { data: [] as TalkRow[] };
 
   const today = new Date().toISOString().slice(0, 10);
-  const seasonStart = cohort ? Date.parse(`${cohort.starts_on}T00:00:00Z`) : null;
 
   const talks: TalkView[] = (talkRows ?? [])
     .filter((talk) => talk.status === "approved" || talk.presenter_id === user?.id)
@@ -160,7 +189,9 @@ export default async function TalksPage() {
       return {
         ...talk,
         date,
-        week: seasonStart === null ? null : Math.floor((Date.parse(`${date}T00:00:00Z`) - seasonStart) / (7 * 86400000)) + 1,
+        week: weekOf.get(talk.id) ?? null,
+        look: looks.get(talk.id) ?? null,
+        deckPending: talk.status === "approved" && !deckIsPublic(talk),
         isMine: talk.presenter_id === user?.id,
         inReview: talk.status !== "approved",
         // your own deck always; anyone else's once the curator has reviewed it
