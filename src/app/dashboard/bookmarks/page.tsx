@@ -48,6 +48,8 @@ async function loadResources(): Promise<{ resources: ResourceListItem[]; metrics
       "id, kind, category, title, url, slug, note, thumbnail_url, favicon_url, tags, read_minutes, status, created_at, added_by",
     )
     .eq("cohort_id", cohort.id)
+    // links only: written pieces live on their own page (Hearticles)
+    .eq("kind", "link")
     .order("created_at", { ascending: false })
     .returns<ResourceRow[]>();
 
@@ -128,7 +130,7 @@ export default async function BookmarksPage() {
       <header>
         <h1 className="text-3xl font-bold tracking-tight">Bookmarks</h1>
         <p className="mt-1 text-muted">
-          Papers, articles, tools and videos the cohort has shared with each other.
+          Papers, tools, videos and links the cohort has shared with each other. Written pieces live in Hearticles.
         </p>
       </header>
 

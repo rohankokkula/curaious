@@ -15,7 +15,16 @@ export function TitleCover({
   number,
   palette,
   size = "sm",
+  kicker,
+  watermark,
+  subtitle,
 }: {
+  /** A line under the title (an article's excerpt). */
+  subtitle?: string | null;
+  /** Replaces "talk 01" in the top-left label (e.g. an article's "hearticles"). */
+  kicker?: string;
+  /** Replaces the big faint number in the corner. */
+  watermark?: string;
   title: string;
   speaker: string | null;
   speakerAvatarUrl?: string | null;
@@ -54,7 +63,7 @@ export function TitleCover({
           lg ? "-bottom-6 text-[8rem] md:-bottom-10 md:text-[12rem]" : "-bottom-3 text-[3.25rem] sm:-bottom-5 sm:text-7xl",
         )}
       >
-        {n}
+        {watermark ?? n}
       </span>
       <span aria-hidden className="absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
 
@@ -66,8 +75,14 @@ export function TitleCover({
           )}
         >
           <span className="h-px w-2.5 bg-current sm:w-3" />
-          <span className={lg ? undefined : "max-sm:hidden"}>talk</span>
-          {n}
+          {kicker ? (
+            kicker
+          ) : (
+            <>
+              <span className={lg ? undefined : "max-sm:hidden"}>talk</span>
+              {n}
+            </>
+          )}
         </span>
         {status === "requested" ? (
           <span className="rounded-full bg-amber-400/90 px-1.5 py-px text-[8px] font-semibold whitespace-nowrap text-black sm:text-[9px]">
@@ -96,6 +111,16 @@ export function TitleCover({
         >
           {title}
         </p>
+        {subtitle ? (
+          <p
+            className={cn(
+              "text-foreground/75",
+              lg ? "mt-2 line-clamp-2 max-w-2xl text-sm leading-relaxed md:mt-3 md:text-lg" : "mt-1 line-clamp-2 text-[11px] leading-snug sm:text-xs",
+            )}
+          >
+            {subtitle}
+          </p>
+        ) : null}
         {speaker ? (
           <p className={cn("flex min-w-0 items-center gap-1.5 font-semibold", lg ? "mt-3 text-sm md:text-base" : "mt-1 text-[9px] sm:mt-1.5 sm:text-[11px]")}>
             {speakerAvatarUrl ? (

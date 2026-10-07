@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, MapPin, Mic, Search } from "lucide-react";
+import { ArrowUpRight, MapPin, Mic, Search, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { DayPalette } from "@/components/dashboard/seasonLayout";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,8 @@ export type DirectoryMember = {
   location: string | null;
   tags: string[];
   isYou: boolean;
+  /** The admin account: shown to everyone as the season's curator. */
+  isCurator: boolean;
   /** Their booked talk this season, if any. */
   talk: { title: string; date: string; done: boolean; number: number | null } | null;
   /** Their talk's day color from the schedule (plain class strings). */
@@ -32,7 +34,7 @@ const FILTERS: { id: Filter; label: string }[] = [
 function matchesFilter(member: DirectoryMember, filter: Filter) {
   if (filter === "upcoming") return Boolean(member.talk && !member.talk.done);
   if (filter === "presented") return Boolean(member.talk?.done);
-  if (filter === "open") return !member.talk;
+  if (filter === "open") return !member.talk && !member.isCurator;
   return true;
 }
 
@@ -92,6 +94,11 @@ function MemberCard({ m }: { m: DirectoryMember }) {
         )}
 
         <div className="min-w-0 flex-1 pt-0.5">
+          {m.isCurator ? (
+            <span className={cn("mb-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-[0.14em] uppercase", accent.well, accent.label)}>
+              <Sparkles className="size-3" /> Curator
+            </span>
+          ) : null}
           <p className="truncate text-lg leading-tight font-bold tracking-tight">
             {m.name}
             {m.isYou ? <span className="ml-1.5 text-xs font-medium text-muted">(you)</span> : null}
@@ -121,6 +128,10 @@ function MemberCard({ m }: { m: DirectoryMember }) {
             </span>
           </div>
           <p className="mt-2 line-clamp-2 text-[15px] leading-snug font-semibold">{m.talk.title}</p>
+        </div>
+      ) : m.isCurator ? (
+        <div className="relative mt-4 rounded-2xl border border-border bg-background/40 px-3.5 py-3 text-sm text-muted">
+          Hosts the season: picks the room, runs every session.
         </div>
       ) : (
         <div className="relative mt-4 rounded-2xl border border-dashed border-border px-3.5 py-3 text-sm text-muted">

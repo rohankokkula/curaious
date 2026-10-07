@@ -147,7 +147,7 @@ function BookmarksMini() {
 function ThoughtsMini() {
   return (
     <div className="w-full rounded-lg border border-border/70 bg-card p-3.5">
-      <p className="font-mono text-[8px] uppercase tracking-[0.16em] text-accent">your thoughts</p>
+      <p className="font-mono text-[8px] uppercase tracking-[0.16em] text-accent">hearticles</p>
       <p className="heading-display mt-1.5 text-[15px] leading-snug text-foreground">What a week of evals taught me about vibes</p>
       <div className="mt-2 space-y-1">
         <span className="block h-1 w-full rounded-full bg-foreground/15" />
@@ -199,7 +199,7 @@ export function InsideThePortal() {
         <Card icon={BookMarked} title="Community bookmarks" line="Papers, tools and videos the cohort thought were worth your time." className="md:col-span-2">
           <BookmarksMini />
         </Card>
-        <Card icon={PenLine} title="Your thoughts" line="Write it up in your own words. No pasting. Approved posts get a public page." className="md:col-span-2">
+        <Card icon={PenLine} title="Hearticles" line="Write it up in your own words. No pasting. Approved posts get a public page." className="md:col-span-2">
           <ThoughtsMini />
         </Card>
         <Card icon={Medal} title="Badges" line="Handed out by the curator at the end of the season." className="md:col-span-6">

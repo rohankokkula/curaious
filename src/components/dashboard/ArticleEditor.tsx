@@ -63,7 +63,7 @@ export function ArticleEditor({ existing }: { existing?: ExistingArticle }) {
 
     if (!res.ok || !json.ok) return toast.error(json.message ?? "couldn't save that.");
     toast.success(isEditing ? "Resubmitted for review" : "Submitted for review");
-    router.push("/dashboard/bookmarks");
+    router.push("/dashboard/resources/write");
     router.refresh();
   }
 

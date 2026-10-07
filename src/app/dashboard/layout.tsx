@@ -33,7 +33,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Rendered as their own group, pinned to the bottom of the sidebar —
   // reference surfaces, not weekend-to-weekend items.
   const secondaryItems: NavItem[] = [
-    { href: "/dashboard/resources/write", label: "Your thoughts", icon: "articles" },
+    { href: "/dashboard/resources/write", label: "Hearticles", icon: "articles" },
     { href: "/dashboard/bookmarks", label: "Bookmarks", icon: "bookmark" },
     { href: "/dashboard/resources", label: "Resources", icon: "resources" },
   ];

@@ -67,7 +67,7 @@ export async function POST(request: Request) {
       category: "article",
       status: "pending",
       read_minutes: estimateReadMinutes(body),
-      url: `/articles/${slug}`, // resource_links.url is not-null; this is its permalink
+      url: `/hearticles/${slug}`, // resource_links.url is not-null; this is its permalink
     })
     .select("id, slug")
     .single();

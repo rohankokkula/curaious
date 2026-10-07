@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { OG_PAGES, ogImagePath } from "@/lib/og/pages";
+import { siteUrl } from "@/lib/siteUrl";
 import "./globals.css";
 
 // Fonts are bundled from ./fonts (latin subset) rather than fetched from
@@ -49,16 +50,6 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "#000000" },
   ],
 };
-
-/** Absolute base for share-card URLs: scrapers can't resolve a relative
- * og:image. The configured site URL when it's a real one, else Vercel's
- * production domain, else local dev. */
-function siteUrl() {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL;
-  if (configured && !configured.includes("localhost")) return configured;
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  return configured || "http://localhost:3000";
-}
 
 const DESCRIPTION = OG_PAGES.home.description;
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowUpRight, Award, Check, EyeOff, Link2, Mail, MapPin, Mic, Plus, Sparkles } from "lucide-react";
+import { ArrowUpRight, Award, Check, EyeOff, Link2, Mail, MapPin, Mic, PenLine, Plus, Rocket, Sparkles } from "lucide-react";
 import { BadgeArt } from "@/components/dashboard/BadgeArt";
 import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
 import { DeckUploadPanel } from "@/components/dashboard/DeckUploadPanel";
@@ -12,7 +12,8 @@ import { RecordingCard } from "@/components/dashboard/RecordingCard";
 import { RemoveMemberButton } from "@/components/dashboard/RemoveMemberButton";
 import { ShareProfileButton } from "@/components/dashboard/ShareProfileButton";
 import { GithubIcon, LinkedinIcon, XIcon } from "@/components/icons/SocialIcons";
-import { DAY_PALETTE, talkLooks } from "@/components/dashboard/seasonLayout";
+import { DAY_PALETTE, GRAY, talkLooks } from "@/components/dashboard/seasonLayout";
+import { WatchRecordingButton } from "@/components/dashboard/WatchRecordingButton";
 import { Wordmark } from "@/components/shell/Wordmark";
 import { loadSeasonSlots } from "@/lib/slots";
 import { BADGES, isBadgeKey } from "@/lib/badges";
@@ -138,7 +139,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   // Everything about this member in one parallel round instead of ten queries
   // in a row. The sent-back talk and ratings given are fetched regardless and
   // gated below; RLS already limits both to the member themselves and admins.
-  const [{ data: member }, { data: talk }, { data: sentBackRow }, { data: givenRows }, { data: badgeRows }] = await Promise.all([
+  const [{ data: member }, { data: talk }, { data: sentBackRow }, { data: givenRows }, { data: badgeRows }, { data: articleRows }] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, name, email, role, avatar_url, headline, location, bio, tags, linkedin_url, twitter_url, github_url, visibility")
@@ -174,6 +175,16 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
       .eq("profile_id", id)
       .order("awarded_at", { ascending: true })
       .returns<{ badge_key: string }[]>(),
+    // their published writing ("Your thoughts"), newest first
+    supabase
+      .from("resource_links")
+      .select("slug, title, note, read_minutes, created_at")
+      .eq("added_by", id)
+      .eq("kind", "article")
+      .eq("status", "approved")
+      .order("created_at", { ascending: false })
+      .limit(2)
+      .returns<{ slug: string; title: string; note: string | null; read_minutes: number | null; created_at: string }[]>(),
   ]);
 
   if (!member) notFound();
@@ -184,8 +195,11 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   const canRemove = isAdmin && !isSelf;
   const badges = (badgeRows ?? []).map((row) => row.badge_key).filter(isBadgeKey).map((key) => BADGES[key]);
 
-  // Members don't see who's an admin — mirrors the filter on the roster page.
-  if (member.role === "admin" && !isSelf && !isAdmin) notFound();
+  // The admin account is the season's curator: shown to everyone as
+  // "Curator", with the sessions they host and what they've written in place
+  // of a talk.
+  const isCurator = member.role === "admin";
+  const articles = articleRows ?? [];
 
   // What this member chose to show. You and admins always see the lot; the
   // toggles govern what everyone else gets.
@@ -237,6 +251,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   // Their talk's day color from the schedule, so a profile and the talk cover
   // match; members without a talk get a steady color from their name.
   const { slots: seasonSlots } = await loadSeasonSlots(user.id);
+  const kickoff = isCurator ? (seasonSlots.find((slot) => slot.type === "kickoff") ?? null) : null;
   const look = talk ? talkLooks(seasonSlots).get(talk.id) : undefined;
   const accent = look?.palette ?? DAY_PALETTE[[...member.name].reduce((n, c) => n + c.charCodeAt(0), 0) % DAY_PALETTE.length];
   const talkStatus = !talk ? null : talk.status !== "approved" ? "Requested" : talkDone ? "Presented" : talk.deck_status === "approved" ? null : "Deck soon";
@@ -261,7 +276,10 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="leading-none max-md:hidden">
             <Wordmark className="block text-lg font-bold tracking-tight" />
-            <span className="mt-1.5 block text-[10px] font-semibold tracking-[0.24em] text-muted uppercase">{cohort?.name ?? "Cohort"}</span>
+            <span className="mt-1.5 block text-[10px] font-semibold tracking-[0.24em] text-muted uppercase">
+              {cohort?.name ?? "Cohort"}
+              {isCurator ? " · curator" : ""}
+            </span>
           </div>
           <div className="flex flex-wrap gap-2 [&_button]:h-9">
             {isSelf ? (
@@ -288,6 +306,11 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
         {/* who they are + photo */}
         <div className="mt-5 grid gap-5 md:mt-6 md:grid-cols-[auto_minmax(0,1fr)] md:items-center md:gap-10">
           <div className="min-w-0 md:pt-2">
+            {isCurator ? (
+              <span className={cn("mb-3 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-[0.14em] uppercase", accent.well, accent.label)}>
+                <Sparkles className="size-3.5" /> Curator
+              </span>
+            ) : null}
             <h1 className="text-4xl leading-[0.95] font-bold tracking-tight text-balance md:text-6xl">{member.name}</h1>
             {member.headline && show("headline") ? (
               <p className="mt-3 text-lg text-muted md:text-2xl">
@@ -346,7 +369,40 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
         {/* their talk + links */}
         <div className={cn("mt-6 grid gap-4", links.length > 0 && "md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]")}>
-          {talk && talkVisible ? (
+          {isCurator ? (
+            <div className={cn("grid gap-3", articles.length > 0 && kickoff && "sm:grid-cols-2")}>
+              {kickoff ? (
+                <div className={cn("relative overflow-hidden rounded-2xl border p-5", GRAY.card)}>
+                  <p className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] text-muted uppercase">
+                    <Rocket className="size-4" /> Hosted the kickoff
+                  </p>
+                  <p className="mt-3 text-lg leading-tight font-bold tracking-tight capitalize">{kickoff.label}</p>
+                  <p className="mt-1 text-sm text-muted">{shortDate(kickoff.date)} · the whole cohort, for the first time</p>
+                  {kickoff.recordingUrl ? <WatchRecordingButton url={kickoff.recordingUrl} title="Season kickoff" className="mt-4" /> : null}
+                </div>
+              ) : null}
+              {articles.map((article) => {
+                const tone = DAY_PALETTE[[...article.slug].reduce((n, c) => n + c.charCodeAt(0), 0) % DAY_PALETTE.length];
+                return (
+                  <Link
+                    key={article.slug}
+                    href={`/hearticles/${article.slug}`}
+                    className={cn("group relative block overflow-hidden rounded-2xl border p-5 transition hover:-translate-y-0.5 hover:shadow-lg", tone.card)}
+                  >
+                    <p className={cn("flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] uppercase", tone.label)}>
+                      <PenLine className="size-4" /> Wrote
+                      {article.read_minutes ? <span className="text-muted">· {article.read_minutes} min read</span> : null}
+                    </p>
+                    <p className="mt-3 text-lg leading-tight font-bold tracking-tight">{article.title}</p>
+                    {article.note ? <p className="mt-1 line-clamp-2 text-sm text-muted">{article.note}</p> : null}
+                    <p className={cn("mt-4 inline-flex items-center gap-1 text-xs font-semibold", tone.label)}>
+                      Read it <ArrowUpRight className="size-3.5 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                    </p>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : talk && talkVisible ? (
             <Link
               href={`/dashboard/talks/${talk.id}/present`}
               className={cn("group relative block overflow-hidden rounded-2xl border p-5 transition hover:-translate-y-0.5 hover:shadow-lg", accent.card)}
@@ -685,7 +741,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
       <div className="space-y-4 sm:space-y-6 lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-6 lg:space-y-0">
         {sidePanel ? <aside className="lg:sticky lg:top-24 lg:order-2">{sidePanel}</aside> : null}
 
-        <div className={cn("min-w-0 lg:order-1", !sidePanel && "lg:col-span-2")}>
+        <div className={cn("min-w-0 lg:order-1", !sidePanel && "lg:col-span-2", isCurator && "hidden")}>
           <ProfileTabs
             tabs={[
               {

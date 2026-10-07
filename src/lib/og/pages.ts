@@ -122,7 +122,7 @@ export const OG_PAGES = {
   },
   thoughts: {
     key: "thoughts",
-    kicker: "your thoughts",
+    kicker: "hearticles",
     title: "Written by the cohort",
     description: "Members' own thinking, in their own words. No pasting allowed.",
     accent: "#c084fc",

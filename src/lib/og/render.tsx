@@ -10,6 +10,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
+import { hearticleTone } from "@/lib/hearticleTone";
 import type { OgMotif, OgPage } from "@/lib/og/pages";
 
 export const OG_SIZE = { width: 1200, height: 630 };
@@ -494,58 +495,151 @@ export async function renderOgPage(page: OgPage) {
   );
 }
 
+/**
+ * A hearticle's share card: the article banner, redrawn at 1200×630 — kicker,
+ * big title, the excerpt under it, the author, a faint grid, a glow and a
+ * giant quote mark, all in the hearticle's own color.
+ */
 export async function renderOgArticle(article: {
+  slug: string;
   title: string;
   excerpt: string | null;
   authorName: string | null;
   authorAvatarUrl: string | null;
   readMinutes: number | null;
-  tags: string[];
 }) {
-  const accent = "#c084fc";
+  const tone = hearticleTone(article.slug);
   const initials = (article.authorName ?? "?")
     .split(/\s+/)
     .map((p) => p[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
+  const titleSize = article.title.length > 70 ? 58 : article.title.length > 40 ? 70 : 84;
+  const excerpt = article.excerpt && article.excerpt.length > 150 ? `${article.excerpt.slice(0, 147).trimEnd()}…` : article.excerpt;
 
-  const footer = (
-    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-      {article.authorAvatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- next/og renders a real <img>
-        <img src={article.authorAvatarUrl} alt="" width={56} height={56} style={{ borderRadius: 999, objectFit: "cover" }} />
-      ) : (
+  return new ImageResponse(
+    (
+      <div style={{ display: "flex", width: "100%", height: "100%", background: BG, padding: 28 }}>
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 56,
-            height: 56,
-            borderRadius: 999,
-            background: tint(accent, 0.25),
-            color: accent,
-            fontSize: 20,
-            fontWeight: 600,
+            position: "relative",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            width: "100%",
+            height: "100%",
+            borderRadius: 40,
+            overflow: "hidden",
+            border: `2px solid ${tint(tone.accent, 0.3)}`,
+            background: tone.bg,
+            backgroundImage: `linear-gradient(135deg, ${tint(tone.accent, 0.22)} 0%, ${tint(tone.accent, 0)} 60%)`,
+            padding: "52px 64px",
+            color: FG,
+            fontFamily: "Inter",
           }}
         >
-          {initials}
-        </div>
-      )}
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        <div style={{ display: "flex", fontSize: 24, fontWeight: 600 }}>{article.authorName ?? "A curaious member"}</div>
-        <div style={{ display: "flex", fontSize: 19, color: MUTED }}>
-          {[article.readMinutes ? `${article.readMinutes} min read` : null, ...article.tags.slice(0, 2).map((t) => `#${t}`)]
-            .filter(Boolean)
-            .join("  ·  ")}
+          {/* grid + glow + top highlight */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              backgroundImage: `linear-gradient(${tint(tone.accent, 0.1)} 1px, transparent 1px), linear-gradient(90deg, ${tint(tone.accent, 0.1)} 1px, transparent 1px)`,
+              backgroundSize: "40px 40px",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: -220,
+              right: -160,
+              width: 640,
+              height: 640,
+              borderRadius: 999,
+              display: "flex",
+              background: `radial-gradient(circle, ${tint(tone.accent, 0.35)} 0%, ${tint(tone.accent, 0)} 65%)`,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              right: 40,
+              bottom: -150,
+              display: "flex",
+              fontFamily: "Plex Mono",
+              fontSize: 420,
+              lineHeight: 1,
+              color: tint(tone.accent, 0.1),
+            }}
+          >
+            “
+          </div>
+
+          {/* kicker row */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                fontFamily: "Plex Mono",
+                fontSize: 20,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: tone.accent,
+              }}
+            >
+              <div style={{ display: "flex", width: 30, height: 2, background: tone.accent }} />
+              {["hearticles", article.readMinutes ? `${article.readMinutes} min read` : null].filter(Boolean).join(" · ")}
+            </div>
+            <Wordmark size={30} />
+          </div>
+
+          {/* title, excerpt, author */}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", fontSize: titleSize, fontWeight: 700, lineHeight: 1.05, letterSpacing: "-0.03em", maxWidth: 960 }}>
+              {article.title}
+            </div>
+            {excerpt ? (
+              <div style={{ display: "flex", marginTop: 18, fontSize: 28, lineHeight: 1.35, color: tint(FG, 0.75), maxWidth: 900 }}>
+                {excerpt}
+              </div>
+            ) : null}
+            <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 30 }}>
+              {article.authorAvatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- next/og renders a real <img>
+                <img
+                  src={article.authorAvatarUrl}
+                  alt=""
+                  width={56}
+                  height={56}
+                  style={{ borderRadius: 999, objectFit: "cover", border: `3px solid ${tone.accent}` }}
+                />
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 56,
+                    height: 56,
+                    borderRadius: 999,
+                    background: tone.accent,
+                    color: tone.bg,
+                    fontSize: 20,
+                    fontWeight: 700,
+                  }}
+                >
+                  {initials}
+                </div>
+              )}
+              <div style={{ display: "flex", fontSize: 26, fontWeight: 600, color: tone.accent }}>{article.authorName ?? "A curaious member"}</div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  );
-
-  return new ImageResponse(
-    <Frame accent={accent} kicker="written by the cohort" title={article.title} description={article.excerpt} footer={footer} />,
+    ),
     { ...OG_SIZE, fonts: await loadFonts() },
   );
 }

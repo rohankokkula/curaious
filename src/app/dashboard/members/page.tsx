@@ -3,7 +3,7 @@ import { DAY_PALETTE, talkLooks } from "@/components/dashboard/seasonLayout";
 import { loadSeasonSlots } from "@/lib/slots";
 import { getActiveCohort } from "@/lib/cohort";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { createSupabaseServerClient, getSessionUser, getViewerProfile } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
 import { pageMetadata } from "@/lib/og/metadata";
 
 export const dynamic = "force-dynamic";
@@ -29,15 +29,8 @@ export default async function MembersPage() {
     );
   }
 
-  // Viewer and cohort are cached per request (the layout already asked for
-  // both), so these resolve without another round trip.
-  const [supabase, user, viewer, cohort] = await Promise.all([
-    createSupabaseServerClient(),
-    getSessionUser(),
-    getViewerProfile(),
-    getActiveCohort(),
-  ]);
-  const viewerIsAdmin = viewer?.role === "admin";
+  // The cohort is cached per request (the layout already asked for it).
+  const [supabase, user, cohort] = await Promise.all([createSupabaseServerClient(), getSessionUser(), getActiveCohort()]);
 
   // One embedded query for the roster instead of memberships-then-profiles,
   // run alongside the talks lookup rather than after it.
@@ -66,10 +59,8 @@ export default async function MembersPage() {
   const { slots: seasonSlots } = user ? await loadSeasonSlots(user.id) : { slots: [] };
   const looks = talkLooks(seasonSlots);
 
-  // Members don't see who's an admin — only admins see the full roster.
-  const roster = (memberships ?? [])
-    .map((m) => m.profiles)
-    .filter((m) => viewerIsAdmin || m.role !== "admin");
+  // Everyone sees the whole room, the curator (the admin account) included.
+  const roster = (memberships ?? []).map((m) => m.profiles);
 
   const today = new Date().toISOString().slice(0, 10);
   const talkBy = new Map((talks ?? []).map((t) => [t.presenter_id, t]));
@@ -86,6 +77,7 @@ export default async function MembersPage() {
         location: m.location,
         tags: m.tags ?? [],
         isYou: m.id === user?.id,
+        isCurator: m.role === "admin",
         talk: talk
           ? { title: talk.title, date: talk.slot.slot_date, done: talk.slot.slot_date < today, number: looks.get(talk.id)?.number ?? null }
           : null,
@@ -93,7 +85,8 @@ export default async function MembersPage() {
         accent: looks.get(talk?.id ?? "")?.palette ?? DAY_PALETTE[[...m.name].reduce((n, c) => n + c.charCodeAt(0), 0) % DAY_PALETTE.length],
       };
     })
-    .sort((a, b) => Number(b.isYou) - Number(a.isYou) || a.name.localeCompare(b.name));
+    // the curator first, then you, then alphabetical
+    .sort((a, b) => Number(b.isCurator) - Number(a.isCurator) || Number(b.isYou) - Number(a.isYou) || a.name.localeCompare(b.name));
 
   const presentedCount = members.filter((m) => m.talk?.done).length;
 
@@ -108,7 +101,7 @@ export default async function MembersPage() {
         {members.length > 0 ? (
           <div className="flex gap-2 text-xs">
             <span className="rounded-full border border-border px-3 py-1.5 text-muted">
-              <strong className="font-semibold text-foreground">{members.length}</strong> members
+              <strong className="font-semibold text-foreground">{members.filter((m) => !m.isCurator).length}</strong> members
             </span>
             <span className="rounded-full border border-border px-3 py-1.5 text-muted">
               <strong className="font-semibold text-foreground">{presentedCount}</strong> presented

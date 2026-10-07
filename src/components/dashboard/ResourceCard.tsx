@@ -54,14 +54,14 @@ export function ResourceCard({ resource }: { resource: ResourceListItem }) {
 
   const isArticle = resource.kind === "article";
   // An article that isn't approved yet has no public page — it 404s there
-  // even for its own author, since /articles/[slug] only ever serves
+  // even for its own author, since /hearticles/[slug] only ever serves
   // approved rows. Route it to the editor instead, which is the one place
   // a pending/rejected piece can actually be opened.
   const isUnpublished = isArticle && resource.status !== "approved";
   const href = isUnpublished
     ? `/dashboard/resources/write?edit=${resource.id}`
     : isArticle
-      ? `/articles/${resource.slug}`
+      ? `/hearticles/${resource.slug}`
       : resource.url;
 
   return (

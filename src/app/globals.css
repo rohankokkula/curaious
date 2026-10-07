@@ -229,6 +229,9 @@ body {
 /* Hand-rolled instead of @tailwindcss/typography (not installed, and this is
    the only place markdown renders) — shared by the article editor's live
    preview, the dashboard's own-article preview, and the public article page. */
+@layer components {
+/* In a layer so a page can still size it with utilities (unlayered CSS beats
+   every Tailwind utility in v4, which silently ignored text-[17px] etc.). */
 .markdown-body {
   @apply text-[15px] leading-relaxed text-foreground md:text-base;
 }
@@ -285,6 +288,70 @@ body {
 }
 .markdown-body th {
   @apply bg-surface font-semibold;
+}
+
+/* Long-form reading for a published hearticle: bigger type, airy measure,
+   pull-quote blockquotes, and an accent color (--tone) for
+   links, quotes and section rules. */
+.hearticle-prose {
+  font-size: 1.125rem;
+  line-height: 1.85;
+  color: color-mix(in srgb, var(--foreground) 88%, transparent);
+}
+@media (min-width: 768px) {
+  .hearticle-prose { font-size: 1.1875rem; line-height: 1.9; }
+}
+.hearticle-prose > * + * { margin-top: 1.5em; }
+/* Scroll reveal: each block fades up as it enters the viewport
+   (HearticleReveal adds .is-visible). Without JS, or with reduced
+   motion, everything just shows. */
+.hearticle-reveal .reveal-block {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.hearticle-reveal .reveal-block.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hearticle-reveal .reveal-block { opacity: 1; transform: none; transition: none; }
+}
+.hearticle-prose h2,
+.hearticle-prose h3 {
+  margin-top: 2.2em;
+  color: var(--foreground);
+}
+.hearticle-prose h2::before {
+  content: "";
+  display: block;
+  width: 2.5rem;
+  height: 2px;
+  margin-bottom: 0.75rem;
+  background: var(--tone, var(--accent));
+}
+.hearticle-prose a { color: var(--tone, var(--accent)); }
+.hearticle-prose blockquote {
+  margin: 2em 0;
+  border-left: 3px solid var(--tone, var(--accent));
+  padding: 0.25em 0 0.25em 1.25em;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.3em;
+  font-style: normal;
+  line-height: 1.5;
+  color: var(--foreground);
+}
+.hearticle-prose hr {
+  border: 0;
+  margin: 2.5em 0;
+  text-align: center;
+}
+.hearticle-prose hr::after {
+  content: "· · ·";
+  letter-spacing: 0.6em;
+  color: var(--muted);
+}
+.hearticle-prose strong { color: var(--foreground); }
 }
 
 .focus-ring {
