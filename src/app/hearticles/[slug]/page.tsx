@@ -22,9 +22,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const description = article.excerpt ?? article.body.replace(/[#>*_`[\]()!-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
   const url = `/hearticles/${slug}`;
+  const image = {
+    url: ogImagePath(slug, article.updatedAt),
+    width: 1200,
+    height: 630,
+    type: "image/png",
+    alt: `${article.title}, a hearticle${article.author ? ` by ${article.author.name}` : ""}`,
+  };
 
   // Indexable on purpose: approving a hearticle is the publish decision.
-  // The share image comes from ./opengraph-image.tsx (the hearticle's cover).
+  // The share image is the hearticle's cover, from /og/hearticle/[slug].
   return {
     title: article.title,
     description,
@@ -45,13 +52,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       authors: article.author ? [article.author.name] : undefined,
       section: "Hearticles",
       tags: article.tags,
+      images: [image],
     },
-    // Replaces the root's twitter block (the home card); with no
-    // twitter:image, X uses this page's og:image.
-    twitter: { card: "summary_large_image", title: article.title, description },
+    // Replaces the root's twitter block (the home card).
+    twitter: { card: "summary_large_image", title: article.title, description, images: [image] },
     robots: { index: true, follow: true, "max-image-preview": "large" },
   };
 }
+
+/** Versioned by the last edit, so chat apps re-fetch the card after a change. */
+const ogImagePath = (slug: string, updatedAt: string) => `/og/hearticle/${slug}?v=${new Date(updatedAt).getTime().toString(36)}`;
 
 const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
@@ -85,7 +95,7 @@ export default async function HearticlePage({ params }: { params: Promise<{ slug
       "@type": "BlogPosting",
       headline: article.title,
       description: article.excerpt ?? undefined,
-      image: [absoluteUrl(`/hearticles/${slug}/opengraph-image`)],
+      image: [absoluteUrl(ogImagePath(slug, article.updatedAt))],
       datePublished: article.publishedAt,
       dateModified: article.updatedAt,
       wordCount: article.wordCount,
