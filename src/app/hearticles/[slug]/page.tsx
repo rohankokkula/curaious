@@ -1,15 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import { BookOpenCheck, ChartNoAxesColumn, Eye } from "lucide-react";
 import { MarkdownRenderer } from "@/components/dashboard/MarkdownRenderer";
 import { HearticleCover } from "@/components/hearticles/HearticleCover";
+import { HearticleTracker } from "@/components/hearticles/HearticleTracker";
+import { LikeButton } from "@/components/hearticles/LikeButton";
 import { HearticleReveal } from "@/components/hearticles/HearticleReveal";
 import { ReadingProgress } from "@/components/hearticles/ReadingProgress";
 import { ShareButtons } from "@/components/hearticles/ShareButtons";
 import { CuraiousLogo } from "@/components/home/CuraiousLogo";
 import { loadArticleBySlug, loadPublishedArticles } from "@/lib/articleData";
 import { INVITE_FORM_URL } from "@/lib/content";
+import { hasLiked, loadPublicStats, VISITOR_COOKIE } from "@/lib/hearticleAnalytics";
 import { hearticleTone } from "@/lib/hearticleTone";
+import { getSessionUser, getViewerProfile } from "@/lib/supabase/server";
 import { absoluteUrl } from "@/lib/siteUrl";
 import { cn } from "@/lib/utils";
 
@@ -63,6 +69,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 /** Versioned by the last edit, so chat apps re-fetch the card after a change. */
 const ogImagePath = (slug: string, updatedAt: string) => `/og/hearticle/${slug}?v=${new Date(updatedAt).getTime().toString(36)}`;
 
+const compact = (n: number) => new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(n);
+
 const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
 function AuthorFace({ name, src, className }: { name: string; src: string | null; className?: string }) {
@@ -83,6 +91,15 @@ export default async function HearticlePage({ params }: { params: Promise<{ slug
   const { slug } = await params;
   const [article, all] = await Promise.all([loadArticleBySlug(slug), loadPublishedArticles(12)]);
   if (!article) notFound();
+
+  const user = await getSessionUser();
+  const visitor = (await cookies()).get(VISITOR_COOKIE)?.value ?? null;
+  const [stats, liked, viewer] = await Promise.all([
+    loadPublicStats(article.id, article.author?.id ?? null),
+    hasLiked(article.id, user?.id ?? visitor),
+    user ? getViewerProfile() : Promise.resolve(null),
+  ]);
+  const canSeeInsights = Boolean(viewer && (viewer.id === article.author?.id || viewer.role === "admin"));
 
   const tone = hearticleTone(slug);
   const url = absoluteUrl(`/hearticles/${slug}`);
@@ -123,6 +140,7 @@ export default async function HearticlePage({ params }: { params: Promise<{ slug
     <div className="landing-dark min-h-screen" style={{ "--tone": tone.accent } as React.CSSProperties}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <ReadingProgress color={tone.accent} />
+      <HearticleTracker slug={slug} />
 
       <header className="px-5 py-5 md:px-8 md:py-7">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4">
@@ -171,13 +189,41 @@ export default async function HearticlePage({ params }: { params: Promise<{ slug
                 ) : (
                   <span />
                 )}
-                <p className="font-mono text-[11px] tracking-[0.16em] text-muted uppercase">
-                  <time dateTime={article.publishedAt} itemProp="datePublished">{longDate(article.publishedAt)}</time>
-                  {article.readMinutes ? ` · ${article.readMinutes} min read` : ""}
-                </p>
+                <div className="flex flex-col gap-2 sm:items-end">
+                  <p className="font-mono text-[11px] tracking-[0.16em] text-muted uppercase">
+                    <time dateTime={article.publishedAt} itemProp="datePublished">{longDate(article.publishedAt)}</time>
+                    {article.readMinutes ? ` · ${article.readMinutes} min read` : ""}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
+                    {stats.views > 0 ? (
+                      <span className="inline-flex items-center gap-1.5 tabular-nums">
+                        <Eye className="size-4" /> {compact(stats.views)} {stats.views === 1 ? "view" : "views"}
+                      </span>
+                    ) : null}
+                    {stats.reads > 0 ? (
+                      <span className="inline-flex items-center gap-1.5 tabular-nums">
+                        <BookOpenCheck className="size-4" /> {compact(stats.reads)} {stats.reads === 1 ? "read" : "reads"}
+                      </span>
+                    ) : null}
+                    <LikeButton slug={slug} initialLiked={liked} initialCount={stats.likes} color={tone.accent} />
+                  </div>
+                </div>
               </div>
 
-              <HearticleReveal className="mt-10">
+              {canSeeInsights ? (
+                <Link
+                  href={`/dashboard/resources/write/insights/${slug}`}
+                  className="focus-ring mt-4 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm transition hover:bg-white/5"
+                  style={{ borderColor: `color-mix(in srgb, ${tone.accent} 35%, transparent)` }}
+                >
+                  <span className="inline-flex items-center gap-2 font-medium" style={{ color: tone.accent }}>
+                    <ChartNoAxesColumn className="size-4" /> {viewer?.id === article.author?.id ? "Your insights" : "Writer insights"}
+                  </span>
+                  <span className="text-muted">only you see this →</span>
+                </Link>
+              ) : null}
+
+              <HearticleReveal className="mt-10" data-hearticle-body>
                 <MarkdownRenderer markdown={article.body} className="hearticle-prose" />
               </HearticleReveal>
 
@@ -191,9 +237,16 @@ export default async function HearticlePage({ params }: { params: Promise<{ slug
                 </div>
               ) : null}
 
-              <div className="mt-8 flex items-center justify-between gap-4 border-t border-white/10 pt-6">
-                <span className="font-mono text-[10px] tracking-[0.18em] text-muted uppercase">share this</span>
-                <ShareButtons url={url} title={article.title} />
+              {/* end of the text: like it, share it */}
+              <div className="mt-10 flex flex-col items-center gap-5 rounded-3xl border border-white/10 px-5 py-8 text-center sm:flex-row sm:justify-between sm:text-left">
+                <div>
+                  <p className="text-lg font-semibold text-foreground">Did this one land?</p>
+                  <p className="mt-0.5 text-sm text-muted">Leave a heart for {article.author?.name.split(" ")[0] ?? "the writer"}, or pass it on.</p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <LikeButton slug={slug} initialLiked={liked} initialCount={stats.likes} color={tone.accent} size="lg" />
+                  <ShareButtons url={url} title={article.title} />
+                </div>
               </div>
 
               {/* written by */}

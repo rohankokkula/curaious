@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, PenLine } from "lucide-react";
-import { DAY_PALETTE } from "@/components/dashboard/seasonLayout";
-import { TitleCover } from "@/components/dashboard/TalkCover";
+import { ArrowLeft, BookOpenCheck, ChartNoAxesColumn, Eye, Heart, PenLine } from "lucide-react";
+import { HearticleCover } from "@/components/hearticles/HearticleCover";
+import { loadStatsFor } from "@/lib/hearticleAnalytics";
+import { hearticleTone } from "@/lib/hearticleTone";
 import { getActiveCohort } from "@/lib/cohort";
 import { cn } from "@/lib/utils";
 import { ArticleEditor, type ExistingArticle } from "@/components/dashboard/ArticleEditor";
@@ -84,7 +85,7 @@ export default async function WriteArticlePage({
     cohort
       ? supabase
           .from("resource_links")
-          .select("id, slug, title, note, read_minutes, created_at, author:profiles!added_by (name, avatar_url)")
+          .select("id, slug, title, note, read_minutes, created_at, added_by, author:profiles!added_by (name, avatar_url)")
           .eq("kind", "article")
           .eq("status", "approved")
           .eq("cohort_id", cohort.id)
@@ -103,6 +104,8 @@ export default async function WriteArticlePage({
 
   const posts = published ?? [];
   const drafts = mine ?? [];
+  const own = posts.filter((p) => p.added_by === user.id);
+  const stats = await loadStatsFor(own.map((p) => ({ id: p.id, authorId: user.id })));
 
   return (
     <div className="space-y-8">
@@ -150,6 +153,39 @@ export default async function WriteArticlePage({
         </section>
       ) : null}
 
+      {own.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold">Your published hearticles</h2>
+          <ul className="grid gap-2 lg:grid-cols-2">
+            {own.map((p) => {
+              const s = stats.get(p.id) ?? { views: 0, reads: 0, likes: 0 };
+              const tone = hearticleTone(p.slug);
+              return (
+                <li key={p.id}>
+                  <Link
+                    href={`/dashboard/resources/write/insights/${p.slug}`}
+                    className="group flex items-center gap-4 rounded-2xl border border-border bg-card px-4 py-3 transition hover:border-foreground/30"
+                  >
+                    <span className="h-10 w-1 shrink-0 rounded-full" style={{ background: tone.accent }} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold">{p.title}</span>
+                      <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted tabular-nums">
+                        <span className="inline-flex items-center gap-1"><Eye className="size-3.5" /> {s.views}</span>
+                        <span className="inline-flex items-center gap-1"><BookOpenCheck className="size-3.5" /> {s.reads}</span>
+                        <span className="inline-flex items-center gap-1"><Heart className="size-3.5" /> {s.likes}</span>
+                      </span>
+                    </span>
+                    <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold" style={{ color: tone.accent }}>
+                      <ChartNoAxesColumn className="size-4" /> Insights
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
+
       {posts.length === 0 ? (
         <div className="flex flex-col items-center rounded-2xl border border-dashed border-border px-6 py-14 text-center">
           <PenLine className="size-6 text-muted" />
@@ -158,30 +194,19 @@ export default async function WriteArticlePage({
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {posts.map((post) => {
-            const tone = DAY_PALETTE[[...post.slug].reduce((n, c) => n + c.charCodeAt(0), 0) % DAY_PALETTE.length];
-            return (
-              <Link
-                key={post.id}
-                href={`/hearticles/${post.slug}`}
-                className={cn("group block rounded-2xl border p-2 transition hover:-translate-y-0.5 hover:shadow-xl", tone.tile)}
-              >
-                <div className={cn("relative aspect-[4/3] overflow-hidden rounded-xl border", tone.well)}>
-                  <TitleCover
-                    title={post.title}
-                    speaker={post.author?.name ?? null}
-                    speakerAvatarUrl={post.author?.avatar_url ?? null}
-                    status={null}
-                    number={0}
-                    palette={tone}
-                    kicker={post.read_minutes ? `${post.read_minutes} min read` : "hearticle"}
-                    watermark="“"
-                    subtitle={post.note}
-                  />
-                </div>
-              </Link>
-            );
-          })}
+          {posts.map((post) => (
+            <Link key={post.id} href={`/hearticles/${post.slug}`} className="group block transition hover:-translate-y-0.5">
+              <HearticleCover
+                title={post.title}
+                excerpt={post.note}
+                authorName={post.author?.name ?? null}
+                authorAvatarUrl={post.author?.avatar_url ?? null}
+                readMinutes={post.read_minutes}
+                tone={hearticleTone(post.slug)}
+                className="aspect-[4/3] rounded-2xl border border-white/10 transition group-hover:shadow-xl"
+              />
+            </Link>
+          ))}
         </div>
       )}
     </div>
@@ -195,6 +220,7 @@ type PublishedRow = {
   note: string | null;
   read_minutes: number | null;
   created_at: string;
+  added_by: string;
   author: { name: string; avatar_url: string | null } | null;
 };
 

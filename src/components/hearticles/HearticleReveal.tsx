@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react";
  * The hiding class is only added once JS runs, so the text is never stuck
  * invisible (no JS, crawlers, reader mode).
  */
-export function HearticleReveal({ children, className }: { children: React.ReactNode; className?: string }) {
+export function HearticleReveal({ children, ...rest }: { children: React.ReactNode } & React.HTMLAttributes<HTMLDivElement> & { "data-hearticle-body"?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export function HearticleReveal({ children, className }: { children: React.React
   }, []);
 
   return (
-    <div ref={ref} className={className}>
+    <div ref={ref} {...rest}>
       {children}
     </div>
   );
