@@ -195,14 +195,13 @@ export default async function HearticlePage({ params }: { params: Promise<{ slug
                     {article.readMinutes ? ` · ${article.readMinutes} min read` : ""}
                   </p>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
-                    {stats.views > 0 ? (
-                      <span className="inline-flex items-center gap-1.5 tabular-nums">
-                        <Eye className="size-4" /> {compact(stats.views)} {stats.views === 1 ? "view" : "views"}
-                      </span>
-                    ) : null}
-                    {stats.reads > 0 ? (
-                      <span className="inline-flex items-center gap-1.5 tabular-nums">
-                        <BookOpenCheck className="size-4" /> {compact(stats.reads)} {stats.reads === 1 ? "read" : "reads"}
+                    {/* public on purpose: everyone sees how far a hearticle has gone */}
+                    <span className="inline-flex items-center gap-1.5 tabular-nums" title="Total views">
+                      <Eye className="size-4" /> {compact(stats.views)} {stats.views === 1 ? "view" : "views"}
+                    </span>
+                    {stats.readers > 0 ? (
+                      <span className="inline-flex items-center gap-1.5 tabular-nums" title="People who read it to the end">
+                        <BookOpenCheck className="size-4" /> {compact(stats.readers)} {stats.readers === 1 ? "reader" : "readers"}
                       </span>
                     ) : null}
                     <LikeButton slug={slug} initialLiked={liked} initialCount={stats.likes} color={tone.accent} />

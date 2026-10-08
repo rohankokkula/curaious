@@ -158,7 +158,7 @@ export default async function WriteArticlePage({
           <h2 className="text-sm font-semibold">Your published hearticles</h2>
           <ul className="grid gap-2 lg:grid-cols-2">
             {own.map((p) => {
-              const s = stats.get(p.id) ?? { views: 0, reads: 0, likes: 0 };
+              const s = stats.get(p.id) ?? { views: 0, reads: 0, readers: 0, likes: 0 };
               const tone = hearticleTone(p.slug);
               return (
                 <li key={p.id}>
@@ -170,8 +170,8 @@ export default async function WriteArticlePage({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold">{p.title}</span>
                       <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted tabular-nums">
-                        <span className="inline-flex items-center gap-1"><Eye className="size-3.5" /> {s.views}</span>
-                        <span className="inline-flex items-center gap-1"><BookOpenCheck className="size-3.5" /> {s.reads}</span>
+                        <span className="inline-flex items-center gap-1" title="Views"><Eye className="size-3.5" /> {s.views}</span>
+                        <span className="inline-flex items-center gap-1" title="Readers"><BookOpenCheck className="size-3.5" /> {s.readers}</span>
                         <span className="inline-flex items-center gap-1"><Heart className="size-3.5" /> {s.likes}</span>
                       </span>
                     </span>

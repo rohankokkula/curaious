@@ -81,7 +81,9 @@ export async function trackableArticle(slug: string) {
 
 /* ───────────────────────── public counts ───────────────────────── */
 
-export type PublicStats = { views: number; reads: number; likes: number };
+/** views = every visit; reads = visits read to the end; readers = distinct
+ * people behind those reads (someone who read it twice is one reader). */
+export type PublicStats = { views: number; reads: number; readers: number; likes: number };
 
 export async function loadPublicStats(articleId: string, authorId: string | null): Promise<PublicStats> {
   const admin = createSupabaseAdminClient();
@@ -91,12 +93,20 @@ export async function loadPublicStats(articleId: string, authorId: string | null
     if (authorId) q = q.or(`profile_id.is.null,profile_id.neq.${authorId}`);
     return q;
   };
-  const [views, reads, likes] = await Promise.all([
+  let readerRows = admin.from("hearticle_views").select("visitor_id").eq("article_id", articleId).eq("is_read", true).limit(50000);
+  if (authorId) readerRows = readerRows.or(`profile_id.is.null,profile_id.neq.${authorId}`);
+  const [views, reads, readers, likes] = await Promise.all([
     viewCount(false),
     viewCount(true),
+    readerRows.returns<{ visitor_id: string }[]>(),
     admin.from("hearticle_likes").select("liker_key", { count: "exact", head: true }).eq("article_id", articleId),
   ]);
-  return { views: views.count ?? 0, reads: reads.count ?? 0, likes: likes.count ?? 0 };
+  return {
+    views: views.count ?? 0,
+    reads: reads.count ?? 0,
+    readers: new Set((readers.data ?? []).map((r) => r.visitor_id)).size,
+    likes: likes.count ?? 0,
+  };
 }
 
 export async function hasLiked(articleId: string, likerKey: string | null) {
@@ -131,6 +141,8 @@ export type HearticleInsights = {
     views: number;
     visitors: number;
     reads: number;
+    /** distinct people who read it to the end */
+    readers: number;
     readRate: number;
     likes: number;
     likeRate: number;
@@ -249,6 +261,7 @@ export async function loadInsights(article: { id: string; authorId: string; publ
     views: n,
     visitors: visitorsSeen.size,
     reads: reads.length,
+    readers: new Set(reads.map((v) => v.visitor_id)).size,
     readRate: n ? reads.length / n : 0,
     likes: likes.length,
     likeRate: visitorsSeen.size ? likes.length / visitorsSeen.size : 0,
@@ -303,22 +316,28 @@ export async function loadInsights(article: { id: string; authorId: string; publ
 
 /** Views / reads / likes for several hearticles at once (the writer's list). */
 export async function loadStatsFor(articles: { id: string; authorId: string }[]): Promise<Map<string, PublicStats>> {
-  const out = new Map<string, PublicStats>(articles.map((a) => [a.id, { views: 0, reads: 0, likes: 0 }]));
+  const out = new Map<string, PublicStats>(articles.map((a) => [a.id, { views: 0, reads: 0, readers: 0, likes: 0 }]));
   if (!articles.length) return out;
   const admin = createSupabaseAdminClient();
   const ids = articles.map((a) => a.id);
   const author = new Map(articles.map((a) => [a.id, a.authorId]));
   const [{ data: views }, { data: likes }] = await Promise.all([
-    admin.from("hearticle_views").select("article_id, profile_id, is_read").in("article_id", ids).limit(50000)
-      .returns<{ article_id: string; profile_id: string | null; is_read: boolean }[]>(),
+    admin.from("hearticle_views").select("article_id, visitor_id, profile_id, is_read").in("article_id", ids).limit(50000)
+      .returns<{ article_id: string; visitor_id: string; profile_id: string | null; is_read: boolean }[]>(),
     admin.from("hearticle_likes").select("article_id").in("article_id", ids).returns<{ article_id: string }[]>(),
   ]);
+  const readerSets = new Map<string, Set<string>>();
   for (const v of views ?? []) {
     if (v.profile_id && v.profile_id === author.get(v.article_id)) continue;
     const s = out.get(v.article_id)!;
     s.views += 1;
-    if (v.is_read) s.reads += 1;
+    if (!v.is_read) continue;
+    s.reads += 1;
+    const set = readerSets.get(v.article_id) ?? new Set<string>();
+    set.add(v.visitor_id);
+    readerSets.set(v.article_id, set);
   }
+  for (const [id, set] of readerSets) out.get(id)!.readers = set.size;
   for (const l of likes ?? []) out.get(l.article_id)!.likes += 1;
   return out;
 }

@@ -54,7 +54,7 @@ export default async function HearticleInsightsPage({ params }: { params: Promis
 
   const kpis = [
     { icon: Eye, label: "Views", value: totals.views.toLocaleString(), hint: `${totals.visitors.toLocaleString()} unique ${totals.visitors === 1 ? "reader" : "readers"}` },
-    { icon: BookOpenCheck, label: "Reads", value: totals.reads.toLocaleString(), hint: `${pct(totals.readRate)} read to the end` },
+    { icon: BookOpenCheck, label: "Readers", value: totals.readers.toLocaleString(), hint: `${totals.reads.toLocaleString()} full ${totals.reads === 1 ? "read" : "reads"} · ${pct(totals.readRate)} of views` },
     { icon: Clock, label: "Time per read", value: totals.reads ? formatDuration(totals.medianReadSeconds) : "–", hint: article.readMinutes ? `typical · estimate ${article.readMinutes} min` : "typical read" },
     { icon: Hourglass, label: "Total attention", value: formatDuration(totals.totalSeconds), hint: "all visits, active reading only" },
     { icon: Heart, label: "Likes", value: totals.likes.toLocaleString(), hint: `${pct(totals.likeRate)} of readers` },
