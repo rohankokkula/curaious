@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays, FileText, Mic } from "lucide-react";
 import { Avatar } from "@/components/dashboard/Avatar";
+import { AccentGlow } from "@/components/dashboard/AccentCard";
 import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
 import { groupWeeks, talkLooks, type DayPalette } from "@/components/dashboard/seasonLayout";
 import { TitleCover } from "@/components/dashboard/TalkCover";
@@ -41,10 +42,10 @@ type TalkView = TalkRow & {
 const shortDate = (date: string) =>
   new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 
-/** The deck's first slide once it's up; until then the same title cover the
- * schedule shows, in the talk's day color. */
+/** The same title cover the schedule's slot cards show, in the talk's day
+ * color — kept even once the deck is up, never swapped for its first slide. */
 function Thumb({ talk, className, size = "sm" }: { talk: TalkView; className?: string; size?: "sm" | "lg" }) {
-  if (!talk.hasThumb && talk.look) {
+  if (talk.look) {
     return (
       <div className={cn("group relative aspect-video overflow-hidden", talk.look.palette.well, className)}>
         <TitleCover
@@ -55,6 +56,7 @@ function Thumb({ talk, className, size = "sm" }: { talk: TalkView; className?: s
           number={talk.look.number}
           palette={talk.look.palette}
           size={size}
+          layout="center"
         />
       </div>
     );
@@ -94,20 +96,27 @@ function Speaker({ talk, size = "sm" }: { talk: TalkView; size?: "sm" | "md" }) 
   );
 }
 
-/** The next talk on the calendar, big: stacked on a phone, side by side on a laptop. */
+/** The next talk on the calendar, big: stacked on a phone, side by side on a
+ * laptop. The cover carries the title, so the text side starts with what the
+ * talk is about. */
 function FeaturedTalk({ talk }: { talk: TalkView }) {
   return (
     <Link
       href={`/dashboard/talks/${talk.id}/present`}
-      className="group block overflow-hidden rounded-2xl border border-border bg-card transition hover:border-foreground/30 md:grid md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]"
+      className="group relative block overflow-hidden rounded-3xl border border-border bg-card transition hover:border-foreground/30 md:grid md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]"
     >
+      {talk.look ? <AccentGlow palette={talk.look.palette} /> : null}
       <Thumb talk={talk} size="lg" className="md:aspect-auto md:min-h-72" />
-      <div className="flex flex-col p-5 md:p-7">
-        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-primary">
+      <div className="relative flex flex-col p-5 md:p-7">
+        <p className={cn("flex items-center gap-1.5 text-[11px] font-semibold tracking-widest uppercase", talk.look?.palette.label ?? "text-primary")}>
           <Mic className="size-3.5" /> Next up
         </p>
-        <h2 className="mt-2 text-xl font-bold tracking-tight text-balance md:text-2xl">{talk.title}</h2>
-        <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-muted">{talk.description}</p>
+        {talk.look ? (
+          <span className="sr-only">{talk.title}</span>
+        ) : (
+          <h2 className="mt-2 text-xl font-bold tracking-tight text-balance md:text-2xl">{talk.title}</h2>
+        )}
+        <p className="mt-3 line-clamp-4 leading-relaxed text-foreground/80 md:text-[15px]">{talk.description}</p>
         <div className="mt-5 flex items-center justify-between gap-3 md:mt-auto md:pt-6">
           <Speaker talk={talk} size="md" />
           <span className="flex shrink-0 items-center gap-1 text-xs font-semibold transition group-hover:translate-x-0.5">
@@ -123,12 +132,18 @@ function TalkCard({ talk }: { talk: TalkView }) {
   return (
     <Link
       href={`/dashboard/talks/${talk.id}/present`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-150 hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-md"
+      className="group relative flex flex-col overflow-hidden rounded-3xl border border-border bg-card transition-all duration-150 hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-md"
     >
+      {talk.look ? <AccentGlow palette={talk.look.palette} size="sm" /> : null}
       <Thumb talk={talk} />
-      <div className="flex flex-1 flex-col p-4">
-        <p className="line-clamp-2 font-semibold leading-snug">{talk.title}</p>
-        <p className="mt-1 line-clamp-2 text-sm text-muted">{talk.description}</p>
+      <div className="relative flex flex-1 flex-col p-4">
+        {/* the cover already shows the title; start with the description */}
+        {talk.look ? (
+          <span className="sr-only">{talk.title}</span>
+        ) : (
+          <p className="mb-1 line-clamp-2 leading-snug font-semibold">{talk.title}</p>
+        )}
+        <p className="line-clamp-3 text-sm leading-relaxed text-muted">{talk.description}</p>
         <div className="mt-auto pt-4">
           <Speaker talk={talk} />
         </div>

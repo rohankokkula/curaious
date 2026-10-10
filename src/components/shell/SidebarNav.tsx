@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Award, BarChart3, Bookmark, BookOpen, CalendarDays, Eye, FileText, Home, Mail, MessageSquare, Mic2, PenLine, Settings, Shield, User, Users, Layers,
+  Award, BarChart3, Bookmark, BookOpen, CalendarDays, Eye, FileText, Home, Mail, MessageSquare, Mic2, PenLine, Settings, Shield, Trophy, User, Users, Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const NAV_ICONS = {
   home: Home, user: User, calendar: CalendarDays, users: Users, shield: Shield, file: FileText,
   mail: Mail, message: MessageSquare, chart: BarChart3, eye: Eye, settings: Settings, layers: Layers,
-  talks: Mic2, resources: BookOpen, bookmark: Bookmark, articles: PenLine, award: Award,
+  talks: Mic2, resources: BookOpen, bookmark: Bookmark, articles: PenLine, award: Award, trophy: Trophy,
 };
 
 export type NavItem = {

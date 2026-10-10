@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowUpRight, Award, Check, EyeOff, Link2, Mail, MapPin, Mic, PenLine, Plus, Rocket, Sparkles } from "lucide-react";
+import { ArrowUpRight, Award, Check, EyeOff, Link2, Lock, Mail, MapPin, Mic, PenLine, Plus, Rocket, Sparkles } from "lucide-react";
 import { BadgeArt } from "@/components/dashboard/BadgeArt";
 import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
 import { DeckUploadPanel } from "@/components/dashboard/DeckUploadPanel";
@@ -15,6 +15,7 @@ import { GithubIcon, LinkedinIcon, XIcon } from "@/components/icons/SocialIcons"
 import { DAY_PALETTE, GRAY, talkLooks } from "@/components/dashboard/seasonLayout";
 import { WatchRecordingButton } from "@/components/dashboard/WatchRecordingButton";
 import { Wordmark } from "@/components/shell/Wordmark";
+import { revealDateLabel, scoresRevealed, scoresRevealOn } from "@/lib/scoreReveal";
 import { loadSeasonSlots } from "@/lib/slots";
 import { BADGES, isBadgeKey } from "@/lib/badges";
 import { getActiveCohort } from "@/lib/cohort";
@@ -218,7 +219,13 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   // curator) should still be able to read why it came back.
   const sentBack = !talk && canSeeGiven ? sentBackRow : null;
 
-  const aggregate = talk && talk.status === "approved" ? await loadRatingAggregate(talk.id) : null;
+  const [aggregate, { slots: seasonSlots }] = await Promise.all([
+    talk && talk.status === "approved" ? loadRatingAggregate(talk.id) : Promise.resolve(null),
+    loadSeasonSlots(user.id),
+  ]);
+  // Scores are sealed for everyone but the curator until the last talk is done.
+  const revealOn = scoresRevealOn(seasonSlots);
+  const scoresOpen = isAdmin || scoresRevealed(seasonSlots);
 
   const today = new Date().toISOString().slice(0, 10);
   const talkVisible = Boolean(talk && show("talk"));
@@ -230,7 +237,8 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
     { href: member.github_url, key: "github" as const, icon: GithubIcon, label: "GitHub" },
   ].filter((link) => link.href && show(link.key));
 
-  const scoresVisible = Boolean(aggregate && show("scores") && aggregate.count > 0);
+  const scoresVisible = Boolean(aggregate && show("scores") && aggregate.count > 0 && scoresOpen);
+  const scoresSealed = Boolean(aggregate && show("scores") && aggregate.count > 0 && !scoresOpen);
 
   /* ── your own profile: what's still missing ── */
   const checklist = [
@@ -250,7 +258,6 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   /* ── header: a profile card in their talk's color ── */
   // Their talk's day color from the schedule, so a profile and the talk cover
   // match; members without a talk get a steady color from their name.
-  const { slots: seasonSlots } = await loadSeasonSlots(user.id);
   const kickoff = isCurator ? (seasonSlots.find((slot) => slot.type === "kickoff") ?? null) : null;
   const look = talk ? talkLooks(seasonSlots).get(talk.id) : undefined;
   const accent = look?.palette ?? DAY_PALETTE[[...member.name].reduce((n, c) => n + c.charCodeAt(0), 0) % DAY_PALETTE.length];
@@ -429,6 +436,11 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
                   <span className="text-lg font-bold tabular-nums">{aggregate!.averages.overall}</span>
                   <span className="text-muted"> / {RATING_MAX} from {aggregate!.count} {aggregate!.count === 1 ? "rating" : "ratings"}</span>
                 </p>
+              ) : scoresSealed ? (
+                <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-muted">
+                  <Lock className="size-3.5" /> {aggregate!.count} {aggregate!.count === 1 ? "score" : "scores"} in · sealed
+                  {revealOn ? ` until ${revealDateLabel(revealOn)}` : ""}
+                </p>
               ) : null}
             </Link>
           ) : (
@@ -497,7 +509,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
                   {badges.map((badge) => (
                     <li key={badge.key}>
                       <Link
-                        href="/dashboard/badges"
+                        href="/dashboard/leaderboard#badges"
                         title={`${badge.name}: ${badge.awardedFor}`}
                         className="flex items-center gap-2 rounded-full border border-border bg-background/40 py-1 pr-3 pl-1.5 transition hover:border-foreground/30"
                       >
@@ -629,6 +641,30 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
             {!aggregate || aggregate.count === 0 ? (
               <p className="mt-4 text-sm text-muted">No scores in yet.</p>
+            ) : !scoresOpen ? (
+              <div className="relative mt-4 overflow-hidden rounded-xl bg-surface p-5">
+                {/* the shape of a score, blurred: something's there, not what */}
+                <div aria-hidden className="pointer-events-none blur-md select-none">
+                  <p className="text-4xl font-bold tracking-tight">?.? <span className="text-lg font-medium">/ {RATING_MAX}</span></p>
+                  <div className="mt-4 space-y-3">
+                    {RATING_PARAMETERS.map((parameter, i) => (
+                      <span key={parameter.key} className="block h-2 rounded-full bg-foreground/25" style={{ width: `${55 + ((i * 17) % 40)}%` }} />
+                    ))}
+                  </div>
+                </div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-surface/40 px-4 text-center">
+                  <span className="flex size-10 items-center justify-center rounded-full bg-background">
+                    <Lock className="size-4" />
+                  </span>
+                  <p className="text-sm font-semibold">
+                    {aggregate.count} {aggregate.count === 1 ? "score is" : "scores are"} in, sealed
+                  </p>
+                  <p className="max-w-xs text-xs text-muted">
+                    Everyone&rsquo;s scores open together once the last talk is done
+                    {revealOn ? `: ${revealDateLabel(revealOn)}` : ""}.
+                  </p>
+                </div>
+              </div>
             ) : (
               <>
                 <div className="mt-4 rounded-xl bg-surface p-4">

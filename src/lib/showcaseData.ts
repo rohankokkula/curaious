@@ -26,6 +26,7 @@ import {
   type ShowcasePerson,
   type ShowcaseSession,
 } from "@/lib/showcase";
+import { scoresRevealed } from "@/lib/scoreReveal";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { SlotType } from "@/lib/talks";
 
@@ -130,6 +131,8 @@ export const loadCohortPage = cache(async (number: number): Promise<CohortPageDa
     Boolean(p && visibilityOf(p).showcase && canSee(visibilityOf(p), key, viewer));
 
   const today = new Date().toISOString().slice(0, 10);
+  // Public page: scores stay sealed until the season's last talk is done.
+  const scoresOpen = scoresRevealed(season.session_slots.map((slot) => ({ date: slot.slot_date, type: slot.slot_type })), today);
 
   const sessions: ShowcaseSession[] = season.session_slots.map((slot) => ({
     id: slot.id,
@@ -165,7 +168,7 @@ export const loadCohortPage = cache(async (number: number): Promise<CohortPageDa
       const rows = talk ? (ratingsByTalk.get(talk.id) ?? []) : [];
 
       let scores: (RatingAverages & { count: number }) | null = null;
-      if (talk && show("scores") && rows.length > 0) {
+      if (talk && scoresOpen && show("scores") && rows.length > 0) {
         const averages = emptyAggregate().averages;
         let overallTotal = 0;
         for (const parameter of RATING_PARAMETERS) {

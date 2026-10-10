@@ -137,3 +137,15 @@ export function talkLooks(slots: SlotView[]) {
   );
   return looks;
 }
+
+/** Each session's day color and week number, as the schedule shows them. */
+export function slotLooks(slots: SlotView[]) {
+  const looks = new Map<string, { palette: DayPalette; week: number }>();
+  groupWeeks(slots).forEach((week, wi) =>
+    week.days.forEach((daySlots, di) => {
+      const palette = dayPalette(daySlots, wi * 2 + di);
+      for (const slot of daySlots) looks.set(slot.id, { palette, week: wi + 1 });
+    }),
+  );
+  return looks;
+}

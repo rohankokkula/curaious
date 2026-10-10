@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { emptyAggregate } from "@/lib/ratings";
 import { loadRatingAggregate } from "@/lib/ratingsAggregate";
+import { scoresRevealed, scoresRevealOn } from "@/lib/scoreReveal";
 import { loadTalkAccess } from "@/lib/talkAccess";
 import { hasServiceRoleKey } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -24,7 +26,7 @@ export async function GET(
   }
 
   const { id } = await params;
-  const { talk, canView, userId } = await loadTalkAccess(id);
+  const { talk, canView, userId, isAdmin, admin } = await loadTalkAccess(id);
 
   if (!userId) {
     return NextResponse.json(
@@ -41,5 +43,25 @@ export async function GET(
   }
 
   const aggregate = await loadRatingAggregate(talk.id);
-  return NextResponse.json({ ok: true, talkId: talk.id, aggregate });
+
+  // Sealed until the season's last talk is done (curator excepted): the
+  // count and written notes come through, the numbers don't.
+  if (!isAdmin) {
+    const { data: slot } = await admin.from("session_slots").select("season_id").eq("id", talk.slot_id).maybeSingle<{ season_id: string }>();
+    const { data: sessions } = slot
+      ? await admin.from("session_slots").select("slot_date, slot_type").eq("season_id", slot.season_id).returns<{ slot_date: string; slot_type: string }[]>()
+      : { data: [] };
+    const seasonSessions = (sessions ?? []).map((s) => ({ date: s.slot_date, type: s.slot_type }));
+    if (!scoresRevealed(seasonSessions)) {
+      return NextResponse.json({
+        ok: true,
+        talkId: talk.id,
+        aggregate: { ...aggregate, averages: emptyAggregate().averages },
+        sealed: true,
+        revealOn: scoresRevealOn(seasonSessions),
+      });
+    }
+  }
+
+  return NextResponse.json({ ok: true, talkId: talk.id, aggregate, sealed: false });
 }

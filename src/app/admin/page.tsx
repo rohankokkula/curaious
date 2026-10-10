@@ -4,7 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cohortMonthLabel, getActiveCohort } from "@/lib/cohort";
+import { LeaderboardToggle } from "@/components/admin/LeaderboardToggle";
 import { loadInvites } from "@/lib/invitesData";
+import { leaderboardEnabled } from "@/lib/leaderboard";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -41,10 +43,11 @@ export default async function AdminOverviewPage() {
   const supabase = await createSupabaseServerClient();
   const { data: slots } = await supabase.from("session_slots").select("id, slot_date, slot_type, label, capacity").eq("season_id", cohort.id).order("slot_date").order("sort_order");
   const slotIds = (slots ?? []).map((s) => s.id);
-  const [{ data: talks }, { count: memberCount }, inviteRows] = await Promise.all([
+  const [{ data: talks }, { count: memberCount }, inviteRows, boardOn] = await Promise.all([
     slotIds.length ? supabase.from("talks").select("slot_id, status").in("slot_id", slotIds).neq("status", "rejected") : Promise.resolve({ data: [] as { slot_id: string; status: string }[] }),
     supabase.from("cohort_members").select("profile_id", { count: "exact", head: true }).eq("cohort_id", cohort.id).eq("status", "active").neq("role", "admin"),
     loadInvites(),
+    leaderboardEnabled(cohort.id),
   ]);
 
   const pending = (talks ?? []).filter((t) => t.status === "pending").length;
@@ -66,6 +69,8 @@ export default async function AdminOverviewPage() {
         </div>
         <Badge variant={cohort.status === "active" ? "success" : "default"} className="px-3 py-1.5 text-sm">{cohort.status}</Badge>
       </header>
+
+      <LeaderboardToggle enabled={boardOn} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat value={pending} label="Talks awaiting review" hint="Review and approve" href="/admin/talks" icon={FileText} />

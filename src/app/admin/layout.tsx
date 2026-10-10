@@ -11,7 +11,7 @@ const ITEMS: NavItem[] = [
   { href: "/admin/talks", label: "Talks", icon: "file", tab: true },
   { href: "/admin/resources", label: "Articles", icon: "resources" },
   { href: "/admin/members", label: "Members", icon: "users", tab: true },
-  { href: "/dashboard/badges", label: "Badges", icon: "award" },
+  { href: "/dashboard/leaderboard", label: "Leaderboard", icon: "trophy" },
   { href: "/admin/invites", label: "Invites", icon: "mail" },
   { href: "/admin/schedule", label: "Schedule", icon: "calendar", tab: true },
   { href: "/admin/feedback", label: "Feedback", icon: "message" },

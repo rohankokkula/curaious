@@ -4,7 +4,6 @@ import { BookSeatDialog, type BookableMember } from "@/components/admin/BookSeat
 import { DraggableTalk, DroppableSeat } from "@/components/admin/ScheduleDnd";
 import { BadgeArt } from "@/components/dashboard/BadgeArt";
 import { BADGE_LIST } from "@/lib/badges";
-import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
 import { dayPalette, GRAY, groupWeeks, seatNumbers, type DayPalette } from "@/components/dashboard/seasonLayout";
 import { TitleCover } from "@/components/dashboard/TalkCover";
 import { WatchRecordingButton } from "@/components/dashboard/WatchRecordingButton";
@@ -126,32 +125,12 @@ function TalkTile({
   // A booked talk (approved request) shows its title and speaker to everyone;
   // a request still waiting on the curator is only readable by its author.
   const canSeeDetail = talk.status === "approved" || talk.isMine || mode === "admin";
-  // The deck's first slide once it's been reviewed (hasDeck already folds in
-  // who may see it) — otherwise the title cover stands in, and stays the
-  // fallback if the deck fails to render, e.g. a corrupt PDF.
-  const showDeckPage = canSeeDetail && talk.hasDeck && (talk.status === "approved" || talk.isMine);
 
   const body = (
     <div className={cn(SEAT_BOX, "flex items-center justify-center", palette.well)}>
-      {showDeckPage ? (
-        <>
-          <DeckPageThumbnail talkId={talk.talkId} className="absolute inset-0" />
-          <TalkNumber n={number} onImage />
-          {/* title + speaker over the slide, on a dark fade */}
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-1.5 pt-6 sm:p-2 sm:pt-8">
-            <p className="line-clamp-2 text-[10px] leading-tight font-bold text-white sm:text-xs">{talk.title}</p>
-            {talk.presenterName ? (
-              <p className="mt-0.5 flex min-w-0 items-center gap-1 text-[9px] text-white/80 sm:text-[11px]">
-                {talk.presenterAvatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={talk.presenterAvatarUrl} alt="" loading="lazy" className="size-4 shrink-0 rounded-full object-cover sm:size-5" />
-                ) : null}
-                <span className="truncate">{talk.presenterName}</span>
-              </p>
-            ) : null}
-          </div>
-        </>
-      ) : canSeeDetail && talk.title ? (
+      {/* always the title cover, never the deck's first slide, so a booked
+          seat looks the same on the schedule and the talks page */}
+      {canSeeDetail && talk.title ? (
         <TitleCover
           title={talk.title}
           speaker={talk.presenterName}
@@ -224,7 +203,7 @@ function SessionTile({
 
       {/* recognitions: the season's badges, big and in full color, up for grabs */}
       {type === "recognition" ? (
-        <Link href="/dashboard/badges" className="mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <Link href="/dashboard/leaderboard#badges" className="mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
           {BADGE_LIST.map((badge) => (
             <span
               key={badge.key}

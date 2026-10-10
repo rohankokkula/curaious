@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/shell/AppShell";
 import type { NavItem } from "@/components/shell/SidebarNav";
 import { getActiveCohort } from "@/lib/cohort";
+import { leaderboardEnabled } from "@/lib/leaderboard";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient, getViewerProfile } from "@/lib/supabase/server";
 
@@ -8,6 +9,10 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [viewer, cohort] = await Promise.all([getViewerProfile(), getActiveCohort()]);
+  const isAdmin = viewer?.role === "admin";
+  // One link for rankings + badges. With the leaderboard switched off,
+  // members still get the page, as just their badges.
+  const rankingsOn = Boolean(cohort && (isAdmin || (await leaderboardEnabled(cohort.id))));
 
   // Removed by the curator: out, even with a session that's still valid.
   if (viewer && viewer.role !== "admin" && cohort) {
@@ -26,7 +31,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/schedule", label: "Schedule", icon: "calendar", tab: true },
     { href: "/dashboard/talks", label: "Talks", icon: "talks", tab: true },
     { href: "/dashboard/members", label: "Members", icon: "users", tab: true },
-    { href: "/dashboard/badges", label: "Badges", icon: "award" },
+    { href: "/dashboard/leaderboard", label: rankingsOn ? "Leaderboard" : "Badges", icon: rankingsOn ? "trophy" : "award" },
     ...(viewer?.role === "admin" ? [{ href: "/admin", label: "Admin", icon: "shield" as const }] : []),
   ];
 

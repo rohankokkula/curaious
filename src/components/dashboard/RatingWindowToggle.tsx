@@ -35,7 +35,7 @@ export function RatingWindowToggle({ talkId, open }: { talkId: string; open: boo
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="rounded-3xl border border-border bg-card p-4">
       <div className="flex items-start gap-2">
         {open ? (
           <LockOpen aria-hidden className="mt-0.5 size-4 shrink-0 text-success" />
