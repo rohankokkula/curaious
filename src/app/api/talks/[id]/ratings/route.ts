@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { emptyAggregate } from "@/lib/ratings";
 import { loadRatingAggregate } from "@/lib/ratingsAggregate";
+import { loadPresentedIds } from "@/lib/presented";
 import { scoresRevealed, scoresRevealOn } from "@/lib/scoreReveal";
 import { loadTalkAccess } from "@/lib/talkAccess";
 import { hasServiceRoleKey } from "@/lib/supabase/admin";
@@ -42,17 +43,27 @@ export async function GET(
     );
   }
 
-  const aggregate = await loadRatingAggregate(talk.id);
+  const loaded = await loadRatingAggregate(talk.id);
+  // Written notes open once the curator marks this talk done.
+  const notesOpen = isAdmin || (await loadPresentedIds([talk.id])).has(talk.id);
+  const aggregate = notesOpen ? loaded : { ...loaded, comments: [] };
 
-  // Sealed until the season's last talk is done (curator excepted): the
-  // count and written notes come through, the numbers don't.
+  // Scores are sealed until every talk is done (curator excepted): the
+  // count comes through, the numbers don't.
   if (!isAdmin) {
     const { data: slot } = await admin.from("session_slots").select("season_id").eq("id", talk.slot_id).maybeSingle<{ season_id: string }>();
     const { data: sessions } = slot
-      ? await admin.from("session_slots").select("slot_date, slot_type").eq("season_id", slot.season_id).returns<{ slot_date: string; slot_type: string }[]>()
+      ? await admin
+          .from("session_slots")
+          .select("slot_date, slot_type, talks (id, status)")
+          .eq("season_id", slot.season_id)
+          .returns<{ slot_date: string; slot_type: string; talks: { id: string; status: string }[] }[]>()
       : { data: [] };
     const seasonSessions = (sessions ?? []).map((s) => ({ date: s.slot_date, type: s.slot_type }));
-    if (!scoresRevealed(seasonSessions)) {
+    const booked = (sessions ?? []).flatMap((s) => s.talks.filter((t) => t.status === "approved").map((t) => t.id));
+    const presented = await loadPresentedIds(booked);
+    const allDone = booked.length > 0 && booked.every((id) => presented.has(id));
+    if (!scoresRevealed(seasonSessions, undefined, allDone)) {
       return NextResponse.json({
         ok: true,
         talkId: talk.id,

@@ -4,6 +4,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  MessageSquareQuote,
   Presentation,
 } from "lucide-react";
 import { AccentCard } from "@/components/dashboard/AccentCard";
@@ -12,6 +13,7 @@ import { DeleteTalkButton } from "@/components/dashboard/DeleteTalkButton";
 import { RatingForm } from "@/components/dashboard/RatingForm";
 import { RatingWindowToggle } from "@/components/dashboard/RatingWindowToggle";
 import { EditTalkDialog } from "@/components/admin/EditTalkDialog";
+import { MarkDoneButton } from "@/components/admin/MarkDoneButton";
 import {
   DAY_PALETTE,
   talkLooks,
@@ -19,7 +21,10 @@ import {
 } from "@/components/dashboard/seasonLayout";
 import { DeckUploadPanel } from "@/components/dashboard/DeckUploadPanel";
 import { SlideDeck } from "@/components/dashboard/SlideDeck";
+import { NotesCarousel } from "@/components/dashboard/NotesCarousel";
 import { SpeakerCard } from "@/components/dashboard/SpeakerCard";
+import { canSee, resolveVisibility } from "@/lib/profile";
+import { loadRatingAggregate } from "@/lib/ratingsAggregate";
 import type { RatingParameterKey } from "@/lib/ratings";
 import { deckIsPublic, type DeckStatus, type TalkStatus } from "@/lib/talks";
 import { loadSeasonSlots } from "@/lib/slots";
@@ -65,6 +70,7 @@ type TalkRow = {
     linkedin_url: string | null;
     twitter_url: string | null;
     github_url: string | null;
+    visibility: unknown;
   } | null;
 };
 type RatingRow = Record<RatingParameterKey, number> & {
@@ -123,7 +129,7 @@ export default async function TalkPage({
           season:seasons (starts_on),
           talks (id, status, submitted_at)
         ),
-        presenter:profiles!presenter_id (id, name, headline, bio, avatar_url, linkedin_url, twitter_url, github_url)`,
+        presenter:profiles!presenter_id (id, name, headline, bio, avatar_url, linkedin_url, twitter_url, github_url, visibility)`,
         )
         .eq("id", talkId)
         .maybeSingle<TalkRow>(),
@@ -195,12 +201,26 @@ export default async function TalkPage({
         .join(" · ")
     : "";
 
+  const done = seasonSlots.some((sl) => sl.talks.some((t) => t.talkId === talk.id && t.done));
+
+  // The room's written notes open once the curator marks the talk done (the
+  // curator sees them as they come in). Scores stay sealed either way. Other
+  // members only see them if the speaker shares their feedback.
+  const notesOpen = talk.status === "approved" && (isAdmin || done);
+  const notesVisible =
+    notesOpen &&
+    Boolean(presenter && canSee(resolveVisibility(presenter.visibility), "feedback", { isSelf: isPresenter, isAdmin }));
+  const notes = notesVisible
+    ? (await loadRatingAggregate(talk.id)).comments.map((c) => ({ name: c.raterName, avatarUrl: c.raterAvatarUrl, text: c.text }))
+    : [];
   const coverStatus =
     talk.status !== "approved"
       ? "requested"
-      : !deckIsPublic(talk)
-        ? "deck-soon"
-        : null;
+      : done
+        ? "done"
+        : !deckIsPublic(talk)
+          ? "deck-soon"
+          : null;
   const canSeeDeck = Boolean(
     talk.deck_path && (isPresenter || isAdmin || deckIsPublic(talk)),
   );
@@ -211,7 +231,7 @@ export default async function TalkPage({
   );
 
   return (
-    <div className="grid gap-5 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
+    <div className="grid grid-cols-1 gap-5 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
       <div className="min-w-0 space-y-5 sm:space-y-6">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm text-muted">
           <Link href="/dashboard/schedule" className="hover:text-foreground">
@@ -265,11 +285,16 @@ export default async function TalkPage({
                   ) : null}
                 </div>
                 {isAdmin ? (
-                  <EditTalkDialog
-                    talkId={talk.id}
-                    title={talk.title}
-                    description={talk.description}
-                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    {talk.status === "approved" ? (
+                      <MarkDoneButton talkId={talk.id} done={done} />
+                    ) : null}
+                    <EditTalkDialog
+                      talkId={talk.id}
+                      title={talk.title}
+                      description={talk.description}
+                    />
+                  </div>
                 ) : null}
               </div>
 
@@ -360,6 +385,25 @@ export default async function TalkPage({
             </div>
           ) : null}
         </section>
+
+        {notesVisible && notes.length > 0 ? (
+          <AccentCard palette={palette} className="p-5 sm:p-6">
+            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className={cn("flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] uppercase", palette.label)}>
+                <MessageSquareQuote className="size-4" /> What the room said
+              </h2>
+              <p className="text-xs text-muted">
+                {notes.length} {notes.length === 1 ? "note" : "notes"}
+                {isAdmin && !done ? " · only you see these until you mark it done" : ""}
+              </p>
+            </div>
+            <NotesCarousel notes={notes} accentClass={palette.label} />
+          </AccentCard>
+        ) : isPresenter && talk.status === "approved" && !done ? (
+          <p className="rounded-3xl border border-dashed border-border p-5 text-sm text-muted">
+            The room&rsquo;s notes on your talk show up here once the curator marks it done.
+          </p>
+        ) : null}
 
         {presenter ? (
           <SpeakerCard speaker={presenter} palette={palette} />

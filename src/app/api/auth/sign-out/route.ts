@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
   // Derived from the request, not a configured site URL — see the same note
   // in auth/callback/route.ts.
-  return NextResponse.redirect(new URL("/login", new URL(request.url).origin), {
+  return NextResponse.redirect(new URL("/", new URL(request.url).origin), {
     status: 303,
   });
 }

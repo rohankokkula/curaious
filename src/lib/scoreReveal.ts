@@ -1,7 +1,8 @@
 /**
  * Scores stay sealed until the whole season has presented: nobody (the
- * speaker included) sees a talk's averages until the day after the season's
- * last talk session, so the anticipation builds toward the reveal. The
+ * speaker included) sees a talk's averages until the curator has marked every
+ * booked talk as done, or failing that the day after the season's last talk
+ * session, so the anticipation builds toward the reveal. The
  * curator sees them all along. Written feedback isn't sealed, only numbers.
  *
  * Plain logic, no server imports: safe anywhere.
@@ -21,9 +22,17 @@ export function scoresRevealOn(sessions: SessionLike[]): string | null {
   return next.toISOString().slice(0, 10);
 }
 
-export function scoresRevealed(sessions: SessionLike[], today = new Date().toISOString().slice(0, 10)) {
+/** `allDone`: every booked talk this season is marked done by the curator. */
+export function scoresRevealed(sessions: SessionLike[], today = new Date().toISOString().slice(0, 10), allDone = false) {
+  if (allDone) return true;
   const on = scoresRevealOn(sessions);
   return on !== null && today >= on;
+}
+
+/** Every booked talk in these sessions is done (and there's at least one). */
+export function allTalksDone(slots: { talks: { status: string; done: boolean }[] }[]) {
+  const booked = slots.flatMap((s) => s.talks.filter((t) => t.status === "approved"));
+  return booked.length > 0 && booked.every((t) => t.done);
 }
 
 export const revealDateLabel = (day: string) =>

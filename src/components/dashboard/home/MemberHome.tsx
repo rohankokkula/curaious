@@ -51,7 +51,7 @@ export function MemberHome({ name, cohort, slots, data }: { name: string; cohort
         ) : null}
       </header>
 
-      <div className="grid gap-5 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-1 gap-5 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         {/* your talk */}
         {myTalk && mineSlot && myLook ? (
           <AccentCard palette={myLook.palette} className="p-4 sm:p-5">
@@ -64,7 +64,7 @@ export function MemberHome({ name, cohort, slots, data }: { name: string; cohort
                   title={myTalk.title ?? "Your talk"}
                   speaker={myTalk.presenterName}
                   speakerAvatarUrl={myTalk.presenterAvatarUrl}
-                  status={myTalk.status !== "approved" ? "requested" : myTalk.deckPending ? "deck-soon" : null}
+                  status={myTalk.status !== "approved" ? "requested" : myTalk.done ? "done" : myTalk.deckPending ? "deck-soon" : null}
                   number={myLook.number}
                   palette={myLook.palette}
                   layout="center"
@@ -170,7 +170,7 @@ export function MemberHome({ name, cohort, slots, data }: { name: string; cohort
             <CheckCircle2 className="size-4 shrink-0 text-success" /> You&rsquo;re all caught up. Talks show up here when the curator opens scoring.
           </p>
         ) : (
-          <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {owed.map(({ talk }) => {
               const look = looks.get(talk.talkId);
               return (

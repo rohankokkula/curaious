@@ -4,9 +4,10 @@ import { BookOpen, Brain, Lightbulb, MonitorPlay, Sparkles } from "lucide-react"
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ScoreSlider, scoreColor } from "@/components/dashboard/ScoreSlider";
+import { ScoreSlider } from "@/components/dashboard/ScoreSlider";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
+import { scoreColor } from "@/lib/scoreColors";
 import { FEEDBACK_MAX, FEEDBACK_MIN, overallOf, RATING_MAX, RATING_PARAMETERS, type RatingParameterKey } from "@/lib/ratings";
 
 type Scores = Record<RatingParameterKey, number>;

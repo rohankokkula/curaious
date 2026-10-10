@@ -11,6 +11,7 @@
  * Vercel, on two of the most-visited pages in the app.
  */
 import { cache } from "react";
+import { loadPresentedIds } from "@/lib/presented";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { deckIsPublic, type SlotType, type SlotView } from "@/lib/talks";
 
@@ -86,6 +87,7 @@ export const loadSeasonSlots = cache(async (viewerId: string): Promise<SeasonSlo
   const slots = season.session_slots ?? [];
   const talks = slots.flatMap((slot) => slot.talks ?? []);
   const names = new Map(talks.map((talk) => [talk.presenter_id, talk.presenter?.name ?? null]));
+  const presented = await loadPresentedIds(talks.filter((t) => t.status === "approved").map((t) => t.id));
 
   const payload: SlotView[] = slots.map((slot) => {
     const slotTalks = slot.talks ?? [];
@@ -114,6 +116,7 @@ export const loadSeasonSlots = cache(async (viewerId: string): Promise<SeasonSlo
           // Others see the deck once it's been reviewed; you always see your own.
           hasDeck: isMine ? Boolean(talk.deck_path) : deckIsPublic(talk),
           deckPending: approved && !deckIsPublic(talk),
+          done: approved && presented.has(talk.id),
         };
       }),
     };

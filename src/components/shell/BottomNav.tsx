@@ -133,7 +133,7 @@ function MoreSheet({
     // Hard navigation so every client component remounts with no stale
     // signed-in state, same as the desktop menu.
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.href = "/login";
+    window.location.href = "/";
   }
 
   return (

@@ -16,6 +16,7 @@ import {
   Video,
 } from "lucide-react";
 import { LeaderboardToggle } from "@/components/admin/LeaderboardToggle";
+import { MarkDoneButton } from "@/components/admin/MarkDoneButton";
 import { AccentCard } from "@/components/dashboard/AccentCard";
 import { Avatar } from "@/components/dashboard/Avatar";
 import {
@@ -29,7 +30,6 @@ import { TitleCover } from "@/components/dashboard/TalkCover";
 import { WatchRecordingButton } from "@/components/dashboard/WatchRecordingButton";
 import type { Cohort } from "@/lib/cohort";
 import type { CuratorHomeData, HomePerson } from "@/lib/homeData";
-import { revealDateLabel, scoresRevealOn } from "@/lib/scoreReveal";
 import type { DeckStatus, SlotView } from "@/lib/talks";
 import { cn } from "@/lib/utils";
 import { dayLabel, timeRange, todayIso, whenFromNow } from "./format";
@@ -100,7 +100,7 @@ export function CuratorHome({
   );
   const neverOpened = booked.filter(
     (t) =>
-      t.slot.date < today &&
+      (t.talk.done || t.slot.date < today) &&
       !t.state?.ratingsOpen &&
       (t.state?.raterIds.size ?? 0) === 0,
   );
@@ -150,7 +150,7 @@ export function CuratorHome({
 
   // feedback chase: talks that have been given (or are being scored now)
   const chase = booked
-    .filter((t) => t.slot.date < today || t.state?.ratingsOpen)
+    .filter((t) => (t.talk.done || t.slot.date < today) || t.state?.ratingsOpen)
     .map((t) => {
       const raters = possibleRaters(t.state!.presenterId);
       const missing = raters.filter((m) => !t.state!.raterIds.has(m.id));
@@ -158,9 +158,6 @@ export function CuratorHome({
     })
     .sort((a, b) => b.missing.length - a.missing.length);
 
-  const revealOn = scoresRevealOn(
-    slots.map((s) => ({ date: s.date, type: s.type })),
-  );
   const scoresIn = booked.reduce(
     (n, t) => n + (t.state?.raterIds.size ?? 0),
     0,
@@ -168,7 +165,7 @@ export function CuratorHome({
   const pulse = [
     {
       icon: Presentation,
-      value: `${booked.filter((t) => t.slot.date < today).length}/${booked.length}`,
+      value: `${booked.filter((t) => t.talk.done || t.slot.date < today).length}/${booked.length}`,
       label: "talks given",
     },
     {
@@ -213,7 +210,7 @@ export function CuratorHome({
         </span>
       </header>
 
-      <div className="grid gap-5 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid grid-cols-1 gap-5 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-5 sm:space-y-6">
           {/* the session to run */}
           {nextSession ? (
@@ -248,7 +245,7 @@ export function CuratorHome({
                 session.
               </p>
             ) : (
-              <ul className="mt-4 grid gap-3 md:grid-cols-2">
+              <ul className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
                 {chase.map(({ talk, total, missing, state }) => {
                   const look = looks.get(talk.talkId);
                   const done = total - missing.length;
@@ -358,10 +355,12 @@ export function CuratorHome({
               ))}
               <div className="rounded-2xl bg-surface px-3 py-2.5">
                 <dt className="flex items-center gap-1.5 text-[11px] text-muted">
-                  <Lock className="size-3.5" /> scores sealed until
+                  <Lock className="size-3.5" /> scores unveil
                 </dt>
                 <dd className="mt-0.5 text-sm font-bold">
-                  {revealOn ? revealDateLabel(revealOn) : "–"}
+                  {booked.length && booked.every((t) => t.talk.done)
+                    ? "Unveiled"
+                    : `after ${booked.filter((t) => !t.talk.done).length} more talks`}
                 </dd>
               </div>
             </dl>
@@ -491,7 +490,7 @@ function NextSession({
           No talks booked into this session yet.
         </p>
       ) : (
-        <ul className="mt-5 grid gap-4 sm:grid-cols-2">
+        <ul className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
           {talks.map(({ talk, state }) => {
             const look = looks.get(talk.talkId);
             const raters = state ? possibleRaters(state.presenterId) : [];
@@ -512,7 +511,7 @@ function NextSession({
                     title={talk.title ?? "Untitled"}
                     speaker={talk.presenterName}
                     speakerAvatarUrl={talk.presenterAvatarUrl}
-                    status={null}
+                    status={talk.done ? "done" : null}
                     number={look?.number ?? 0}
                     palette={look?.palette ?? palette}
                     layout="center"
@@ -525,6 +524,7 @@ function NextSession({
                       open={state.ratingsOpen}
                     />
                   ) : null}
+                  <MarkDoneButton talkId={talk.talkId} done={talk.done} />
                   <span
                     className={cn(
                       "rounded-full px-2.5 py-1 text-xs font-semibold",

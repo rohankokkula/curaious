@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowUpRight, Award, Check, EyeOff, Link2, Lock, Mail, MapPin, Mic, PenLine, Plus, Rocket, Sparkles } from "lucide-react";
 import { BadgeArt } from "@/components/dashboard/BadgeArt";
-import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
 import { DeckUploadPanel } from "@/components/dashboard/DeckUploadPanel";
 import { DeleteTalkButton } from "@/components/dashboard/DeleteTalkButton";
 import { Avatar } from "@/components/dashboard/Avatar";
@@ -15,7 +14,7 @@ import { GithubIcon, LinkedinIcon, XIcon } from "@/components/icons/SocialIcons"
 import { DAY_PALETTE, GRAY, talkLooks } from "@/components/dashboard/seasonLayout";
 import { WatchRecordingButton } from "@/components/dashboard/WatchRecordingButton";
 import { Wordmark } from "@/components/shell/Wordmark";
-import { revealDateLabel, scoresRevealed, scoresRevealOn } from "@/lib/scoreReveal";
+import { allTalksDone, scoresRevealed } from "@/lib/scoreReveal";
 import { loadSeasonSlots } from "@/lib/slots";
 import { BADGES, isBadgeKey } from "@/lib/badges";
 import { getActiveCohort } from "@/lib/cohort";
@@ -224,8 +223,9 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
     loadSeasonSlots(user.id),
   ]);
   // Scores are sealed for everyone but the curator until the last talk is done.
-  const revealOn = scoresRevealOn(seasonSlots);
-  const scoresOpen = isAdmin || scoresRevealed(seasonSlots);
+  const scoresOpen = isAdmin || scoresRevealed(seasonSlots, undefined, allTalksDone(seasonSlots));
+  // Written notes open per talk, once the curator marks it done.
+  const notesOpen = isAdmin || Boolean(talk && seasonSlots.some((sl) => sl.talks.some((t) => t.talkId === talk.id && t.done)));
 
   const today = new Date().toISOString().slice(0, 10);
   const talkVisible = Boolean(talk && show("talk"));
@@ -439,7 +439,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
               ) : scoresSealed ? (
                 <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-muted">
                   <Lock className="size-3.5" /> {aggregate!.count} {aggregate!.count === 1 ? "score" : "scores"} in · sealed
-                  {revealOn ? ` until ${revealDateLabel(revealOn)}` : ""}
+                   until every talk is done
                 </p>
               ) : null}
             </Link>
@@ -565,7 +565,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   const presentationTab = (
     <div className="space-y-4 sm:space-y-6">
       {/* The talk itself lives in the profile card above. What's left here:
-          why a request came back, and (for you / the curator) deck tools. */}
+          why a request came back, and (for you) your talk tools. */}
       {sentBack ? (
         <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-300">
@@ -576,42 +576,14 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
         </div>
       ) : null}
 
-      {talk && (isSelf || (isAdmin && talk.deck_path)) ? (
+      {/* the deck itself lives on the talk page; here, only your own talk tools */}
+      {talk && isSelf ? (
         <Card className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-base font-bold">{isSelf ? "Manage your talk" : "Deck"}</h3>
-            {talk.deck_path ? (
-              <div className="flex gap-2">
-                <Link
-                  href={`/dashboard/talks/${talk.id}/present`}
-                  className="rounded-full bg-foreground px-4 py-1.5 text-sm font-semibold text-background transition hover:bg-foreground/90"
-                >
-                  View deck
-                </Link>
-                <a
-                  href={`/api/talks/${talk.id}/deck/view`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-full border border-border px-4 py-1.5 text-sm font-medium transition hover:bg-surface"
-                >
-                  Open PDF
-                </a>
-              </div>
-            ) : null}
+          <h3 className="text-base font-bold">Manage your talk</h3>
+          <DeckUploadPanel talkId={talk.id} booked={talk.status === "approved"} deckStatus={talk.deck_status} feedback={talk.deck_feedback} />
+          <div className="border-t border-border pt-4">
+            <DeleteTalkButton talkId={talk.id} />
           </div>
-          {talk.deck_path ? (
-            <div className="relative aspect-video max-w-md overflow-hidden rounded-xl border border-border bg-surface">
-              <DeckPageThumbnail talkId={talk.id} className="absolute inset-0" />
-            </div>
-          ) : null}
-          {isSelf ? (
-            <>
-              <DeckUploadPanel talkId={talk.id} booked={talk.status === "approved"} deckStatus={talk.deck_status} feedback={talk.deck_feedback} />
-              <div className="border-t border-border pt-4">
-                <DeleteTalkButton talkId={talk.id} />
-              </div>
-            </>
-          ) : null}
         </Card>
       ) : null}
 
@@ -661,7 +633,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
                   </p>
                   <p className="max-w-xs text-xs text-muted">
                     Everyone&rsquo;s scores open together once the last talk is done
-                    {revealOn ? `: ${revealDateLabel(revealOn)}` : ""}.
+                    .
                   </p>
                 </div>
               </div>
@@ -701,6 +673,8 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
             {!show("feedback") ? (
               <p className="mt-4 text-sm text-muted">This member keeps their written feedback private.</p>
+            ) : !notesOpen ? (
+              <p className="mt-4 text-sm text-muted">Notes show up here once the curator marks the talk done.</p>
             ) : !aggregate || aggregate.comments.length === 0 ? (
               <p className="mt-4 text-sm text-muted">No notes in yet.</p>
             ) : (

@@ -8,8 +8,9 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 /**
- * Curator-only switch for the season leaderboard. Off hides the rankings from
- * members everywhere; the page stays as just the season's badges.
+ * Curator-only switch for the season leaderboard. It never hides the page:
+ * members always have it in the sidebar. On, rankings unveil once every talk
+ * is done; off, they stay held back after that too.
  */
 export function LeaderboardToggle({ enabled, className }: { enabled: boolean; className?: string }) {
   const router = useRouter();
@@ -48,7 +49,9 @@ export function LeaderboardToggle({ enabled, className }: { enabled: boolean; cl
           </Link>
         </p>
         <p className="mt-0.5 text-xs text-muted">
-          {on ? "Members see it in the sidebar. Rankings stay sealed until the last talk is done." : "Rankings hidden from members. They still see the badges."}
+          {on
+            ? "Rankings unveil to members the moment every talk is marked done."
+            : "Held back: members see \u201cUnveils after all the talks are done\u201d even once they are."}
         </p>
       </div>
       <button

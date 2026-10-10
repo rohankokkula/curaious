@@ -33,6 +33,8 @@ export type SlotTalk = {
   hasDeck: boolean;
   /** Booked, but the deck isn't uploaded/approved yet. */
   deckPending: boolean;
+  /** The curator has marked it as given. */
+  done: boolean;
 };
 
 /** A slot can hold more than one talk — e.g. two or three lightning talks in one session. */

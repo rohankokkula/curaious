@@ -1,3 +1,4 @@
+import { loadPresentedIds } from "@/lib/presented";
 import Link from "next/link";
 import { ScheduleDndProvider } from "@/components/admin/ScheduleDnd";
 import { ScheduleEditor } from "@/components/admin/ScheduleEditor";
@@ -66,6 +67,7 @@ export default async function AdminSchedulePage() {
   // The same week-by-week view the cohort sees, built from the rows already
   // loaded above. Admins read every talk under RLS, so nothing is withheld
   // here the way it is for members in /api/slots.
+  const presented = await loadPresentedIds((talks ?? []).filter((t) => t.status === "approved").map((t) => t.id));
   const timeline: SlotView[] = slots
     .map((slot) => ({
       id: slot.id,
@@ -89,6 +91,7 @@ export default async function AdminSchedulePage() {
         isMine: false,
         hasDeck: Boolean(talk.deck_path),
         deckPending: talk.status === "approved" && !deckIsPublic(talk),
+        done: presented.has(talk.id),
       })),
     }))
     .sort((a, b) => a.date.localeCompare(b.date));

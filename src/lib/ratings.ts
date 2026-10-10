@@ -15,6 +15,8 @@ export const RATING_PARAMETERS = [
   {
     key: "understanding",
     label: "Ease of understanding",
+    /** column header on the leaderboard */
+    short: "Understanding",
     hint: "The ideas, the examples, the jargon: how much of it did you follow?",
     icon: "understanding",
     anchors: [
@@ -33,6 +35,8 @@ export const RATING_PARAMETERS = [
   {
     key: "content",
     label: "Content value",
+    /** column header on the leaderboard */
+    short: "Content",
     hint: "The topic, the ideas, what was new to you: was it worth your time?",
     icon: "content",
     anchors: [
@@ -51,6 +55,8 @@ export const RATING_PARAMETERS = [
   {
     key: "research_depth",
     label: "Research depth",
+    /** column header on the leaderboard */
+    short: "Depth",
     hint: "The sources, the facts, their own digging: how far beyond a quick search did they go?",
     icon: "depth",
     anchors: [
@@ -69,6 +75,8 @@ export const RATING_PARAMETERS = [
   {
     key: "delivery",
     label: "Delivery",
+    /** column header on the leaderboard */
+    short: "Delivery",
     hint: "The slides, the pace, the choice of words: how well did it come across?",
     icon: "delivery",
     anchors: [
@@ -87,6 +95,8 @@ export const RATING_PARAMETERS = [
   {
     key: "usefulness",
     label: "Practical takeaways",
+    /** column header on the leaderboard */
+    short: "Takeaways",
     hint: "Tools, tips, ways of thinking: can you use any of it in your own work or projects?",
     icon: "takeaways",
     anchors: [

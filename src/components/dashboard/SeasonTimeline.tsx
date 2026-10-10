@@ -135,7 +135,7 @@ function TalkTile({
           title={talk.title}
           speaker={talk.presenterName}
           speakerAvatarUrl={talk.presenterAvatarUrl}
-          status={talk.status !== "approved" ? "requested" : talk.deckPending ? "deck-soon" : null}
+          status={talk.status !== "approved" ? "requested" : talk.done ? "done" : talk.deckPending ? "deck-soon" : null}
           number={number}
           palette={palette}
         />

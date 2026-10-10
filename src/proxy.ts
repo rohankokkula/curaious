@@ -32,6 +32,12 @@ export async function proxy(request: NextRequest) {
 
   const { supabase, response, user } = session;
 
+  // Still signed in from last time: skip the landing page and the login
+  // screen and go straight in. Only an explicit log out ends the session.
+  if (user && (pathname === "/" || pathname === "/login")) {
+    return redirectTo(request, "/dashboard");
+  }
+
   if ((needsMember || needsAdmin) && !user) {
     // A link someone shared into WhatsApp/Slack/iMessage: the preview
     // fetcher isn't signed in, so it would follow the redirect and every

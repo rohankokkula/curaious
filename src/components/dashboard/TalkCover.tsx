@@ -33,7 +33,7 @@ export function TitleCover({
   speaker: string | null;
   speakerAvatarUrl?: string | null;
   /** Small tag in the corner: the request is pending, or the deck isn't up yet. */
-  status: "requested" | "deck-soon" | null;
+  status: "requested" | "deck-soon" | "done" | null;
   number: number;
   palette: DayPalette;
   /** "sm" for schedule tiles and talk cards; "lg" for a featured, full-width cover. */
@@ -156,7 +156,14 @@ export function TitleCover({
             </>
           )}
         </span>
-        {status === "requested" ? (
+        {status === "done" ? (
+          <span className="flex items-center gap-1 rounded-full bg-sky-400/90 px-1.5 py-px text-[8px] font-semibold whitespace-nowrap text-black sm:text-[9px]">
+            <svg aria-hidden viewBox="0 0 12 12" className="size-2.5">
+              <path d="M2.5 6.5 5 9l4.5-5.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Done
+          </span>
+        ) : status === "requested" ? (
           <span className="rounded-full bg-amber-400/90 px-1.5 py-px text-[8px] font-semibold whitespace-nowrap text-black sm:text-[9px]">
             Requested
           </span>

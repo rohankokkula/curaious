@@ -48,7 +48,7 @@ export function UserMenu({
     // A hard navigation (not router.push) so every client component — this
     // menu included — remounts clean with no stale signed-in state left over.
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.href = "/login";
+    window.location.href = "/";
   }
 
   // modal={false}: the default modal mode blocks pointer events elsewhere on

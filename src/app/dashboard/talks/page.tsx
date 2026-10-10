@@ -37,6 +37,8 @@ type TalkView = TalkRow & {
   /** The talk's season number and day color, exactly as the schedule shows it. */
   look: { number: number; palette: DayPalette } | null;
   deckPending: boolean;
+  /** marked done by the curator */
+  done: boolean;
 };
 
 const shortDate = (date: string) =>
@@ -52,7 +54,7 @@ function Thumb({ talk, className, size = "sm" }: { talk: TalkView; className?: s
           title={talk.title}
           speaker={talk.presenter?.name ?? null}
           speakerAvatarUrl={talk.presenter?.avatar_url ?? null}
-          status={talk.inReview ? "requested" : talk.deckPending ? "deck-soon" : null}
+          status={talk.inReview ? "requested" : talk.done ? "done" : talk.deckPending ? "deck-soon" : null}
           number={talk.look.number}
           palette={talk.look.palette}
           size={size}
@@ -177,6 +179,7 @@ export default async function TalksPage() {
   // identical here and on the schedule.
   const { slots: seasonSlots } = user ? await loadSeasonSlots(user.id) : { slots: [] };
   const looks = talkLooks(seasonSlots);
+  const doneIds = new Set(seasonSlots.flatMap((s) => s.talks.filter((t) => t.done).map((t) => t.talkId)));
   const weekOf = new Map<string, number>();
   groupWeeks(seasonSlots).forEach((week, wi) => week.days.flat().forEach((slot) => slot.talks.forEach((t) => weekOf.set(t.talkId, wi + 1))));
 
@@ -208,6 +211,7 @@ export default async function TalksPage() {
         week: weekOf.get(talk.id) ?? null,
         look: looks.get(talk.id) ?? null,
         deckPending: talk.status === "approved" && !deckIsPublic(talk),
+        done: doneIds.has(talk.id),
         isMine: talk.presenter_id === user?.id,
         inReview: talk.status !== "approved",
         // your own deck always; anyone else's once the curator has reviewed it
@@ -218,9 +222,11 @@ export default async function TalksPage() {
     // the session). Anything without a seat number falls back to its date.
     .sort((a, b) => (a.look?.number ?? Number.MAX_SAFE_INTEGER) - (b.look?.number ?? Number.MAX_SAFE_INTEGER) || a.date.localeCompare(b.date));
 
-  const upcoming = talks.filter((t) => t.date >= today);
+  // Given = marked done by the curator, or its day has passed.
+  const given = (t: TalkView) => t.done || t.date < today;
+  const upcoming = talks.filter((t) => !given(t));
   // Most recent first: what you'd most likely want to go back and rate.
-  const presented = talks.filter((t) => t.date < today).reverse();
+  const presented = talks.filter(given).reverse();
   const next = upcoming.find((t) => !t.inReview) ?? null;
   const comingUp = upcoming.filter((t) => t !== next);
 
