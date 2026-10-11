@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { absoluteUrl } from "@/lib/siteUrl";
 
 /**
  * /cohort1 (the public season page) is unlisted: nothing on the site links to it, and well-behaved
@@ -14,5 +15,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/cohort1", "/showcase", "/dashboard", "/admin", "/api"],
     },
+    sitemap: absoluteUrl("/sitemap.xml"),
   };
 }

@@ -287,6 +287,10 @@ export function ScheduleEditor({ cohortId, initial }: { cohortId: string; initia
                   <Input className="mt-1.5" type="time" value={draft.endsAt} onChange={(e) => setDraft({ ...draft, endsAt: e.target.value })} />
                 </label>
               </div>
+              {/* talk days: each talk gets its own recording, on the talk page */}
+              {draft.type === "talk" ? (
+                <p className="text-xs text-muted">Recordings for talk days are added per talk: open the talk and use &ldquo;Add recording&rdquo;.</p>
+              ) : (
               <label className="block text-sm font-medium">Recording link
                 <Input
                   className="mt-1.5"
@@ -297,6 +301,7 @@ export function ScheduleEditor({ cohortId, initial }: { cohortId: string; initia
                 />
                 <span className="mt-1 block text-xs font-normal text-muted">YouTube (unlisted is fine), Vimeo or Loom. Signed-in members can watch it from the schedule.</span>
               </label>
+              )}
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" onClick={() => setDraft(null)}>Cancel</Button>
                 <Button onClick={saveDraft} disabled={!draft.label.trim() || !draft.date}>Save</Button>

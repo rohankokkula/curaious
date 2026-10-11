@@ -1,18 +1,17 @@
 /**
- * SERVER-ONLY. Deck PDF validation + storage, shared by a slot request that
- * comes with a deck (POST /api/talks) and a deck added later
- * (PUT /api/talks/[id]/deck).
+ * SERVER-ONLY. Deck validation + storage (PDF or PowerPoint), shared by a slot
+ * request that comes with a deck (POST /api/talks) and a deck added later
+ * (PUT /api/talks/[id]/deck), by the presenter or by the curator on their behalf.
  */
 import { NextResponse } from "next/server";
 import { DECKS_BUCKET, type createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { MAX_DECK_BYTES, MAX_DECK_MB, sanitizeDeckFilename } from "@/lib/talks";
+import { DECK_FORMATS, deckFormatOf, MAX_DECK_BYTES, MAX_DECK_MB, sanitizeDeckFilename } from "@/lib/talks";
 
 /** A 400 response when the file isn't an acceptable deck, else null. */
 export function validateDeck(deck: File) {
-  const looksLikePdf = deck.type === "application/pdf" || /\.pdf$/i.test(deck.name);
-  if (!looksLikePdf) {
+  if (!deckFormatOf(deck.name, deck.type)) {
     return NextResponse.json(
-      { ok: false, error: "deck_not_pdf", message: "pdf only, please, it's what the fullscreen viewer expects." },
+      { ok: false, error: "deck_bad_format", message: "a pdf or a powerpoint (.pptx) file, please." },
       { status: 400 },
     );
   }
@@ -26,15 +25,29 @@ export function validateDeck(deck: File) {
 }
 
 /**
- * Uploads the PDF and marks it for review. Returns false if the upload (or
- * the row update) failed; the talk itself is left as it was.
+ * Uploads the deck and sends it for review, or, when the curator uploads on
+ * the presenter's behalf (`approved: true`), marks it approved straight away,
+ * since the curator is the reviewer. Returns false if the upload (or the row
+ * update) failed; the talk itself is left as it was.
  */
-export async function storeDeck(admin: ReturnType<typeof createSupabaseAdminClient>, talkId: string, deck: File) {
+export async function storeDeck(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  talkId: string,
+  deck: File,
+  { approved = false }: { approved?: boolean } = {},
+) {
+  const format = deckFormatOf(deck.name, deck.type) ?? "pdf";
   const deckPath = `${talkId}/${sanitizeDeckFilename(deck.name)}`;
+
+  // A replacement in the other format would leave the old file behind.
+  const { data: existing } = await admin.from("talks").select("deck_path").eq("id", talkId).maybeSingle<{ deck_path: string | null }>();
+  if (existing?.deck_path && existing.deck_path !== deckPath) {
+    await admin.storage.from(DECKS_BUCKET).remove([existing.deck_path]);
+  }
 
   const { error: uploadError } = await admin.storage
     .from(DECKS_BUCKET)
-    .upload(deckPath, await deck.arrayBuffer(), { contentType: "application/pdf", upsert: true });
+    .upload(deckPath, await deck.arrayBuffer(), { contentType: DECK_FORMATS[format].mime, upsert: true });
   if (uploadError) {
     console.error("deckUpload: upload failed", uploadError.message);
     return false;
@@ -42,7 +55,12 @@ export async function storeDeck(admin: ReturnType<typeof createSupabaseAdminClie
 
   const { error: updateError } = await admin
     .from("talks")
-    .update({ deck_path: deckPath, deck_status: "submitted", deck_feedback: null, deck_reviewed_at: null })
+    .update({
+      deck_path: deckPath,
+      deck_status: approved ? "approved" : "submitted",
+      deck_feedback: null,
+      deck_reviewed_at: approved ? new Date().toISOString() : null,
+    })
     .eq("id", talkId);
   if (updateError) {
     console.error("deckUpload: talk update failed", updateError.message);

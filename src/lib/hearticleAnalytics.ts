@@ -165,7 +165,7 @@ export type HearticleInsights = {
   hours: number[];
   fastestRead: number | null;
   longestRead: number | null;
-  likers: { name: string; avatarUrl: string | null }[];
+  likers: { id: string | null; name: string; avatarUrl: string | null }[];
   anonymousLikes: number;
   facts: string[];
 };
@@ -308,7 +308,7 @@ export async function loadInsights(article: { id: string; authorId: string; publ
     hours,
     fastestRead: readSeconds.length ? Math.min(...readSeconds) : null,
     longestRead: readSeconds.length ? Math.max(...readSeconds) : null,
-    likers: likes.filter((l) => l.liker).map((l) => ({ name: l.liker!.name, avatarUrl: l.liker!.avatar_url })),
+    likers: likes.filter((l) => l.liker).map((l) => ({ id: l.profile_id, name: l.liker!.name, avatarUrl: l.liker!.avatar_url })),
     anonymousLikes: likes.filter((l) => !l.liker).length,
     facts,
   };

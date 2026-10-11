@@ -76,8 +76,10 @@ export async function GET(
 }
 
 /**
- * The presenter adds (or replaces) their deck after the slot was requested.
- * Any upload goes back to the curator for review: `deck_status = submitted`.
+ * The presenter adds (or replaces) their deck after the slot was requested;
+ * the curator can do the same on their behalf. A presenter's upload goes back
+ * to the curator for review (`deck_status = submitted`); the curator's own
+ * upload is approved straight away.
  */
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!isSupabaseConfigured || !hasServiceRoleKey) {
@@ -85,22 +87,25 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
 
   const { id } = await params;
-  const { admin, talk, userId, isPresenter } = await loadTalkAccess(id);
+  const { admin, talk, userId, isPresenter, isAdmin } = await loadTalkAccess(id);
   if (!userId) return NextResponse.json({ ok: false, message: "sign in first." }, { status: 401 });
-  if (!talk || !isPresenter) return NextResponse.json({ ok: false, message: "that isn't your talk." }, { status: 403 });
+  if (!talk || !(isPresenter || isAdmin)) return NextResponse.json({ ok: false, message: "that isn't your talk." }, { status: 403 });
   if (talk.status === "rejected") {
     return NextResponse.json({ ok: false, message: "this request was declined. request another slot first." }, { status: 409 });
   }
 
   const deck = (await request.formData().catch(() => null))?.get("deck");
   if (!(deck instanceof File) || deck.size === 0) {
-    return NextResponse.json({ ok: false, message: "attach your deck as a pdf." }, { status: 400 });
+    return NextResponse.json({ ok: false, message: "attach the deck as a pdf or powerpoint file." }, { status: 400 });
   }
   const invalid = validateDeck(deck);
   if (invalid) return invalid;
 
-  const stored = await storeDeck(admin, talk.id, deck);
+  // The curator uploading for someone else is the review; a curator who is
+  // also the presenter still goes through the same rule as everyone.
+  const onBehalf = isAdmin && !isPresenter;
+  const stored = await storeDeck(admin, talk.id, deck, { approved: onBehalf });
   if (!stored) return NextResponse.json({ ok: false, message: "the deck didn't upload. try again in a moment." }, { status: 502 });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, approved: onBehalf });
 }

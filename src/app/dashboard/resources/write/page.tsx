@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, BookOpenCheck, ChartNoAxesColumn, Eye, Heart, PenLine } from "lucide-react";
+import { CardLink } from "@/components/dashboard/PersonLink";
 import { HearticleCover } from "@/components/hearticles/HearticleCover";
 import { loadStatsFor } from "@/lib/hearticleAnalytics";
 import { hearticleTone } from "@/lib/hearticleTone";
@@ -195,17 +196,19 @@ export default async function WriteArticlePage({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {posts.map((post) => (
-            <Link key={post.id} href={`/hearticles/${post.slug}`} className="group block transition hover:-translate-y-0.5">
+            <div key={post.id} className="group relative block rounded-2xl transition hover:-translate-y-0.5 [&>*:not(a)]:pointer-events-none">
+              <CardLink href={`/hearticles/${post.slug}`} label={post.title} />
               <HearticleCover
                 title={post.title}
                 excerpt={post.note}
                 authorName={post.author?.name ?? null}
+                authorId={post.added_by}
                 authorAvatarUrl={post.author?.avatar_url ?? null}
                 readMinutes={post.read_minutes}
                 tone={hearticleTone(post.slug)}
                 className="aspect-[4/3] rounded-2xl border border-white/10 transition group-hover:shadow-xl"
               />
-            </Link>
+            </div>
           ))}
         </div>
       )}

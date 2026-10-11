@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { loadTalkAccess } from "@/lib/talkAccess";
+import { deckFormatOf } from "@/lib/talks";
 import { DECKS_BUCKET, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -34,9 +35,12 @@ export async function GET(
     return new NextResponse("no deck here.", { status: 404 });
   }
 
+  // A PowerPoint can't be shown in the browser, so it downloads, under the
+  // speaker's own file name; a PDF opens in place.
+  const isPptx = deckFormatOf(talk.deck_path) === "pptx";
   const { data, error } = await admin.storage
     .from(DECKS_BUCKET)
-    .createSignedUrl(talk.deck_path, SIGNED_URL_TTL_SECONDS);
+    .createSignedUrl(talk.deck_path, SIGNED_URL_TTL_SECONDS, isPptx ? { download: `${talk.title.slice(0, 60).replace(/[^\w .-]+/g, "")}.pptx` || true } : undefined);
 
   if (error || !data?.signedUrl) {
     console.error("api/talks/[id]/deck/view: sign failed", error?.message);

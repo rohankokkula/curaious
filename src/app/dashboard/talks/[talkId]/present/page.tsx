@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageSquareQuote,
+  FileDown,
   Presentation,
 } from "lucide-react";
 import { AccentCard } from "@/components/dashboard/AccentCard";
@@ -17,16 +18,26 @@ import { MarkDoneButton } from "@/components/admin/MarkDoneButton";
 import {
   DAY_PALETTE,
   talkLooks,
+  talkPaletteByPerson,
   weekKey,
 } from "@/components/dashboard/seasonLayout";
 import { DeckUploadPanel } from "@/components/dashboard/DeckUploadPanel";
 import { SlideDeck } from "@/components/dashboard/SlideDeck";
 import { NotesCarousel } from "@/components/dashboard/NotesCarousel";
 import { SpeakerCard } from "@/components/dashboard/SpeakerCard";
+import { TalkRecordingButton } from "@/components/dashboard/TalkRecordingButton";
+import { WatchRecordingButton } from "@/components/dashboard/WatchRecordingButton";
+import { Avatar } from "@/components/dashboard/Avatar";
+import { PersonLink } from "@/components/dashboard/PersonLink";
 import { canSee, resolveVisibility } from "@/lib/profile";
 import { loadRatingAggregate } from "@/lib/ratingsAggregate";
 import type { RatingParameterKey } from "@/lib/ratings";
-import { deckIsPublic, type DeckStatus, type TalkStatus } from "@/lib/talks";
+import {
+  deckFormatOf,
+  deckIsPublic,
+  type DeckStatus,
+  type TalkStatus,
+} from "@/lib/talks";
 import { loadSeasonSlots } from "@/lib/slots";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { cn } from "@/lib/utils";
@@ -60,6 +71,7 @@ type TalkRow = {
   slot_id: string;
   submitted_at: string;
   ratings_open: boolean;
+  recording_url: string | null;
   slot: SlotRow | null;
   presenter: {
     id: string;
@@ -124,7 +136,7 @@ export default async function TalkPage({
       supabase
         .from("talks")
         .select(
-          `id, title, description, status, presenter_id, deck_path, deck_status, deck_feedback, slot_id, submitted_at, ratings_open,
+          `id, title, description, status, presenter_id, deck_path, deck_status, deck_feedback, slot_id, submitted_at, ratings_open, recording_url,
         slot:session_slots (label, slot_date, starts_at, ends_at, season_id,
           season:seasons (starts_on),
           talks (id, status, submitted_at)
@@ -201,7 +213,9 @@ export default async function TalkPage({
         .join(" · ")
     : "";
 
-  const done = seasonSlots.some((sl) => sl.talks.some((t) => t.talkId === talk.id && t.done));
+  const done = seasonSlots.some((sl) =>
+    sl.talks.some((t) => t.talkId === talk.id && t.done),
+  );
 
   // The room's written notes open once the curator marks the talk done (the
   // curator sees them as they come in). Scores stay sealed either way. Other
@@ -209,10 +223,37 @@ export default async function TalkPage({
   const notesOpen = talk.status === "approved" && (isAdmin || done);
   const notesVisible =
     notesOpen &&
-    Boolean(presenter && canSee(resolveVisibility(presenter.visibility), "feedback", { isSelf: isPresenter, isAdmin }));
+    Boolean(
+      presenter &&
+      canSee(resolveVisibility(presenter.visibility), "feedback", {
+        isSelf: isPresenter,
+        isAdmin,
+      }),
+    );
+  // recordings: the speaker's own "recording" toggle decides who else sees it
+  const canSeeRecording = Boolean(
+    presenter &&
+    canSee(resolveVisibility(presenter.visibility), "recording", {
+      isSelf: isPresenter,
+      isAdmin,
+    }),
+  );
+  const writerPalette = talkPaletteByPerson(seasonSlots);
   const notes = notesVisible
-    ? (await loadRatingAggregate(talk.id)).comments.map((c) => ({ name: c.raterName, avatarUrl: c.raterAvatarUrl, text: c.text }))
+    ? (await loadRatingAggregate(talk.id)).comments.map((c) => {
+        // each note wears its writer's own talk color
+        const writer = writerPalette.get(c.raterId);
+        return {
+          id: c.raterId,
+          name: c.raterName,
+          avatarUrl: c.raterAvatarUrl,
+          text: c.text,
+          cardClass: writer?.well,
+          accentClass: writer?.label,
+        };
+      })
     : [];
+  const showNotes = notesVisible && notes.length > 0;
   const coverStatus =
     talk.status !== "approved"
       ? "requested"
@@ -224,6 +265,9 @@ export default async function TalkPage({
   const canSeeDeck = Boolean(
     talk.deck_path && (isPresenter || isAdmin || deckIsPublic(talk)),
   );
+  // an approved PDF (or the presenter's / curator's own view of one) becomes
+  // the banner itself; a PowerPoint keeps the cover and gets a download card
+  const slidesInBanner = canSeeDeck && deckFormatOf(talk.deck_path) === "pdf";
   const pillClass = cn(
     "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold",
     palette.well,
@@ -251,24 +295,36 @@ export default async function TalkPage({
 
         {/* the talk, in its day color: cover (which carries the title) + what it's about */}
         <AccentCard palette={palette} className="@container p-3 sm:p-4">
-          <div className="grid gap-4 @3xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] @3xl:gap-6">
-            <div
-              className={cn(
-                "relative aspect-video overflow-hidden rounded-2xl border",
-                palette.well,
-              )}
-            >
-              <TitleCover
-                title={talk.title}
-                speaker={presenter?.name ?? null}
-                speakerAvatarUrl={presenter?.avatar_url ?? null}
-                status={coverStatus}
-                number={look?.number ?? position + 1}
-                palette={palette}
-                size="lg"
-                layout="center"
-              />
-            </div>
+          <div
+            className={cn(
+              "grid gap-4",
+              // slides need the width: they stack over the details
+              !slidesInBanner &&
+                "@3xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] @3xl:gap-6",
+            )}
+          >
+            {slidesInBanner ? (
+              <SlideDeck talkId={talk.id} />
+            ) : (
+              <div
+                className={cn(
+                  "relative aspect-video overflow-hidden rounded-2xl border",
+                  palette.well,
+                )}
+              >
+                <TitleCover
+                  title={talk.title}
+                  speaker={presenter?.name ?? null}
+                  speakerAvatarUrl={presenter?.avatar_url ?? null}
+                  speakerId={presenter?.id ?? null}
+                  status={coverStatus}
+                  number={look?.number ?? position + 1}
+                  palette={palette}
+                  size="lg"
+                  layout="center"
+                />
+              </div>
+            )}
 
             <div className="flex min-w-0 flex-col px-2 pb-3 @3xl:px-0 @3xl:py-3 @3xl:pr-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -283,23 +339,76 @@ export default async function TalkPage({
                       Talk {position + 1} of {siblings.length}
                     </span>
                   ) : null}
+                  {/* this talk's own recording (the speaker decides who sees it) */}
+                  {talk.recording_url && canSeeRecording ? (
+                    <WatchRecordingButton
+                      url={talk.recording_url}
+                      title={talk.title}
+                    />
+                  ) : null}
                 </div>
-                {isAdmin ? (
+                {(isAdmin || isPresenter) && talk.status !== "rejected" ? (
                   <div className="flex flex-wrap items-center gap-2">
-                    {talk.status === "approved" ? (
+                    {isAdmin && talk.status === "approved" ? (
                       <MarkDoneButton talkId={talk.id} done={done} />
                     ) : null}
+                    {talk.status === "approved" ? (
+                      <TalkRecordingButton
+                        talkId={talk.id}
+                        current={talk.recording_url}
+                      />
+                    ) : null}
+                    {/* the speaker edits their own title; the curator, anyone's */}
                     <EditTalkDialog
                       talkId={talk.id}
                       title={talk.title}
                       description={talk.description}
+                      asAdmin={isAdmin}
                     />
+                    {isAdmin && !isPresenter ? (
+                      <DeleteTalkButton
+                        talkId={talk.id}
+                        speakerName={presenter?.name.split(" ")[0] ?? "this"}
+                        size="xs"
+                      />
+                    ) : null}
                   </div>
                 ) : null}
               </div>
 
-              {/* the title is on the cover; this keeps it for screen readers and the tab */}
-              <h1 className="sr-only">{talk.title}</h1>
+              {slidesInBanner ? (
+                // the slides took the cover's place: title and speaker go here
+                <div className="mt-4">
+                  <p
+                    className={cn(
+                      "font-mono text-[11px] font-semibold tracking-[0.16em] uppercase",
+                      palette.label,
+                    )}
+                  >
+                    Talk {String(look?.number ?? position + 1).padStart(2, "0")}
+                    {done ? " · done" : ""}
+                  </p>
+                  <h1 className="mt-1 text-2xl font-bold tracking-tight text-balance md:text-3xl">
+                    {talk.title}
+                  </h1>
+                  {presenter ? (
+                    <PersonLink
+                      id={presenter.id}
+                      className="mt-2 inline-flex items-center gap-2 text-sm font-semibold"
+                    >
+                      <Avatar
+                        name={presenter.name}
+                        src={presenter.avatar_url}
+                        size="sm"
+                      />
+                      {presenter.name}
+                    </PersonLink>
+                  ) : null}
+                </div>
+              ) : (
+                // the title is on the cover; this keeps it for screen readers and the tab
+                <h1 className="sr-only">{talk.title}</h1>
+              )}
               <p
                 className={cn(
                   "mt-5 text-[11px] font-semibold tracking-[0.18em] uppercase",
@@ -346,67 +455,84 @@ export default async function TalkPage({
           </div>
         </AccentCard>
 
-        <section className="space-y-4">
-          <h2
-            className={cn(
-              "flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] uppercase",
-              palette.label,
-            )}
-          >
-            <Presentation className="size-4" /> The deck
-          </h2>
-
-          {isPresenter ? (
-            <DeckUploadPanel
-              talkId={talk.id}
-              booked={talk.status === "approved"}
-              deckStatus={talk.deck_status}
-              feedback={talk.deck_feedback}
-            />
-          ) : null}
-
-          {/* Others see the deck once the curator has reviewed it. */}
-          {canSeeDeck ? (
-            <SlideDeck talkId={talk.id} />
-          ) : !isPresenter ? (
-            <div
+        {/* deck tools and the non-slideshow cases; the slides themselves are up in the banner */}
+        {((isPresenter || isAdmin) && talk.status !== "rejected") ||
+        !slidesInBanner ? (
+          <section className="space-y-4">
+            <h2
               className={cn(
-                "relative overflow-hidden rounded-3xl border border-dashed p-10 text-center",
-                palette.well,
+                "flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] uppercase",
+                palette.label,
               )}
             >
-              <Presentation className={cn("mx-auto size-6", palette.label)} />
-              <p className="mt-2 font-semibold">The deck isn&rsquo;t up yet</p>
-              <p className="mt-1 text-sm text-muted">
-                It shows here once{" "}
-                {presenter?.name.split(" ")[0] ?? "the speaker"} uploads it and
-                the curator has had a look.
-              </p>
-            </div>
-          ) : null}
-        </section>
+              <Presentation className="size-4" /> The deck
+            </h2>
 
-        {notesVisible && notes.length > 0 ? (
-          <AccentCard palette={palette} className="p-5 sm:p-6">
-            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className={cn("flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] uppercase", palette.label)}>
-                <MessageSquareQuote className="size-4" /> What the room said
-              </h2>
-              <p className="text-xs text-muted">
-                {notes.length} {notes.length === 1 ? "note" : "notes"}
-                {isAdmin && !done ? " · only you see these until you mark it done" : ""}
-              </p>
-            </div>
-            <NotesCarousel notes={notes} accentClass={palette.label} />
-          </AccentCard>
-        ) : isPresenter && talk.status === "approved" && !done ? (
-          <p className="rounded-3xl border border-dashed border-border p-5 text-sm text-muted">
-            The room&rsquo;s notes on your talk show up here once the curator marks it done.
-          </p>
-        ) : null}
+            {/* the speaker uploads their own; the curator can upload for them */}
+            {(isPresenter || isAdmin) && talk.status !== "rejected" ? (
+              <DeckUploadPanel
+                talkId={talk.id}
+                booked={talk.status === "approved"}
+                deckStatus={talk.deck_status}
+                feedback={talk.deck_feedback}
+                onBehalfOf={
+                  isAdmin && !isPresenter
+                    ? (presenter?.name.split(" ")[0] ?? "the speaker")
+                    : null
+                }
+              />
+            ) : null}
 
-        {presenter ? (
-          <SpeakerCard speaker={presenter} palette={palette} />
+            {/* Others see the deck once the curator has reviewed it. A PDF opens
+              as a slideshow; a PowerPoint file is a download. */}
+            {canSeeDeck && deckFormatOf(talk.deck_path) === "pptx" ? (
+              <div
+                className={cn(
+                  "flex flex-wrap items-center gap-4 rounded-3xl border p-5",
+                  palette.well,
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex size-12 shrink-0 items-center justify-center rounded-2xl bg-background/50",
+                    palette.label,
+                  )}
+                >
+                  <FileDown className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold">PowerPoint deck</p>
+                  <p className="text-sm text-muted">
+                    It opens in PowerPoint, Keynote or Google Slides. Upload a
+                    PDF for the in-browser slideshow.
+                  </p>
+                </div>
+                <a
+                  href={`/api/talks/${talk.id}/deck/view`}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition hover:bg-foreground/90"
+                >
+                  <FileDown className="size-4" /> Download
+                </a>
+              </div>
+            ) : canSeeDeck ? null : !isPresenter && !isAdmin ? (
+              <div
+                className={cn(
+                  "relative overflow-hidden rounded-3xl border border-dashed p-10 text-center",
+                  palette.well,
+                )}
+              >
+                <Presentation className={cn("mx-auto size-6", palette.label)} />
+                <p className="mt-2 font-semibold">
+                  The deck isn&rsquo;t up yet
+                </p>
+                <p className="mt-1 text-sm text-muted">
+                  It shows here once{" "}
+                  {presenter?.name.split(" ")[0] ?? "the speaker"} uploads it
+                  and the curator has had a look.
+                </p>
+              </div>
+            ) : null}
+          </section>
         ) : null}
 
         {isPresenter ? (
@@ -423,20 +549,56 @@ export default async function TalkPage({
         ) : null}
       </div>
 
-      {/* scoring has a sidebar of its own, in view while you go through the deck */}
+      {/* the right sidebar: the room's notes once they're open, else scoring */}
       <aside
-        aria-label="Scoring"
+        aria-label="Scoring and feedback"
         className="space-y-4 xl:sticky xl:top-6 xl:max-h-[calc(100dvh-3rem)] xl:overflow-y-auto xl:pb-2"
       >
+        {/* who's speaking, first */}
+        {presenter ? (
+          <SpeakerCard speaker={presenter} palette={palette} />
+        ) : null}
+
         {isAdmin ? (
           <RatingWindowToggle talkId={talk.id} open={talk.ratings_open} />
         ) : null}
 
+        {showNotes ? (
+          <AccentCard palette={palette} className="p-4">
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <h2
+                className={cn(
+                  "flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] uppercase",
+                  palette.label,
+                )}
+              >
+                <MessageSquareQuote className="size-4" /> What the room said
+              </h2>
+              <p className="text-xs text-muted">
+                {notes.length} {notes.length === 1 ? "note" : "notes"}
+              </p>
+            </div>
+            {isAdmin && !done ? (
+              <p className="-mt-1 mb-3 text-xs text-muted">
+                Only you see these until you mark the talk done.
+              </p>
+            ) : null}
+            <NotesCarousel
+              notes={notes}
+              accentClass={palette.label}
+              cardClass={palette.well}
+            />
+          </AccentCard>
+        ) : null}
+
         {isPresenter ? (
-          <Notice>
-            This is your talk. The curator opens scoring once you&rsquo;ve given
-            it, and the rest of the cohort rates it then.
-          </Notice>
+          showNotes ? null : (
+            <Notice>
+              {done
+                ? "This is your talk. Notes from the room show up here as they come in."
+                : "This is your talk. The room's notes show up here once the curator marks it done, and scoring opens when you've given it."}
+            </Notice>
+          )
         ) : talk.status !== "approved" ? (
           <Notice>
             This slot request hasn&rsquo;t been confirmed yet, so there&rsquo;s
@@ -445,14 +607,19 @@ export default async function TalkPage({
         ) : !user ? (
           <Notice>Sign in to leave feedback.</Notice>
         ) : !talk.ratings_open ? (
-          isAdmin ? null : (
+          isAdmin || showNotes ? null : (
             <Notice>
               Scoring isn&rsquo;t open for this talk yet. The curator opens it
               once the talk has been given.
             </Notice>
           )
         ) : (
-          <RatingForm talkId={talk.id} initial={existing} />
+          <RatingForm
+            talkId={talk.id}
+            initial={existing}
+            speakerName={presenter?.name.split(" ")[0] ?? null}
+            speakerId={presenter?.id ?? null}
+          />
         )}
       </aside>
     </div>

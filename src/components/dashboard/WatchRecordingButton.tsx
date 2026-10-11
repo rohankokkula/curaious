@@ -11,17 +11,32 @@ import { cn } from "@/lib/utils";
  * in view beside it. Only allowlisted providers are ever
  * embedded; anything else is just a link out.
  */
-export function WatchRecordingButton({ url, title, className }: { url: string; title: string; className?: string }) {
+export function WatchRecordingButton({
+  url,
+  title,
+  className,
+  compact = false,
+  label = "Watch recording",
+}: {
+  url: string;
+  title: string;
+  className?: string;
+  /** a small "Recording" pill, for under a schedule tile */
+  compact?: boolean;
+  label?: string;
+}) {
   const recording = parseRecordingUrl(url);
+  const text = compact ? "Recording" : label;
   const buttonClass = cn(
-    "inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background transition hover:bg-foreground/85",
+    "inline-flex items-center gap-1.5 rounded-full bg-foreground font-semibold text-background transition hover:bg-foreground/85",
+    compact ? "px-2 py-0.5 text-[10px] sm:text-[11px]" : "px-3 py-1.5 text-xs",
     className,
   );
 
   if (!recording) {
     return (
       <a href={url} target="_blank" rel="noreferrer noopener" className={buttonClass}>
-        <PlayCircle className="size-3.5" /> Watch recording
+        <PlayCircle className="size-3.5" /> {text}
       </a>
     );
   }
@@ -30,10 +45,10 @@ export function WatchRecordingButton({ url, title, className }: { url: string; t
     <Dialog>
       <DialogTrigger asChild>
         <button type="button" className={buttonClass}>
-          <PlayCircle className="size-3.5" /> Watch recording
+          <PlayCircle className="size-3.5" /> {text}
         </button>
       </DialogTrigger>
-      <SheetContent title={title} description="Session recording · members only" className="md:max-w-2xl">
+      <SheetContent title={title} description="Recording · members only" className="md:max-w-2xl">
         <div className="aspect-video overflow-hidden rounded-xl border border-border bg-surface">
           <iframe
             src={recording.embedUrl}

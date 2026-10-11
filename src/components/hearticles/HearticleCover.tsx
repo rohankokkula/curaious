@@ -1,4 +1,5 @@
 import type { hearticleTone } from "@/lib/hearticleTone";
+import { PersonLink } from "@/components/dashboard/PersonLink";
 import { cn } from "@/lib/utils";
 
 type Tone = ReturnType<typeof hearticleTone>;
@@ -19,6 +20,7 @@ export function HearticleCover({
   title,
   excerpt,
   authorName,
+  authorId,
   authorAvatarUrl,
   readMinutes,
   tone,
@@ -28,6 +30,8 @@ export function HearticleCover({
   title: string;
   excerpt: string | null;
   authorName: string | null;
+  /** links the author to their profile; only inside the dashboard (profiles are members-only) */
+  authorId?: string | null;
   authorAvatarUrl: string | null;
   readMinutes: number | null;
   tone: Tone;
@@ -105,7 +109,7 @@ export function HearticleCover({
 
       {/* author, anchored to the bottom */}
       {authorName ? (
-        <div className={cn("mt-auto flex items-center gap-2.5 pt-4", lg && "md:pt-8")}>
+        <PersonLink id={authorId} className={cn("mt-auto flex items-center gap-2.5 pt-4 decoration-current", lg && "md:pt-8")}>
           {authorAvatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -125,7 +129,7 @@ export function HearticleCover({
           <span className={cn("truncate font-semibold", lg ? "text-base md:text-lg" : "text-[13px]")} style={{ color: tone.accent }}>
             {authorName}
           </span>
-        </div>
+        </PersonLink>
       ) : null}
     </div>
   );

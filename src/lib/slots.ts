@@ -12,8 +12,9 @@
  */
 import { cache } from "react";
 import { loadPresentedIds } from "@/lib/presented";
+import { canSee, resolveVisibility } from "@/lib/profile";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { deckIsPublic, type SlotType, type SlotView } from "@/lib/talks";
+import { deckFormatOf, deckIsPublic, type SlotType, type SlotView } from "@/lib/talks";
 
 type TalkRow = {
   id: string;
@@ -22,7 +23,8 @@ type TalkRow = {
   status: "pending" | "approved";
   deck_path: string | null;
   deck_status: string;
-  presenter: { name: string; avatar_url: string | null } | null;
+  recording_url: string | null;
+  presenter: { name: string; avatar_url: string | null; visibility: unknown } | null;
 };
 
 type SlotRow = {
@@ -60,7 +62,7 @@ export type SeasonSlots = {
 // points at profiles too.
 const SEASON_SELECT = `id, name, number, starts_on, ends_on,
   session_slots (id, slot_date, slot_type, label, sort_order, capacity, starts_at, ends_at, recording_url,
-    talks (id, presenter_id, title, status, deck_path, deck_status, presenter:profiles!presenter_id (name, avatar_url))
+    talks (id, presenter_id, title, status, deck_path, deck_status, recording_url, presenter:profiles!presenter_id (name, avatar_url, visibility))
   )`;
 
 /** Cached per request: the dashboard home and the schedule both call it. */
@@ -117,6 +119,14 @@ export const loadSeasonSlots = cache(async (viewerId: string): Promise<SeasonSlo
           hasDeck: isMine ? Boolean(talk.deck_path) : deckIsPublic(talk),
           deckPending: approved && !deckIsPublic(talk),
           done: approved && presented.has(talk.id),
+          presenterId: approved || isMine ? talk.presenter_id : null,
+          deckSlides: deckIsPublic(talk) && deckFormatOf(talk.deck_path) === "pdf",
+          deckKey: talk.deck_path,
+          // the speaker's own "recording" toggle decides who else sees it
+          recordingUrl:
+            approved && talk.recording_url && (isMine || canSee(resolveVisibility(talk.presenter?.visibility), "recording", { isSelf: false, isAdmin: false }))
+              ? talk.recording_url
+              : null,
         };
       }),
     };

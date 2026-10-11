@@ -1,13 +1,13 @@
 "use client";
 
-import { ArrowLeft, Check, Upload } from "lucide-react";
+import { ArrowLeft, Check, FileText, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useRef, useState } from "react";
 import { DeckThumbnail } from "@/components/dashboard/DeckThumbnail";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
-import { MAX_DECK_BYTES, MAX_DECK_MB, talkSubmissionSchema } from "@/lib/talks";
+import { DECK_ACCEPT, DECK_TYPES_LABEL, deckFormatOf, MAX_DECK_BYTES, MAX_DECK_MB, talkSubmissionSchema } from "@/lib/talks";
 import { cn } from "@/lib/utils";
 
 type Errors = { title?: string; description?: string; deck?: string };
@@ -45,7 +45,7 @@ function StepIndicator({ step }: { step: Step }) {
 function validateDeck(file: File | null): string | undefined {
   if (!file) return undefined; // optional: the deck can be added later
   if (file.size > MAX_DECK_BYTES) return `that's over ${MAX_DECK_MB}mb, trim the deck and try again`;
-  if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) return "pdf only, please";
+  if (!deckFormatOf(file.name, file.type)) return "a pdf or a powerpoint (.pptx) file, please";
   return undefined;
 }
 
@@ -200,7 +200,7 @@ export function TalkSubmitForm({
               <label className="text-sm font-semibold">
                 Presentation deck <span className="font-normal text-muted">(optional)</span>
               </label>
-              <p className="mt-0.5 text-xs text-muted">Not ready yet? Skip it and add it later. PDF only, up to {MAX_DECK_MB}MB.</p>
+              <p className="mt-0.5 text-xs text-muted">Not ready yet? Skip it and add it later. {DECK_TYPES_LABEL}, up to {MAX_DECK_MB}MB.</p>
 
               <button
                 type="button"
@@ -223,7 +223,15 @@ export function TalkSubmitForm({
               >
                 {deck ? (
                   <>
-                    <DeckThumbnail file={deck} className="absolute inset-0 bg-surface" />
+                    {deckFormatOf(deck.name, deck.type) === "pdf" ? (
+                      <DeckThumbnail file={deck} className="absolute inset-0 bg-surface" />
+                    ) : (
+                      // a PowerPoint can't be previewed in the browser: show the file
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-surface text-muted">
+                        <FileText className="size-8" />
+                        <span className="text-xs">PowerPoint · {(deck.size / 1024 / 1024).toFixed(1)} MB</span>
+                      </div>
+                    )}
                     {/* Filename sits over the preview so the whole tile stays
                         clickable for swapping the file out. */}
                     <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-gradient-to-t from-black/80 to-transparent px-3 pt-8 pb-2.5 text-left">
@@ -243,13 +251,13 @@ export function TalkSubmitForm({
                     <p className="text-sm">
                       <span className="font-semibold text-foreground">Click to upload</span> <span className="text-muted">or drag and drop</span>
                     </p>
-                    <p className="text-xs text-muted">PDF (max {MAX_DECK_MB}MB)</p>
+                    <p className="text-xs text-muted">PDF or PowerPoint (max {MAX_DECK_MB}MB)</p>
                   </>
                 )}
                 <input
                   ref={fileRef}
                   type="file"
-                  accept="application/pdf"
+                  accept={DECK_ACCEPT}
                   hidden
                   onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 />

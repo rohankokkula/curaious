@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { PersonLink } from "@/components/dashboard/PersonLink";
 import { Card } from "@/components/ui/card";
 import { getActiveCohort } from "@/lib/cohort";
 import { loadCohortFeedback } from "@/lib/feedback";
@@ -57,7 +59,7 @@ export default async function AdminAnalyticsPage() {
         <h2 className="font-semibold">Top rated talks</h2>
         <ol className="mt-3 divide-y divide-border">
           {[...rated].sort((a, b) => (b.overall ?? 0) - (a.overall ?? 0)).slice(0, 5).map((t) => (
-            <li key={t.talkId} className="flex justify-between py-2 text-sm"><span>{t.title} <span className="text-muted">· {t.presenter}</span></span><span className="font-semibold">{t.overall}</span></li>
+            <li key={t.talkId} className="flex justify-between py-2 text-sm"><span><Link href={`/dashboard/talks/${t.talkId}/present`} className="hover:underline">{t.title}</Link> <span className="text-muted">· <PersonLink id={t.presenterId}>{t.presenter}</PersonLink></span></span><span className="font-semibold">{t.overall}</span></li>
           ))}
           {rated.length === 0 ? <li className="py-2 text-sm text-muted">No ratings yet.</li> : null}
         </ol>

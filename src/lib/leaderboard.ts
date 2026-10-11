@@ -39,7 +39,7 @@ export type LeaderboardEntry = {
   /** marked done by the curator */
   done: boolean;
   /** written feedback, newest first */
-  notes: { name: string; avatarUrl: string | null; text: string }[];
+  notes: { id: string | null; name: string; avatarUrl: string | null; text: string }[];
   /** the speaker lets others read their feedback (visibility.feedback) */
   notesPublic: boolean;
 };
@@ -78,7 +78,7 @@ type SlotRow = {
     presenter: { id: string; name: string; avatar_url: string | null; visibility: unknown } | null;
   }[];
 };
-type RatingRow = { talk_id: string; comment: string | null; created_at: string; rater: { name: string; avatar_url: string | null } | null } & Record<
+type RatingRow = { talk_id: string; comment: string | null; created_at: string; rater: { id: string; name: string; avatar_url: string | null } | null } & Record<
   RatingParameterKey,
   number
 >;
@@ -111,7 +111,7 @@ export async function loadLeaderboard(seasonId: string): Promise<Leaderboard> {
     talkIds.length
       ? admin
           .from("ratings")
-          .select(`talk_id, comment, created_at, rater:profiles!rater_id (name, avatar_url), ${RATING_PARAMETERS.map((p) => p.key).join(", ")}`)
+          .select(`talk_id, comment, created_at, rater:profiles!rater_id (id, name, avatar_url), ${RATING_PARAMETERS.map((p) => p.key).join(", ")}`)
           .in("talk_id", talkIds)
           .returns<RatingRow[]>()
       : Promise.resolve({ data: [] as RatingRow[] }),
@@ -136,7 +136,7 @@ export async function loadLeaderboard(seasonId: string): Promise<Leaderboard> {
       notes: rows
         .filter((r) => r.comment?.trim())
         .sort((a, b) => b.created_at.localeCompare(a.created_at))
-        .map((r) => ({ name: r.rater?.name ?? "A member", avatarUrl: r.rater?.avatar_url ?? null, text: r.comment!.trim() })),
+        .map((r) => ({ id: r.rater?.id ?? null, name: r.rater?.name ?? "A member", avatarUrl: r.rater?.avatar_url ?? null, text: r.comment!.trim() })),
       notesPublic: canSee(resolveVisibility(talk.presenter.visibility), "feedback", { isSelf: false, isAdmin: false }),
     };
     const overall = rows.length

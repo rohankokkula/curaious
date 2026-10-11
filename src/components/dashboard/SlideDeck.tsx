@@ -68,13 +68,15 @@ export function SlideDeck({ talkId }: { talkId: string }) {
 
     const pdfPage = await doc.getPage(pageNumber);
     const unscaled = pdfPage.getViewport({ scale: 1 });
-    const scale = Math.min(wrap.clientWidth / unscaled.width, wrap.clientHeight / unscaled.height) * (window.devicePixelRatio || 1);
+    // at least 2x the frame (more on denser screens), so slide text stays sharp
+    const density = Math.max(2, window.devicePixelRatio || 1);
+    const scale = Math.min(wrap.clientWidth / unscaled.width, wrap.clientHeight / unscaled.height) * density;
     const viewport = pdfPage.getViewport({ scale });
 
     canvas.width = viewport.width;
     canvas.height = viewport.height;
-    canvas.style.width = `${viewport.width / (window.devicePixelRatio || 1)}px`;
-    canvas.style.height = `${viewport.height / (window.devicePixelRatio || 1)}px`;
+    canvas.style.width = `${viewport.width / density}px`;
+    canvas.style.height = `${viewport.height / density}px`;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;

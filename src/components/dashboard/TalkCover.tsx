@@ -1,4 +1,5 @@
 import type { DayPalette } from "@/components/dashboard/seasonLayout";
+import { PersonLink } from "@/components/dashboard/PersonLink";
 import { cn } from "@/lib/utils";
 
 /**
@@ -19,7 +20,10 @@ export function TitleCover({
   watermark,
   subtitle,
   layout = "bottom",
+  speakerId,
 }: {
+  /** The speaker's profile id: makes their name on the cover a link to it. */
+  speakerId?: string | null;
   /** "bottom": title sits low (schedule tiles). "center": a bigger title,
    * vertically centered in the cover (talk cards and the talk page). */
   layout?: "bottom" | "center";
@@ -42,19 +46,18 @@ export function TitleCover({
   const n = String(number).padStart(2, "0");
   const lg = size === "lg";
   const center = layout === "center";
-  const speakerLine = speaker ? (
-    <p
-      className={cn(
-        "flex min-w-0 items-center gap-1.5 font-semibold",
-        center
-          ? lg
-            ? "text-sm md:text-base"
-            : "text-sm"
-          : lg
-            ? "mt-3 text-sm md:mt-4 md:text-base"
-            : "mt-1 text-[9px] sm:mt-1.5 sm:text-[11px]",
-      )}
-    >
+  const lineClass = cn(
+    "flex min-w-0 items-center gap-1.5 font-semibold",
+    center
+      ? lg
+        ? "text-sm md:text-base"
+        : "text-sm"
+      : lg
+        ? "mt-3 text-sm md:mt-4 md:text-base"
+        : "mt-1 text-[9px] sm:mt-1.5 sm:text-[11px]",
+  );
+  const speakerFace = speaker ? (
+    <>
       {speakerAvatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -84,12 +87,29 @@ export function TitleCover({
         </span>
       )}
       <span className="truncate">{speaker}</span>
-    </p>
+    </>
+  ) : null;
+  // With an id the name opens the speaker's profile; it stays clickable even
+  // though the rest of the cover lets clicks through to the card underneath.
+  const speakerLine = speakerFace ? (
+    speakerId ? (
+      <p className={lineClass}>
+        <PersonLink
+          id={speakerId}
+          className="pointer-events-auto inline-flex min-w-0 items-center gap-1.5"
+        >
+          {speakerFace}
+        </PersonLink>
+      </p>
+    ) : (
+      <p className={lineClass}>{speakerFace}</p>
+    )
   ) : null;
   return (
     <div
       className={cn(
-        "absolute inset-0 flex flex-col overflow-hidden text-left",
+        // clicks pass through to whatever the cover sits in (a card link)
+        "pointer-events-none absolute inset-0 flex flex-col overflow-hidden text-left",
         !center && "justify-between",
         lg ? "p-5 md:p-8" : center ? "p-4 sm:p-5" : "p-2 sm:p-3",
         palette.label,

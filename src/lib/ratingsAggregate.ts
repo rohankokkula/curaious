@@ -73,6 +73,7 @@ export async function loadRatingAggregate(talkId: string): Promise<RatingAggrega
     aggregate.comments = commentRows.map((row) => {
       const rater = raterById.get(row.rater_id);
       return {
+        raterId: row.rater_id,
         raterName: rater?.name ?? "A member",
         raterAvatarUrl: rater?.avatar_url ?? null,
         text: row.comment!.trim(),

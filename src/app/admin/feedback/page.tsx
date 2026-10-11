@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { PersonLink } from "@/components/dashboard/PersonLink";
 import { Card } from "@/components/ui/card";
 import { getActiveCohort } from "@/lib/cohort";
 import { loadCohortFeedback } from "@/lib/feedback";
@@ -21,8 +23,10 @@ export default async function AdminFeedbackPage() {
         <Card key={t.talkId} className="p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <div>
-              <h2 className="font-semibold">{t.title}</h2>
-              <p className="text-sm text-muted">by {t.presenter} · {t.count} {t.count === 1 ? "response" : "responses"}</p>
+              <h2 className="font-semibold">
+                <Link href={`/dashboard/talks/${t.talkId}/present`} className="hover:underline">{t.title}</Link>
+              </h2>
+              <p className="text-sm text-muted">by <PersonLink id={t.presenterId}>{t.presenter}</PersonLink> · {t.count} {t.count === 1 ? "response" : "responses"}</p>
             </div>
             <p className="text-2xl font-bold">{t.overall ?? "–"}<span className="text-sm font-medium text-muted"> / {RATING_MAX}</span></p>
           </div>
@@ -34,7 +38,7 @@ export default async function AdminFeedbackPage() {
           {t.comments.length > 0 ? (
             <ul className="mt-4 space-y-2">
               {t.comments.map((c, i) => (
-                <li key={i} className="rounded-lg bg-surface p-3 text-sm"><span className="font-medium">{c.rater}: </span><span className="text-muted">{c.text}</span></li>
+                <li key={i} className="rounded-lg bg-surface p-3 text-sm"><PersonLink id={c.raterId} className="font-medium">{c.rater}</PersonLink><span className="font-medium">: </span><span className="text-muted">{c.text}</span></li>
               ))}
             </ul>
           ) : null}

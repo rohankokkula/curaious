@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isGeneric } from "@/lib/feedbackNote";
 
 /**
  * The five things a talk is scored on. "Overall" is never asked for: it's
@@ -116,13 +117,19 @@ export const RATING_PARAMETERS = [
 
 /** The anchor line for a score on one parameter. */
 export const anchorFor = (key: RatingParameterKey, score: number) =>
-  RATING_PARAMETERS.find((p) => p.key === key)?.anchors[Math.min(Math.max(Math.round(score), 1), 10) - 1] ?? "";
+  RATING_PARAMETERS.find((p) => p.key === key)?.anchors[
+    Math.min(Math.max(Math.round(score), 1), 10) - 1
+  ] ?? "";
 
 /** The overall score: the plain average of whichever of the five are set, to
  * one decimal (the same formula the aggregates use). Null when none are. */
 export function overallOf(scores: Partial<Record<RatingParameterKey, number>>) {
-  const values = RATING_PARAMETERS.map((p) => scores[p.key] ?? 0).filter((v) => v > 0);
-  return values.length ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10 : null;
+  const values = RATING_PARAMETERS.map((p) => scores[p.key] ?? 0).filter(
+    (v) => v > 0,
+  );
+  return values.length
+    ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10
+    : null;
 }
 
 export type RatingParameterKey = (typeof RATING_PARAMETERS)[number]["key"];
@@ -150,8 +157,16 @@ export const ratingScoresSchema = z.object({
   comment: z
     .string()
     .trim()
-    .min(FEEDBACK_MIN, `write at least ${FEEDBACK_MIN} characters of feedback for the speaker.`)
-    .max(FEEDBACK_MAX, `keep feedback under ${FEEDBACK_MAX} characters.`),
+    .min(
+      FEEDBACK_MIN,
+      `write at least ${FEEDBACK_MIN} characters of feedback for the speaker.`,
+    )
+    .max(FEEDBACK_MAX, `keep feedback under ${FEEDBACK_MAX} characters.`)
+    // something real, not just "nice talk"
+    .refine(
+      (note) => !isGeneric(note),
+      'say what exactly, not just "nice talk".',
+    ),
 });
 
 export const ratingSubmissionSchema = ratingScoresSchema.extend({
@@ -165,6 +180,8 @@ export type RatingAverages = Record<RatingParameterKey, number | null> & {
 };
 
 export type RatingComment = {
+  /** for the profile link and the writer's own talk color */
+  raterId: string;
   raterName: string;
   raterAvatarUrl: string | null;
   text: string;

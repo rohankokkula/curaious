@@ -16,6 +16,7 @@ import {
   Tablet,
   Users,
 } from "lucide-react";
+import { PersonLink } from "@/components/dashboard/PersonLink";
 import { HearticleCover } from "@/components/hearticles/HearticleCover";
 import { loadArticleBySlug } from "@/lib/articleData";
 import { formatDuration, loadInsights, type Ranked } from "@/lib/hearticleAnalytics";
@@ -85,7 +86,13 @@ export default async function HearticleInsightsPage({ params }: { params: Promis
         </Link>
         <div>
           <p className="font-mono text-[11px] tracking-[0.18em] uppercase" style={{ color: accent }}>
-            {mine ? "your insights" : `insights · ${article.author.name}`}
+            {mine ? (
+              "your insights"
+            ) : (
+              <>
+                insights · <PersonLink id={article.author.id}>{article.author.name}</PersonLink>
+              </>
+            )}
           </p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{article.title}</h1>
           <p className="mt-1 text-sm text-muted">
@@ -261,7 +268,8 @@ export default async function HearticleInsightsPage({ params }: { params: Promis
               {insights.likers.length ? (
                 <ul className="flex flex-wrap gap-2">
                   {insights.likers.map((l) => (
-                    <li key={l.name} className="flex items-center gap-2 rounded-full border border-border py-1 pr-3 pl-1 text-sm">
+                    <li key={l.id ?? l.name}>
+                      <PersonLink id={l.id} className="flex items-center gap-2 rounded-full border border-border py-1 pr-3 pl-1 text-sm transition hover:border-foreground/30 hover:no-underline">
                       {l.avatarUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={l.avatarUrl} alt="" className="size-6 rounded-full object-cover" />
@@ -271,6 +279,7 @@ export default async function HearticleInsightsPage({ params }: { params: Promis
                         </span>
                       )}
                       {l.name}
+                      </PersonLink>
                     </li>
                   ))}
                 </ul>

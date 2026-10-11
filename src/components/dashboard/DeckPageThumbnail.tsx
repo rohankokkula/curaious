@@ -11,7 +11,10 @@ type State = "idle" | "loading" | "ready" | "error";
  * talks list or the schedule shows thumbnails at once instead of
  * downloading and rasterising every deck again. */
 const memory = new Map<string, string>();
-const storageKey = (talkId: string) => `deck-thumb:v1:${talkId}`;
+
+/** Rendered width of a first slide: full HD, enough for the largest card on a retina screen. */
+const HD_WIDTH = 1600;
+const storageKey = (key: string) => `deck-thumb:v4:${key}`;
 
 function readCached(talkId: string): string | null {
   const hit = memory.get(talkId);
@@ -44,28 +47,38 @@ function writeCached(talkId: string, dataUrl: string) {
  * Lazy: nothing (not pdfjs, not the PDF) loads until the tile is about to
  * scroll into view, and a cached render skips all of it.
  */
-export function DeckPageThumbnail({ talkId, className }: { talkId: string; className?: string }) {
+export function DeckPageThumbnail({
+  talkId,
+  deckKey,
+  className,
+}: {
+  talkId: string;
+  /** changes when the deck file does, so a replaced deck renders afresh */
+  deckKey?: string | null;
+  className?: string;
+}) {
+  const key = deckKey ? `${talkId}:${deckKey}` : talkId;
   const wrapRef = useRef<HTMLDivElement>(null);
   // Seeded from memory only (empty on a fresh page load, so server and
   // client agree during hydration); sessionStorage is checked in the effect.
-  const [rendered, setRendered] = useState<{ talkId: string; url: string } | null>(() => {
-    const hit = memory.get(talkId);
-    return hit ? { talkId, url: hit } : null;
+  const [rendered, setRendered] = useState<{ key: string; url: string } | null>(() => {
+    const hit = memory.get(key);
+    return hit ? { key, url: hit } : null;
   });
   const [state, setState] = useState<State>("idle");
-  const cached = rendered?.talkId === talkId ? rendered.url : null;
+  const cached = rendered?.key === key ? rendered.url : null;
 
   useEffect(() => {
     const wrap = wrapRef.current;
-    if (!wrap || memory.has(talkId)) return;
+    if (!wrap || memory.has(key)) return;
 
     let cancelled = false;
     let doc: PDFDocumentProxy | null = null;
 
     async function render() {
-      const stored = readCached(talkId);
+      const stored = readCached(key);
       if (stored) {
-        setRendered({ talkId, url: stored });
+        setRendered({ key, url: stored });
         return;
       }
 
@@ -86,13 +99,13 @@ export function DeckPageThumbnail({ talkId, className }: { talkId: string; class
         if (cancelled) return;
 
         const page = await doc.getPage(1);
-        const box = wrapRef.current;
-        if (!box || cancelled) return;
+        if (!wrapRef.current || cancelled) return;
 
+        // One render, sharp everywhere: the same cached image is reused by
+        // small schedule tiles and big talk cards alike, so it's drawn at a
+        // fixed HD width rather than at whatever tile asked for it first.
         const unscaled = page.getViewport({ scale: 1 });
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const fit = Math.min(box.clientWidth / unscaled.width, box.clientHeight / unscaled.height) || 1;
-        const viewport = page.getViewport({ scale: fit * dpr });
+        const viewport = page.getViewport({ scale: HD_WIDTH / unscaled.width });
 
         const canvas = document.createElement("canvas");
         canvas.width = viewport.width;
@@ -102,9 +115,10 @@ export function DeckPageThumbnail({ talkId, className }: { talkId: string; class
         await page.render({ canvasContext: ctx, viewport }).promise;
         if (cancelled) return;
 
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
-        writeCached(talkId, dataUrl);
-        setRendered({ talkId, url: dataUrl });
+        // lossless: no JPEG artifacts on slide text
+        const dataUrl = canvas.toDataURL("image/png");
+        writeCached(key, dataUrl);
+        setRendered({ key, url: dataUrl });
         setState("ready");
       } catch {
         if (!cancelled) setState("error");
@@ -129,7 +143,7 @@ export function DeckPageThumbnail({ talkId, className }: { talkId: string; class
       observer.disconnect();
       void doc?.destroy();
     };
-  }, [talkId]);
+  }, [talkId, key]);
 
   if (state === "error") return null; // falls back to the caller's plain tile
 
@@ -137,7 +151,7 @@ export function DeckPageThumbnail({ talkId, className }: { talkId: string; class
     <div ref={wrapRef} className={cn("relative flex items-center justify-center overflow-hidden bg-neutral-950", className)}>
       {cached ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={cached} alt="" className="max-h-full max-w-full object-contain" />
+        <img src={cached} alt="" decoding="async" className="h-full w-full object-contain" />
       ) : null}
     </div>
   );

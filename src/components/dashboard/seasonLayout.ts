@@ -107,7 +107,7 @@ export function groupWeeks(slots: SlotView[]) {
  * 2, 3...), keyed by slot id → the first seat's number. Sessions (kickoff,
  * recognitions) take no numbers.
  */
-export function seatNumbers(weeks: ReturnType<typeof groupWeeks>) {
+export function seatNumbers(weeks: ReturnType<typeof groupWeeks>, today = new Date().toISOString().slice(0, 10)) {
   const firstNumber = new Map<string, number>();
   let next = 1;
   for (const week of weeks) {
@@ -115,7 +115,9 @@ export function seatNumbers(weeks: ReturnType<typeof groupWeeks>) {
       for (const slot of day) {
         if (slot.type !== "talk") continue;
         firstNumber.set(slot.id, next);
-        next += Math.max(slot.capacity, slot.talks.length);
+        // a session that has passed keeps only the talks that happened: its
+        // empty seats are gone, so numbering carries on without a gap
+        next += slot.date < today ? slot.talks.length : Math.max(slot.capacity, slot.talks.length);
       }
     }
   }
@@ -148,4 +150,18 @@ export function slotLooks(slots: SlotView[]) {
     }),
   );
   return looks;
+}
+
+/** Each speaker's talk color, by their profile id: so anything a member
+ * writes (a note on someone else's talk) can wear their own talk's color. */
+export function talkPaletteByPerson(slots: SlotView[]) {
+  const looks = talkLooks(slots);
+  const byPerson = new Map<string, DayPalette>();
+  for (const slot of slots) {
+    for (const talk of slot.talks) {
+      const look = looks.get(talk.talkId);
+      if (talk.presenterId && look) byPerson.set(talk.presenterId, look.palette);
+    }
+  }
+  return byPerson;
 }

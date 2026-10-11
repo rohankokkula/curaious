@@ -3,7 +3,8 @@ import { ArrowRight, CalendarDays, CheckCircle2, MessageSquare, Mic, Star, Video
 import { AccentCard } from "@/components/dashboard/AccentCard";
 import { DeckUploadPanel } from "@/components/dashboard/DeckUploadPanel";
 import { groupWeeks, slotLooks, talkLooks } from "@/components/dashboard/seasonLayout";
-import { TitleCover } from "@/components/dashboard/TalkCover";
+import { CardLink } from "@/components/dashboard/PersonLink";
+import { TalkThumb } from "@/components/dashboard/TalkThumb";
 import { WatchRecordingButton } from "@/components/dashboard/WatchRecordingButton";
 import type { Cohort } from "@/lib/cohort";
 import type { MemberHomeData } from "@/lib/homeData";
@@ -56,11 +57,13 @@ export function MemberHome({ name, cohort, slots, data }: { name: string; cohort
         {myTalk && mineSlot && myLook ? (
           <AccentCard palette={myLook.palette} className="p-4 sm:p-5">
             <div className="grid gap-5 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-              <Link
-                href={`/dashboard/talks/${myTalk.talkId}/present`}
-                className={cn("relative block aspect-video overflow-hidden rounded-2xl border transition hover:-translate-y-0.5", myLook.palette.well)}
-              >
-                <TitleCover
+              <div className={cn("relative block aspect-video overflow-hidden rounded-2xl border transition hover:-translate-y-0.5", myLook.palette.well)}>
+                <CardLink href={`/dashboard/talks/${myTalk.talkId}/present`} label={myTalk.title ?? "Your talk"} />
+                <TalkThumb
+                  talkId={myTalk.talkId}
+                  deckSlides={myTalk.deckSlides}
+                  deckKey={myTalk.deckKey}
+                  speakerId={myTalk.presenterId}
                   title={myTalk.title ?? "Your talk"}
                   speaker={myTalk.presenterName}
                   speakerAvatarUrl={myTalk.presenterAvatarUrl}
@@ -69,7 +72,7 @@ export function MemberHome({ name, cohort, slots, data }: { name: string; cohort
                   palette={myLook.palette}
                   layout="center"
                 />
-              </Link>
+              </div>
               <div className="flex min-w-0 flex-col">
                 <p className={cn("flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.18em] uppercase", myLook.palette.label)}>
                   <Mic className="size-3.5" /> Your talk · {myTalk.status === "approved" ? "booked" : "requested"}
@@ -132,11 +135,13 @@ export function MemberHome({ name, cohort, slots, data }: { name: string; cohort
                     const look = looks.get(talk.talkId);
                     return (
                       <li key={talk.talkId}>
-                        <Link
-                          href={`/dashboard/talks/${talk.talkId}/present`}
-                          className={cn("relative block aspect-[4/3] overflow-hidden rounded-xl border transition hover:-translate-y-0.5", look?.palette.well)}
-                        >
-                          <TitleCover
+                        <div className={cn("relative block aspect-[4/3] overflow-hidden rounded-xl border transition hover:-translate-y-0.5", look?.palette.well)}>
+                          <CardLink href={`/dashboard/talks/${talk.talkId}/present`} label={talk.title ?? "Open the talk"} />
+                          <TalkThumb
+                            talkId={talk.talkId}
+                            deckSlides={talk.deckSlides}
+                            deckKey={talk.deckKey}
+                            speakerId={talk.presenterId}
                             title={talk.title ?? "Untitled"}
                             speaker={talk.presenterName}
                             speakerAvatarUrl={talk.presenterAvatarUrl}
@@ -144,7 +149,7 @@ export function MemberHome({ name, cohort, slots, data }: { name: string; cohort
                             number={look?.number ?? 0}
                             palette={look?.palette ?? sessionLooks.get(nextSession.id)!.palette}
                           />
-                        </Link>
+                        </div>
                       </li>
                     );
                   })}
@@ -175,13 +180,15 @@ export function MemberHome({ name, cohort, slots, data }: { name: string; cohort
               const look = looks.get(talk.talkId);
               return (
                 <li key={talk.talkId}>
-                  <Link
-                    href={`/dashboard/talks/${talk.talkId}/present`}
-                    className="group block overflow-hidden rounded-2xl border border-border bg-background/40 transition hover:-translate-y-0.5 hover:border-foreground/30"
-                  >
-                    <div className={cn("relative aspect-video overflow-hidden", look?.palette.well)}>
+                  <div className="group relative block overflow-hidden rounded-2xl border border-border bg-background/40 transition hover:-translate-y-0.5 hover:border-foreground/30">
+                    <CardLink href={`/dashboard/talks/${talk.talkId}/present`} label={`Rate ${talk.title ?? "this talk"}`} />
+                    <div className={cn("pointer-events-none relative aspect-video overflow-hidden", look?.palette.well)}>
                       {look ? (
-                        <TitleCover
+                        <TalkThumb
+                          talkId={talk.talkId}
+                          deckSlides={talk.deckSlides}
+                          deckKey={talk.deckKey}
+                          speakerId={talk.presenterId}
                           title={talk.title ?? "Untitled"}
                           speaker={talk.presenterName}
                           speakerAvatarUrl={talk.presenterAvatarUrl}
@@ -192,7 +199,7 @@ export function MemberHome({ name, cohort, slots, data }: { name: string; cohort
                         />
                       ) : null}
                     </div>
-                    <div className="flex items-center justify-between gap-3 px-4 py-3">
+                    <div className="pointer-events-none relative flex items-center justify-between gap-3 px-4 py-3">
                       <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-success">
                         <span className="size-1.5 rounded-full bg-success" /> Scoring open
                       </span>
@@ -200,7 +207,7 @@ export function MemberHome({ name, cohort, slots, data }: { name: string; cohort
                         <Star className="size-3.5" /> Rate now
                       </span>
                     </div>
-                  </Link>
+                  </div>
                 </li>
               );
             })}

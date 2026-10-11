@@ -81,9 +81,9 @@ export async function POST(request: Request) {
 
   const { data: slot } = await admin
     .from("session_slots")
-    .select("id, slot_type, capacity")
+    .select("id, slot_type, capacity, slot_date")
     .eq("id", slotId)
-    .maybeSingle<{ id: string; slot_type: string; capacity: number }>();
+    .maybeSingle<{ id: string; slot_type: string; capacity: number; slot_date: string }>();
 
   if (!slot || slot.slot_type !== "talk") {
     return NextResponse.json(
@@ -93,6 +93,13 @@ export async function POST(request: Request) {
         message: "that isn't a talk slot.",
       },
       { status: 400 },
+    );
+  }
+
+  if (slot.slot_date < new Date().toISOString().slice(0, 10)) {
+    return NextResponse.json(
+      { ok: false, error: "slot_past", message: "that session has already happened. pick an upcoming slot." },
+      { status: 409 },
     );
   }
 

@@ -9,17 +9,23 @@ import { Dialog, DialogTrigger, SheetContent } from "@/components/ui/dialog";
 import { Input, Textarea } from "@/components/ui/input";
 import { talkSubmissionSchema } from "@/lib/talks";
 
-/** Curator-only: edit a talk's title and description in the side panel. */
+/**
+ * Edit a talk's title and description in the side panel: the speaker for
+ * their own talk, the curator for any (`asAdmin`).
+ */
 export function EditTalkDialog({
   talkId,
   title,
   description,
+  asAdmin = false,
   size = "sm",
   className,
 }: {
   talkId: string;
   title: string;
   description: string;
+  /** the curator editing someone else's talk; otherwise it's the speaker's own */
+  asAdmin?: boolean;
   size?: "sm" | "default";
   className?: string;
 }) {
@@ -33,7 +39,7 @@ export function EditTalkDialog({
     const check = talkSubmissionSchema.safeParse(form);
     if (!check.success) return toast.error(check.error.issues[0]?.message ?? "Check the fields.");
     setBusy(true);
-    const res = await fetch(`/api/admin/talks/${talkId}/details`, {
+    const res = await fetch(asAdmin ? `/api/admin/talks/${talkId}/details` : `/api/talks/${talkId}/details`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(check.data),

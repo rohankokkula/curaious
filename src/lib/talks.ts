@@ -35,6 +35,14 @@ export type SlotTalk = {
   deckPending: boolean;
   /** The curator has marked it as given. */
   done: boolean;
+  /** Who's presenting (profile id); null while it's someone else's pending request. */
+  presenterId: string | null;
+  /** The approved deck is a PDF: show its first slide instead of the title cover. */
+  deckSlides: boolean;
+  /** Changes whenever the deck file does (its storage path), so cached slides refresh. */
+  deckKey: string | null;
+  /** This talk's own recording, when the speaker shows recordings (or it's yours). */
+  recordingUrl: string | null;
 };
 
 /** A slot can hold more than one talk — e.g. two or three lightning talks in one session. */
@@ -77,16 +85,38 @@ export const talkReviewSchema = z.object({
     .optional(),
 });
 
-/** Keep uploaded filenames boring: storage keys are not a place for surprises. */
+/** Deck formats: a PDF opens in the in-browser slideshow; a PowerPoint file
+ * is stored as-is and offered as a download (the browser can't render it). */
+export const DECK_FORMATS = {
+  pdf: { ext: "pdf", mime: "application/pdf", label: "PDF" },
+  pptx: { ext: "pptx", mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation", label: "PowerPoint" },
+} as const;
+export type DeckFormat = keyof typeof DECK_FORMATS;
+
+/** What the file picker should offer. */
+export const DECK_ACCEPT = `${DECK_FORMATS.pdf.mime},${DECK_FORMATS.pptx.mime},.pdf,.pptx`;
+export const DECK_TYPES_LABEL = "PDF or PowerPoint (.pptx)";
+
+/** The deck's format from a file name or storage path; null if neither. */
+export function deckFormatOf(nameOrPath: string | null | undefined, mime?: string): DeckFormat | null {
+  const name = (nameOrPath ?? "").toLowerCase();
+  if (mime === DECK_FORMATS.pdf.mime || name.endsWith(".pdf")) return "pdf";
+  if (mime === DECK_FORMATS.pptx.mime || name.endsWith(".pptx")) return "pptx";
+  return null;
+}
+
+/** Keep uploaded filenames boring: storage keys are not a place for surprises.
+ * The extension (pdf or pptx) is kept so the format survives in the path. */
 export function sanitizeDeckFilename(filename: string): string {
-  const base = filename.replace(/\.pdf$/i, "");
+  const format = deckFormatOf(filename) ?? "pdf";
+  const base = filename.replace(/\.(pdf|pptx)$/i, "");
   const safe = base
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
 
-  return `${safe || "deck"}.pdf`;
+  return `${safe || "deck"}.${DECK_FORMATS[format].ext}`;
 }
 
 export function formatSlotDate(date: string): string {

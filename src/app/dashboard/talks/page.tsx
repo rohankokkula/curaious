@@ -4,11 +4,12 @@ import { Avatar } from "@/components/dashboard/Avatar";
 import { AccentGlow } from "@/components/dashboard/AccentCard";
 import { DeckPageThumbnail } from "@/components/dashboard/DeckPageThumbnail";
 import { groupWeeks, talkLooks, type DayPalette } from "@/components/dashboard/seasonLayout";
-import { TitleCover } from "@/components/dashboard/TalkCover";
+import { CardLink, PersonLink } from "@/components/dashboard/PersonLink";
+import { TalkThumb } from "@/components/dashboard/TalkThumb";
 import { loadSeasonSlots } from "@/lib/slots";
 import { getActiveCohort } from "@/lib/cohort";
 import { createSupabaseServerClient, getSessionUser } from "@/lib/supabase/server";
-import { deckIsPublic } from "@/lib/talks";
+import { deckFormatOf, deckIsPublic } from "@/lib/talks";
 import { cn } from "@/lib/utils";
 import { pageMetadata } from "@/lib/og/metadata";
 
@@ -44,16 +45,20 @@ type TalkView = TalkRow & {
 const shortDate = (date: string) =>
   new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 
-/** The same title cover the schedule's slot cards show, in the talk's day
- * color — kept even once the deck is up, never swapped for its first slide. */
+/** The same picture the schedule's slot cards show: the deck's first slide
+ * once it's approved, else the title cover in the talk's day color. */
 function Thumb({ talk, className, size = "sm" }: { talk: TalkView; className?: string; size?: "sm" | "lg" }) {
   if (talk.look) {
     return (
-      <div className={cn("group relative aspect-video overflow-hidden", talk.look.palette.well, className)}>
-        <TitleCover
+      <div className={cn("pointer-events-none relative aspect-video overflow-hidden", talk.look.palette.well, className)}>
+        <TalkThumb
+          talkId={talk.id}
+          deckSlides={deckIsPublic(talk) && deckFormatOf(talk.deck_path) === "pdf"}
+          deckKey={talk.deck_path}
           title={talk.title}
           speaker={talk.presenter?.name ?? null}
           speakerAvatarUrl={talk.presenter?.avatar_url ?? null}
+          speakerId={talk.presenter_id}
           status={talk.inReview ? "requested" : talk.done ? "done" : talk.deckPending ? "deck-soon" : null}
           number={talk.look.number}
           palette={talk.look.palette}
@@ -64,9 +69,9 @@ function Thumb({ talk, className, size = "sm" }: { talk: TalkView; className?: s
     );
   }
   return (
-    <div className={cn("relative flex aspect-video items-center justify-center overflow-hidden bg-surface", className)}>
-      {talk.hasThumb ? (
-        <DeckPageThumbnail talkId={talk.id} className="absolute inset-0" />
+    <div className={cn("pointer-events-none relative flex aspect-video items-center justify-center overflow-hidden bg-surface", className)}>
+      {talk.hasThumb && deckFormatOf(talk.deck_path) === "pdf" ? (
+        <DeckPageThumbnail talkId={talk.id} deckKey={talk.deck_path} className="absolute inset-0" />
       ) : (
         <FileText className="size-6 text-muted/50" />
       )}
@@ -84,10 +89,12 @@ const whenLabel = (talk: TalkView) => `${talk.week ? `Week ${talk.week} · ` : "
 function Speaker({ talk, size = "sm" }: { talk: TalkView; size?: "sm" | "md" }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <Avatar name={talk.presenter?.name ?? "?"} src={talk.presenter?.avatar_url} size={size} />
+      <PersonLink id={talk.presenter_id} className="shrink-0 rounded-full hover:no-underline">
+        <Avatar name={talk.presenter?.name ?? "?"} src={talk.presenter?.avatar_url} size={size} />
+      </PersonLink>
       <div className="min-w-0">
         <p className="truncate text-xs font-medium">
-          {talk.presenter?.name ?? "Unknown"}
+          <PersonLink id={talk.presenter_id}>{talk.presenter?.name ?? "Unknown"}</PersonLink>
           {talk.isMine ? <span className="ml-1 font-normal text-muted">(you)</span> : null}
         </p>
         <p className="truncate text-[11px] text-muted">
@@ -103,13 +110,11 @@ function Speaker({ talk, size = "sm" }: { talk: TalkView; size?: "sm" | "md" }) 
  * talk is about. */
 function FeaturedTalk({ talk }: { talk: TalkView }) {
   return (
-    <Link
-      href={`/dashboard/talks/${talk.id}/present`}
-      className="group relative block overflow-hidden rounded-3xl border border-border bg-card transition hover:border-foreground/30 md:grid md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]"
-    >
+    <div className="group relative block overflow-hidden rounded-3xl border border-border bg-card transition hover:border-foreground/30 md:grid md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
       {talk.look ? <AccentGlow palette={talk.look.palette} /> : null}
+      <CardLink href={`/dashboard/talks/${talk.id}/present`} label={talk.title} />
       <Thumb talk={talk} size="lg" className="md:aspect-auto md:min-h-72" />
-      <div className="relative flex flex-col p-5 md:p-7">
+      <div className="pointer-events-none relative flex flex-col p-5 md:p-7">
         <p className={cn("flex items-center gap-1.5 text-[11px] font-semibold tracking-widest uppercase", talk.look?.palette.label ?? "text-primary")}>
           <Mic className="size-3.5" /> Next up
         </p>
@@ -126,19 +131,17 @@ function FeaturedTalk({ talk }: { talk: TalkView }) {
           </span>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
 
 function TalkCard({ talk }: { talk: TalkView }) {
   return (
-    <Link
-      href={`/dashboard/talks/${talk.id}/present`}
-      className="group relative flex flex-col overflow-hidden rounded-3xl border border-border bg-card transition-all duration-150 hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-md"
-    >
+    <div className="group relative flex flex-col overflow-hidden rounded-3xl border border-border bg-card transition-all duration-150 hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-md">
       {talk.look ? <AccentGlow palette={talk.look.palette} size="sm" /> : null}
+      <CardLink href={`/dashboard/talks/${talk.id}/present`} label={talk.title} />
       <Thumb talk={talk} />
-      <div className="relative flex flex-1 flex-col p-4">
+      <div className="pointer-events-none relative flex flex-1 flex-col p-4">
         {/* the cover already shows the title; start with the description */}
         {talk.look ? (
           <span className="sr-only">{talk.title}</span>
@@ -150,7 +153,7 @@ function TalkCard({ talk }: { talk: TalkView }) {
           <Speaker talk={talk} />
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
 

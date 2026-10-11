@@ -5,7 +5,7 @@ import { ScheduleEditor } from "@/components/admin/ScheduleEditor";
 import { SeasonTimeline } from "@/components/dashboard/SeasonTimeline";
 import { getActiveCohort } from "@/lib/cohort";
 import type { EditorSlot } from "@/lib/schedule";
-import { deckIsPublic, type SlotView } from "@/lib/talks";
+import { deckFormatOf, deckIsPublic, type SlotView } from "@/lib/talks";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export default async function AdminSchedulePage() {
   const { data: talks } = ids.length
     ? await supabase
         .from("talks")
-        .select("id, slot_id, title, status, presenter_id, deck_path, deck_status")
+        .select("id, slot_id, title, status, presenter_id, deck_path, deck_status, recording_url")
         .in("slot_id", ids)
         .neq("status", "rejected")
         .order("submitted_at", { ascending: true })
@@ -92,6 +92,10 @@ export default async function AdminSchedulePage() {
         hasDeck: Boolean(talk.deck_path),
         deckPending: talk.status === "approved" && !deckIsPublic(talk),
         done: presented.has(talk.id),
+        presenterId: talk.presenter_id,
+        deckSlides: deckIsPublic(talk) && deckFormatOf(talk.deck_path) === "pdf",
+        deckKey: talk.deck_path,
+        recordingUrl: talk.recording_url,
       })),
     }))
     .sort((a, b) => a.date.localeCompare(b.date));

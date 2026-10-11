@@ -76,6 +76,15 @@ export default async function SubmitTalkPage({
 
   if (!slot) notFound();
 
+  if (slot.slot_date < new Date().toISOString().slice(0, 10)) {
+    return (
+      <Notice heading="this session has passed">
+        {slot.label} has already happened, so its open seat can&rsquo;t be
+        requested any more. Pick an upcoming slot on the schedule.
+      </Notice>
+    );
+  }
+
   if (slot.slot_type !== "talk") {
     return (
       <Notice heading="not a talk slot">

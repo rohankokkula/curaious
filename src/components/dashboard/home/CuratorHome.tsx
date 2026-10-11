@@ -26,7 +26,10 @@ import {
   weekKey,
   type DayPalette,
 } from "@/components/dashboard/seasonLayout";
-import { TitleCover } from "@/components/dashboard/TalkCover";
+import { DeleteTalkButton } from "@/components/dashboard/DeleteTalkButton";
+import { CardLink, PersonLink } from "@/components/dashboard/PersonLink";
+import { TalkRecordingButton } from "@/components/dashboard/TalkRecordingButton";
+import { TalkThumb } from "@/components/dashboard/TalkThumb";
 import { WatchRecordingButton } from "@/components/dashboard/WatchRecordingButton";
 import type { Cohort } from "@/lib/cohort";
 import type { CuratorHomeData, HomePerson } from "@/lib/homeData";
@@ -251,11 +254,12 @@ export function CuratorHome({
                   const done = total - missing.length;
                   return (
                     <li key={talk.talkId}>
-                      <Link
-                        href={`/dashboard/talks/${talk.talkId}/present`}
-                        className="flex h-full flex-col gap-3 rounded-2xl border border-border bg-background/40 p-3.5 transition hover:border-foreground/30"
-                      >
-                        <div className="flex items-start justify-between gap-3">
+                      <div className="relative flex h-full flex-col gap-3 rounded-2xl border border-border bg-background/40 p-3.5 transition hover:border-foreground/30">
+                        <CardLink
+                          href={`/dashboard/talks/${talk.talkId}/present`}
+                          label={talk.title ?? "Open the talk"}
+                        />
+                        <div className="pointer-events-none relative flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p
                               className={cn(
@@ -270,7 +274,9 @@ export function CuratorHome({
                               {talk.title}
                             </p>
                             <p className="truncate text-xs text-muted">
-                              {talk.presenterName}
+                              <PersonLink id={talk.presenterId}>
+                                {talk.presenterName}
+                              </PersonLink>
                             </p>
                           </div>
                           <span className="shrink-0 text-right">
@@ -282,7 +288,7 @@ export function CuratorHome({
                             </span>
                           </span>
                         </div>
-                        <span className="block h-1.5 overflow-hidden rounded-full bg-surface">
+                        <span className="pointer-events-none relative block h-1.5 overflow-hidden rounded-full bg-surface">
                           <span
                             className="block h-full rounded-full bg-success"
                             style={{
@@ -293,11 +299,11 @@ export function CuratorHome({
                         {missing.length ? (
                           <Faces people={missing} label="still to score" />
                         ) : (
-                          <p className="text-xs font-medium text-success">
+                          <p className="pointer-events-none relative text-xs font-medium text-success">
                             Everyone has scored it.
                           </p>
                         )}
-                      </Link>
+                      </div>
                     </li>
                   );
                 })}
@@ -386,16 +392,22 @@ export function currentWeek(weeks: { key: string }[], today: string) {
 function Faces({ people, label }: { people: HomePerson[]; label: string }) {
   const shown = people.slice(0, 8);
   return (
-    <div className="flex items-center gap-2">
+    <div className="pointer-events-none relative flex items-center gap-2">
       <div className="flex -space-x-2">
         {shown.map((p) => (
-          <Avatar
+          <PersonLink
             key={p.id}
-            name={p.name}
-            src={p.avatarUrl}
-            size="sm"
-            className="size-7 text-[10px] ring-2 ring-card"
-          />
+            id={p.id}
+            title={p.name}
+            className="rounded-full transition hover:z-20 hover:-translate-y-0.5"
+          >
+            <Avatar
+              name={p.name}
+              src={p.avatarUrl}
+              size="sm"
+              className="size-7 text-[10px] ring-2 ring-card"
+            />
+          </PersonLink>
         ))}
       </div>
       <p className="min-w-0 truncate text-xs text-muted">
@@ -500,23 +512,30 @@ function NextSession({
             const chip = DECK_CHIP[state?.deckStatus ?? "none"];
             return (
               <li key={talk.talkId} className="flex flex-col gap-3">
-                <Link
-                  href={`/dashboard/talks/${talk.talkId}/present`}
+                <div
                   className={cn(
                     "group relative block aspect-video overflow-hidden rounded-2xl border transition hover:-translate-y-0.5",
                     palette.well,
                   )}
                 >
-                  <TitleCover
+                  <CardLink
+                    href={`/dashboard/talks/${talk.talkId}/present`}
+                    label={talk.title ?? "Open the talk"}
+                  />
+                  <TalkThumb
+                    talkId={talk.talkId}
+                    deckSlides={talk.deckSlides}
+                    deckKey={talk.deckKey}
                     title={talk.title ?? "Untitled"}
                     speaker={talk.presenterName}
                     speakerAvatarUrl={talk.presenterAvatarUrl}
+                    speakerId={talk.presenterId}
                     status={talk.done ? "done" : null}
                     number={look?.number ?? 0}
                     palette={look?.palette ?? palette}
                     layout="center"
                   />
-                </Link>
+                </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {state ? (
                     <ScoringSwitch
@@ -525,6 +544,15 @@ function NextSession({
                     />
                   ) : null}
                   <MarkDoneButton talkId={talk.talkId} done={talk.done} />
+                  <TalkRecordingButton talkId={talk.talkId} current={talk.recordingUrl} />
+                  {/* it's the day and it hasn't happened: take it off */}
+                  {!talk.done && slot.date <= today ? (
+                    <DeleteTalkButton
+                      talkId={talk.talkId}
+                      speakerName={talk.presenterName?.split(" ")[0] ?? "this"}
+                      size="xs"
+                    />
+                  ) : null}
                   <span
                     className={cn(
                       "rounded-full px-2.5 py-1 text-xs font-semibold",

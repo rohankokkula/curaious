@@ -5,10 +5,11 @@ export type TalkFeedback = {
   talkId: string;
   title: string;
   presenter: string;
+  presenterId: string;
   count: number;
   overall: number | null;
   averages: Record<string, number | null>;
-  comments: { rater: string; text: string }[];
+  comments: { rater: string; raterId: string; text: string }[];
 };
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -44,10 +45,11 @@ export async function loadCohortFeedback(cohortId: string) {
       talkId: t.id,
       title: t.title,
       presenter: name.get(t.presenter_id) ?? "Unknown",
+      presenterId: t.presenter_id,
       count: rows.length,
       overall: vals.length ? r1(vals.reduce((a, b) => a + b, 0) / vals.length) : null,
       averages,
-      comments: rows.filter((r) => r.comment).map((r) => ({ rater: name.get(r.rater_id) ?? "Unknown", text: r.comment as string })),
+      comments: rows.filter((r) => r.comment).map((r) => ({ rater: name.get(r.rater_id) ?? "Unknown", raterId: r.rater_id, text: r.comment as string })),
     };
   });
   return { talks: out, raters, memberCount: members?.length ?? 0 };
